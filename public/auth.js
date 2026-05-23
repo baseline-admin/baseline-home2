@@ -16,13 +16,23 @@ function switchTab(tab) {
   document.getElementById('errRegister').textContent = '';
 }
 
-// ── Google OAuth — one call, Supabase handles everything ──
+// ── Google OAuth ──────────────────────────────────────────
 async function signInWithGoogle() {
-  var { error } = await sb.auth.signInWithOAuth({
+  var { data, error } = await sb.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: APP_URL }
+    options: {
+      redirectTo: APP_URL,
+      skipBrowserRedirect: false
+    }
   });
-  if (error) alert('Google sign in failed: ' + error.message);
+  if (error) {
+    alert('Google sign in failed: ' + error.message);
+    return;
+  }
+  // Supabase returns the URL — we redirect manually
+  if (data && data.url) {
+    window.location.href = data.url;
+  }
 }
 
 // ── Email / password sign in ──────────────────────────────
