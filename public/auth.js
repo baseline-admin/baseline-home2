@@ -2,7 +2,7 @@
    BASELINE — auth.js
    ============================================================ */
 
-var APP_URL = 'https://baseline-home.vercel.app';
+var APP_URL = 'https://baseline-home-login.vercel.app';
 
 function switchTab(tab) {
   document.getElementById('formSignIn').style.display   = tab === 'signin'   ? 'block' : 'none';
