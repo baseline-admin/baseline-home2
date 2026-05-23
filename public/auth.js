@@ -1,11 +1,10 @@
 /* ============================================================
    BASELINE — auth.js
    Auth using Supabase JS library directly.
-   Sign in, register, Google OAuth, sign out.
-   Depends on: app.js (which loads Supabase client as 'sb')
    ============================================================ */
 
 var APP_URL = 'https://baseline-home.vercel.app';
+var SUPABASE_PROJECT = 'zugyathhuiliaszixnlm';
 
 function switchTab(tab) {
   document.getElementById('formSignIn').style.display   = tab === 'signin'   ? 'block' : 'none';
@@ -16,23 +15,13 @@ function switchTab(tab) {
   document.getElementById('errRegister').textContent = '';
 }
 
-// ── Google OAuth ──────────────────────────────────────────
-async function signInWithGoogle() {
-  var { data, error } = await sb.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: APP_URL,
-      skipBrowserRedirect: false
-    }
-  });
-  if (error) {
-    alert('Google sign in failed: ' + error.message);
-    return;
-  }
-  // Supabase returns the URL — we redirect manually
-  if (data && data.url) {
-    window.location.href = data.url;
-  }
+// ── Google OAuth — direct redirect, no fetch ──────────────
+function signInWithGoogle() {
+  var redirectTo = encodeURIComponent(APP_URL);
+  var url = 'https://' + SUPABASE_PROJECT + '.supabase.co/auth/v1/authorize'
+    + '?provider=google'
+    + '&redirect_to=' + redirectTo;
+  window.location.href = url;
 }
 
 // ── Email / password sign in ──────────────────────────────
@@ -56,8 +45,7 @@ async function register() {
   if (pass.length < 6) { document.getElementById('errRegister').textContent = 'Password must be at least 6 characters.'; return; }
   setBusy('btnRegister', true, 'Create account');
   var { data, error } = await sb.auth.signUp({
-    email: email,
-    password: pass,
+    email: email, password: pass,
     options: { data: { first_name: name } }
   });
   setBusy('btnRegister', false, 'Create account');
