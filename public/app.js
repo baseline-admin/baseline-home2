@@ -1,16 +1,14 @@
 /* ============================================================
    BASELINE — app.js
-   Shared state, shared helpers, page navigation, boot.
+   Shared state, helpers, page navigation, boot.
    Uses Supabase JS library loaded from CDN in index.html.
    ============================================================ */
 
 var SUPABASE_URL = 'https://zugyathhuiliaszixnlm.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_eTwm5JbLf6nW9zu3roUt6Q_D9JiacF4';
 
-// Supabase client — initialised once, used everywhere
 var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Shared state
 var State = {
   currentUser: null,
   sheetData:   null,
@@ -18,14 +16,7 @@ var State = {
   openWorkout: null
 };
 
-// ── API helper (sheet data only) ──────────────────────────
-async function apiFetch(path, opts) {
-  opts = opts || {};
-  return fetch(path, opts);
-}
-
-// ── Supabase database helpers ─────────────────────────────
-// All DB calls go direct to Supabase from the browser
+// ── Database helpers ──────────────────────────────────────
 
 async function dbGetProfile() {
   var { data } = await sb.from('profiles').select('*').eq('id', State.currentUser.id).single();
@@ -71,7 +62,8 @@ async function dbDeleteScore(id) {
   await sb.from('scores').delete().eq('id', id).eq('user_id', State.currentUser.id);
 }
 
-// ── Shared UI helpers ─────────────────────────────────────
+// ── UI helpers ────────────────────────────────────────────
+
 function setBusy(id, busy, label) {
   var b = document.getElementById(id);
   b.disabled = busy;
@@ -86,15 +78,22 @@ function showPage(name, btn) {
   if (name === 'myWorkouts') loadWorkouts();
 }
 
-// ── Start app after auth ──────────────────────────────────
+// ── Start app ─────────────────────────────────────────────
+
 async function startApp(user) {
   State.currentUser = user;
-  var profile = await dbGetProfile();
-  var name = (profile && profile.first_name)
-    || (user.user_metadata && (user.user_metadata.first_name || user.user_metadata.given_name))
-    || (user.user_metadata && user.user_metadata.full_name && user.user_metadata.full_name.split(' ')[0])
-    || 'there';
 
+  // Ensure profile exists — create from OAuth metadata if needed
+  var profile = await dbGetProfile();
+  if (!profile || !profile.first_name) {
+    var meta = user.user_metadata || {};
+    var firstName = meta.first_name || meta.given_name
+      || (meta.full_name ? meta.full_name.split(' ')[0] : '')
+      || 'there';
+    profile = await dbUpsertProfile(firstName);
+  }
+
+  var name = (profile && profile.first_name) || 'there';
   document.getElementById('greetingName').textContent = name;
   document.getElementById('headerName').textContent   = name;
   document.getElementById('authOverlay').style.display = 'none';
@@ -104,21 +103,26 @@ async function startApp(user) {
   loadWorkouts();
 }
 
-// ── Boot: check for existing session ─────────────────────
-window.addEventListener('load', async function() {
-  var { data: { session } } = await sb.auth.getSession();
-  if (session && session.user) {
-    await startApp(session.user);
-  }
+// ── Boot ──────────────────────────────────────────────────
 
-  // Listen for auth state changes (handles OAuth redirect)
+window.addEventListener('load', async function() {
+  // onAuthStateChange handles both fresh sessions and OAuth redirects
   sb.auth.onAuthStateChange(async function(event, session) {
-    if (event === 'SIGNED_IN' && session && session.user) {
-      await startApp(session.user);
+    if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session && session.user) {
+      if (!State.currentUser) {
+        await startApp(session.user);
+      }
     }
     if (event === 'SIGNED_OUT') {
+      State.currentUser = null;
       document.getElementById('authOverlay').style.display = 'flex';
       document.getElementById('app').style.display = 'none';
     }
   });
+
+  // Also check for an existing session on page load
+  var { data: { session } } = await sb.auth.getSession();
+  if (session && session.user && !State.currentUser) {
+    await startApp(session.user);
+  }
 });
