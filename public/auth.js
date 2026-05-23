@@ -1,10 +1,8 @@
 /* ============================================================
    BASELINE — auth.js
-   Auth using Supabase JS library directly.
    ============================================================ */
 
 var APP_URL = 'https://baseline-home.vercel.app';
-var SUPABASE_PROJECT = 'zugyathhuiliaszixnlm';
 
 function switchTab(tab) {
   document.getElementById('formSignIn').style.display   = tab === 'signin'   ? 'block' : 'none';
@@ -15,16 +13,14 @@ function switchTab(tab) {
   document.getElementById('errRegister').textContent = '';
 }
 
-// ── Google OAuth — direct redirect, no fetch ──────────────
+// Pure redirect — zero Supabase JS involvement
 function signInWithGoogle() {
-  var redirectTo = encodeURIComponent(APP_URL);
-  var url = 'https://' + SUPABASE_PROJECT + '.supabase.co/auth/v1/authorize'
-    + '?provider=google'
-    + '&redirect_to=' + redirectTo;
-  window.location.href = url;
+  window.location.assign(
+    'https://zugyathhuiliaszixnlm.supabase.co/auth/v1/authorize?provider=google&redirect_to=' +
+    encodeURIComponent(APP_URL)
+  );
 }
 
-// ── Email / password sign in ──────────────────────────────
 async function signIn() {
   var email = document.getElementById('siEmail').value.trim();
   var pass  = document.getElementById('siPassword').value;
@@ -36,7 +32,6 @@ async function signIn() {
   await startApp(data.user);
 }
 
-// ── Register ──────────────────────────────────────────────
 async function register() {
   var name  = document.getElementById('regName').value.trim();
   var email = document.getElementById('regEmail').value.trim();
@@ -60,7 +55,6 @@ async function register() {
   }
 }
 
-// ── Sign out ──────────────────────────────────────────────
 async function signOut() {
   await sb.auth.signOut();
   State.currentUser = null; State.sheetData = null; State.lastResult = null;
