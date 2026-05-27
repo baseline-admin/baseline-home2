@@ -26,7 +26,7 @@ async function loadSheetData(){
     if(!r.ok)throw new Error();
     State.sheetData=await r.json();
     var sel=document.getElementById('promptSelect');
-    sel.innerHTML=State.sheetData.prompts.map(function(p){return'<option value="'+p+'">'+p+'</option>';}).join('');
+    sel.innerHTML=State.sheetData.prompts.filter(function(p){return p&&p.trim()!==''&&p!=='PROMPT RULES'&&!p.startsWith('Controls');}).map(function(p){return'<option value="'+p+'">'+p+'</option>';}).join('');
     sel.disabled=false;document.getElementById('timeSelect').disabled=false;document.getElementById('genBtn').disabled=false;
   }catch(e){
     document.getElementById('output').innerHTML='<div class="state-msg">Could not load workout data. Please refresh.</div>';
