@@ -1,7 +1,7 @@
-\/* ============================================================
-   BASELINE — auth.js
+/* ============================================================
+   BASELINE - auth.js
    Google OAuth + email OTP + email/password registration.
-   All auth goes through Supabase JS — no custom token handling.
+   All auth goes through Supabase JS - no custom token handling.
    ============================================================ */
 
 var APP_URL = 'https://baseline-home-login.vercel.app';
@@ -21,7 +21,7 @@ function showRegister() {
 }
 
 // ── Google OAuth ──────────────────────────────────────────
-// Uses Supabase's authorize endpoint directly — plain redirect, no JS fetch
+// Uses Supabase's authorize endpoint directly - plain redirect, no JS fetch
 function signInWithGoogle() {
   window.location.href =
     'https://zugyathhuiliaszixnlm.supabase.co/auth/v1/authorize?provider=google&redirect_to=' +
@@ -51,7 +51,7 @@ async function sendOTP() {
   }
   if (error) { document.getElementById('err1').textContent = error.message || 'Could not send code.'; return; }
 
-  document.getElementById('otpSubtext').textContent = 'We sent a 6-digit code to ' + email + '. Enter it below — valid for 10 minutes.';
+  document.getElementById('otpSubtext').textContent = 'We sent a 6-digit code to ' + email + '. Enter it below - valid for 10 minutes.';
   document.getElementById('authStep1').style.display = 'none';
   document.getElementById('authStep2').style.display = 'block';
   setTimeout(function(){ document.getElementById('otpCode').focus(); }, 100);
@@ -75,7 +75,7 @@ async function verifyOTP() {
   btn.disabled = false; btn.textContent = 'Sign in';
 
   if (error) { document.getElementById('err2').textContent = error.message || 'Invalid or expired code.'; return; }
-  // Session is set — onAuthStateChange in app.js handles the rest
+  // Session is set - onAuthStateChange in app.js handles the rest
 }
 
 // ── Register ──────────────────────────────────────────────
@@ -97,7 +97,7 @@ async function register() {
   if (error) { document.getElementById('err3').textContent = error.message || 'Registration failed.'; return; }
 
   if (data.user && data.session) {
-    // Immediately signed in — save profile and go
+    // Immediately signed in - save profile and go
     await dbUpsertProfile(name);
     // onAuthStateChange handles startApp
   } else {
