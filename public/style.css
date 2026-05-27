@@ -172,3 +172,11 @@ select option { background:var(--surface); color:var(--text); }
   .exercise-pair { grid-template-columns:1fr; }
   .nav-tabs { display:none; }
 }
+
+/* ── Additional auth styles ── */
+.auth-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.auth-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+.auth-btn-outline { width: 100%; padding: 11px; background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; margin-top: 4px; }
+.auth-btn-outline:hover { border-color: var(--accent); }
+.auth-back { background: none; border: none; font-family: var(--mono); font-size: 11px; color: var(--muted); cursor: pointer; text-decoration: underline; margin-top: 20px; display: block; }
+.auth-back:hover { color: var(--text); }
