@@ -1,62 +1,116 @@
-/* ============================================================
+\/* ============================================================
    BASELINE — auth.js
+   Google OAuth + email OTP + email/password registration.
+   All auth goes through Supabase JS — no custom token handling.
    ============================================================ */
 
 var APP_URL = 'https://baseline-home-login.vercel.app';
+var pendingEmail = '';
 
-function switchTab(tab) {
-  document.getElementById('formSignIn').style.display   = tab === 'signin'   ? 'block' : 'none';
-  document.getElementById('formRegister').style.display = tab === 'register' ? 'block' : 'none';
-  document.getElementById('tabSignIn').className   = 'auth-tab' + (tab === 'signin'   ? ' active' : '');
-  document.getElementById('tabRegister').className = 'auth-tab' + (tab === 'register' ? ' active' : '');
-  document.getElementById('errSignIn').textContent   = '';
-  document.getElementById('errRegister').textContent = '';
+function showStep1() {
+  document.getElementById('authStep1').style.display = 'block';
+  document.getElementById('authStep2').style.display = 'none';
+  document.getElementById('authStep3').style.display = 'none';
+  document.getElementById('err1').textContent = '';
 }
 
-// Pure redirect — zero Supabase JS involvement
+function showRegister() {
+  document.getElementById('authStep1').style.display = 'none';
+  document.getElementById('authStep3').style.display = 'block';
+  document.getElementById('err3').textContent = '';
+}
+
+// ── Google OAuth ──────────────────────────────────────────
+// Uses Supabase's authorize endpoint directly — plain redirect, no JS fetch
 function signInWithGoogle() {
-  window.location.assign(
+  window.location.href =
     'https://zugyathhuiliaszixnlm.supabase.co/auth/v1/authorize?provider=google&redirect_to=' +
-    encodeURIComponent(APP_URL)
-  );
+    encodeURIComponent(APP_URL);
 }
 
-async function signIn() {
-  var email = document.getElementById('siEmail').value.trim();
-  var pass  = document.getElementById('siPassword').value;
-  if (!email || !pass) { document.getElementById('errSignIn').textContent = 'Please fill in all fields.'; return; }
-  setBusy('btnSignIn', true, 'Sign in');
-  var { data, error } = await sb.auth.signInWithPassword({ email: email, password: pass });
-  setBusy('btnSignIn', false, 'Sign in');
-  if (error) { document.getElementById('errSignIn').textContent = error.message || 'Sign in failed.'; return; }
-  await startApp(data.user);
+// ── Email OTP ─────────────────────────────────────────────
+async function sendOTP() {
+  var email = document.getElementById('authEmail').value.trim();
+  if (!email || !email.includes('@')) { document.getElementById('err1').textContent = 'Please enter a valid email.'; return; }
+  pendingEmail = email;
+  document.getElementById('err1').textContent = '';
+  document.getElementById('authStep1').querySelector('.auth-btn').disabled = true;
+  document.getElementById('authStep1').querySelector('.auth-btn').textContent = 'Sending...';
+
+  var { error } = await sb.auth.signInWithOtp({
+    email: email,
+    options: { shouldCreateUser: false }
+  });
+
+  document.getElementById('authStep1').querySelector('.auth-btn').disabled = false;
+  document.getElementById('authStep1').querySelector('.auth-btn').textContent = 'Send sign-in code';
+
+  if (error && error.message && error.message.toLowerCase().includes('not found')) {
+    document.getElementById('err1').textContent = 'No account found. Please create one below.';
+    return;
+  }
+  if (error) { document.getElementById('err1').textContent = error.message || 'Could not send code.'; return; }
+
+  document.getElementById('otpSubtext').textContent = 'We sent a 6-digit code to ' + email + '. Enter it below — valid for 10 minutes.';
+  document.getElementById('authStep1').style.display = 'none';
+  document.getElementById('authStep2').style.display = 'block';
+  setTimeout(function(){ document.getElementById('otpCode').focus(); }, 100);
 }
 
+async function verifyOTP() {
+  var code = document.getElementById('otpCode').value.trim().replace(/\s/g, '');
+  if (code.length !== 6) { document.getElementById('err2').textContent = 'Please enter the 6-digit code.'; return; }
+  document.getElementById('err2').textContent = '';
+  setBusy ? setBusy('', true, '') : null;
+
+  var btn = document.getElementById('authStep2').querySelector('.auth-btn');
+  btn.disabled = true; btn.textContent = 'Verifying...';
+
+  var { data, error } = await sb.auth.verifyOtp({
+    email: pendingEmail,
+    token: code,
+    type: 'email'
+  });
+
+  btn.disabled = false; btn.textContent = 'Sign in';
+
+  if (error) { document.getElementById('err2').textContent = error.message || 'Invalid or expired code.'; return; }
+  // Session is set — onAuthStateChange in app.js handles the rest
+}
+
+// ── Register ──────────────────────────────────────────────
 async function register() {
   var name  = document.getElementById('regName').value.trim();
   var email = document.getElementById('regEmail').value.trim();
   var pass  = document.getElementById('regPassword').value;
-  if (!name || !email || !pass) { document.getElementById('errRegister').textContent = 'Please fill in all fields.'; return; }
-  if (pass.length < 6) { document.getElementById('errRegister').textContent = 'Password must be at least 6 characters.'; return; }
+  if (!name || !email || !pass) { document.getElementById('err3').textContent = 'Please fill in all fields.'; return; }
+  if (pass.length < 6) { document.getElementById('err3').textContent = 'Password must be at least 6 characters.'; return; }
+
   setBusy('btnRegister', true, 'Create account');
   var { data, error } = await sb.auth.signUp({
-    email: email, password: pass,
+    email: email,
+    password: pass,
     options: { data: { first_name: name } }
   });
   setBusy('btnRegister', false, 'Create account');
-  if (error) { document.getElementById('errRegister').textContent = error.message || 'Registration failed.'; return; }
+
+  if (error) { document.getElementById('err3').textContent = error.message || 'Registration failed.'; return; }
+
   if (data.user && data.session) {
+    // Immediately signed in — save profile and go
     await dbUpsertProfile(name);
-    await startApp(data.user);
+    // onAuthStateChange handles startApp
   } else {
-    document.getElementById('errRegister').textContent = 'Account created! Please check your email then sign in.';
-    switchTab('signin');
-    document.getElementById('siEmail').value = email;
+    // Email confirmation required
+    document.getElementById('err3').textContent = 'Account created! Check your email to confirm, then sign in.';
   }
 }
 
+// ── Sign out ──────────────────────────────────────────────
 async function signOut() {
+  State.sheetData = null; State.lastResult = null;
   await sb.auth.signOut();
-  State.currentUser = null; State.sheetData = null; State.lastResult = null;
-  switchTab('signin');
+  showStep1();
+  document.getElementById('authEmail').value = '';
+  document.getElementById('otpCode').value = '';
 }
