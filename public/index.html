@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
-  <!-- Supabase JS v2 from CDN -->
+  <!-- Supabase JS library — official CDN, no custom auth code needed -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -16,63 +16,33 @@
 <div id="authOverlay">
   <div class="auth-box">
     <div class="auth-logo"><span class="auth-logo-dot"></span>Baseline</div>
-
-    <!-- Step 1: choose method -->
-    <div id="authStep1">
-      <button class="google-btn" onclick="signInWithGoogle()">
-        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-          <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-          <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
-          <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-        </svg>
-        Continue with Google
-      </button>
-      <div class="auth-divider">or sign in with email</div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input class="form-input" type="email" id="authEmail" placeholder="you@example.com" />
-      </div>
-      <button class="auth-btn" onclick="sendOTP()">Send sign-in code</button>
-      <div class="auth-divider">new here?</div>
-      <button class="auth-btn-outline" onclick="showRegister()">Create account</button>
-      <div class="auth-error" id="err1"></div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabSignIn" onclick="switchTab('signin')">Sign in</button>
+      <button class="auth-tab" id="tabRegister" onclick="switchTab('register')">Create account</button>
     </div>
-
-    <!-- Step 2: enter OTP code -->
-    <div id="authStep2" style="display:none">
-      <div class="auth-title">Check your email</div>
-      <div class="auth-sub" id="otpSubtext"></div>
-      <div class="form-group" style="margin-top:16px">
-        <label class="form-label">6-digit code</label>
-        <input class="form-input" type="text" id="otpCode" placeholder="000000" maxlength="6" inputmode="numeric" onkeydown="if(event.key==='Enter')verifyOTP()" />
-      </div>
-      <button class="auth-btn" onclick="verifyOTP()">Sign in</button>
-      <div class="auth-error" id="err2"></div>
-      <button class="auth-back" onclick="showStep1()">&#8592; Back</button>
+    <button class="google-btn" onclick="signInWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+        <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </button>
+    <div class="auth-divider">or</div>
+    <div id="formSignIn">
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="siEmail" placeholder="you@example.com" onkeydown="if(event.key==='Enter')signIn()" /></div>
+      <div class="form-group"><label class="form-label">Password</label><input class="form-input" type="password" id="siPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')signIn()" /></div>
+      <button class="auth-btn" id="btnSignIn" onclick="signIn()">Sign in</button>
+      <div class="auth-error" id="errSignIn"></div>
     </div>
-
-    <!-- Step 3: register -->
-    <div id="authStep3" style="display:none">
-      <div class="auth-title">Create account</div>
-      <div class="auth-sub">Just your name and email to get started.</div>
-      <div class="form-group">
-        <label class="form-label">First name</label>
-        <input class="form-input" type="text" id="regName" placeholder="Your first name" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input class="form-input" type="email" id="regEmail" placeholder="you@example.com" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input class="form-input" type="password" id="regPassword" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter')register()" />
-      </div>
+    <div id="formRegister" style="display:none">
+      <div class="form-group"><label class="form-label">First name</label><input class="form-input" type="text" id="regName" placeholder="Your first name" onkeydown="if(event.key==='Enter')register()" /></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="regEmail" placeholder="you@example.com" onkeydown="if(event.key==='Enter')register()" /></div>
+      <div class="form-group"><label class="form-label">Password</label><input class="form-input" type="password" id="regPassword" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter')register()" /></div>
       <button class="auth-btn" id="btnRegister" onclick="register()">Create account</button>
-      <div class="auth-error" id="err3"></div>
-      <button class="auth-back" onclick="showStep1()">&#8592; Back</button>
+      <div class="auth-error" id="errRegister"></div>
     </div>
-
   </div>
 </div>
 
@@ -89,17 +59,15 @@
       <button class="sign-out-btn" onclick="signOut()">Sign out</button>
     </div>
   </header>
-
   <div class="page active" id="pageGenerator">
-    <div class="greeting" id="greeting">Hello<span> — what would you like to work on today?</span></div>
+    <div class="greeting">Hello <strong id="greetingName"></strong><span> — what would you like to work on today?</span></div>
     <div class="controls">
-      <div class="control-group"><span class="control-label">Prompt</span><select id="promptSelect" disabled><option>Loading...</option></select></div>
+      <div class="control-group"><span class="control-label">Prompt</span><select id="promptSelect" disabled><option value="" disabled selected>Choose</option></select></div>
       <div class="control-group"><span class="control-label">Time</span><select id="timeSelect" disabled><option value="30mins">30 mins</option><option value="45mins">45 mins</option><option value="60mins">60 mins</option></select></div>
       <button class="gen-btn" id="genBtn" disabled onclick="generate()">Generate</button>
     </div>
     <div id="output"><div class="state-msg">Select a prompt and time, then click Generate.</div></div>
   </div>
-
   <div class="page" id="pageMyWorkouts">
     <div class="page-title">My Workouts</div>
     <div class="page-sub">Your saved workouts. Click any to view and log scores.</div>
@@ -128,6 +96,7 @@
   </div>
 </div>
 
+<!-- Scripts load in dependency order -->
 <script src="app.js"></script>
 <script src="auth.js"></script>
 <script src="generator.js"></script>
