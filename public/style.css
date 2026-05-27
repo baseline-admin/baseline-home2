@@ -180,3 +180,9 @@ select option { background:var(--surface); color:var(--text); }
 .auth-btn-outline:hover { border-color: var(--accent); }
 .auth-back { background: none; border: none; font-family: var(--mono); font-size: 11px; color: var(--muted); cursor: pointer; text-decoration: underline; margin-top: 20px; display: block; }
 .auth-back:hover { color: var(--text); }
+
+/* Reps + each side inline */
+.card-reps-row { display: flex; align-items: baseline; gap: 10px; }
+.acc-reps-row  { display: flex; align-items: baseline; gap: 10px; }
+.card-each-side { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.acc-each-side  { font-family: var(--mono); font-size: 11px; color: var(--muted); }
