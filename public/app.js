@@ -1,16 +1,19 @@
 /* ============================================================
    BASELINE — app.js
-   Shared state, shared helpers, page navigation, boot.
-   Uses Supabase JS library loaded from CDN in index.html.
+   Shared state, db helpers, page navigation, boot.
    ============================================================ */
 
 var SUPABASE_URL = 'https://zugyathhuiliaszixnlm.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_eTwm5JbLf6nW9zu3roUt6Q_D9JiacF4';
 
-// Supabase client — initialised once, used everywhere
-var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+});
 
-// Shared state
 var State = {
   currentUser: null,
   sheetData:   null,
@@ -18,14 +21,7 @@ var State = {
   openWorkout: null
 };
 
-// ── API helper (sheet data only) ──────────────────────────
-async function apiFetch(path, opts) {
-  opts = opts || {};
-  return fetch(path, opts);
-}
-
-// ── Supabase database helpers ─────────────────────────────
-// All DB calls go direct to Supabase from the browser
+// ── DB helpers ────────────────────────────────────────────
 
 async function dbGetProfile() {
   var { data } = await sb.from('profiles').select('*').eq('id', State.currentUser.id).single();
@@ -49,7 +45,7 @@ async function dbGetWorkouts() {
 
 async function dbInsertWorkout(title, prompt, timeSelection, workoutData) {
   var { data, error } = await sb.from('workouts')
-    .insert({ user_id: State.currentUser.id, title, prompt, time_selection: timeSelection, workout_data: workoutData })
+    .insert({ user_id: State.currentUser.id, title: title, prompt: prompt, time_selection: timeSelection, workout_data: workoutData })
     .select().single();
   if (error) throw error;
   return data;
@@ -71,7 +67,8 @@ async function dbDeleteScore(id) {
   await sb.from('scores').delete().eq('id', id).eq('user_id', State.currentUser.id);
 }
 
-// ── Shared UI helpers ─────────────────────────────────────
+// ── UI helpers ────────────────────────────────────────────
+
 function setBusy(id, busy, label) {
   var b = document.getElementById(id);
   b.disabled = busy;
@@ -86,39 +83,46 @@ function showPage(name, btn) {
   if (name === 'myWorkouts') loadWorkouts();
 }
 
-// ── Start app after auth ──────────────────────────────────
-async function startApp(user) {
-  State.currentUser = user;
-  var profile = await dbGetProfile();
-  var name = (profile && profile.first_name)
-    || (user.user_metadata && (user.user_metadata.first_name || user.user_metadata.given_name))
-    || (user.user_metadata && user.user_metadata.full_name && user.user_metadata.full_name.split(' ')[0])
-    || 'there';
+// ── Start app ─────────────────────────────────────────────
 
-  document.getElementById('greetingName').textContent = name;
-  document.getElementById('headerName').textContent   = name;
+async function startApp(user) {
+  if (State.currentUser && State.currentUser.id === user.id) return; // already running
+  State.currentUser = user;
+
+  var profile = await dbGetProfile();
+  if (!profile || !profile.first_name) {
+    var meta = user.user_metadata || {};
+    var firstName = meta.first_name || meta.given_name
+      || (meta.full_name ? meta.full_name.split(' ')[0] : '');
+    if (firstName) profile = await dbUpsertProfile(firstName);
+  }
+
+  var name = (profile && profile.first_name) || '';
+  var greeting = document.getElementById('greeting');
+  if (greeting) greeting.innerHTML = (name ? 'Hello <strong>' + name + '</strong>' : 'Hello') + '<span> — what would you like to work on today?</span>';
+  document.getElementById('headerName').textContent = name;
   document.getElementById('authOverlay').style.display = 'none';
-  document.getElementById('app').style.display         = 'block';
+  document.getElementById('app').style.display = 'block';
 
   loadSheetData();
   loadWorkouts();
 }
 
-// ── Boot: check for existing session ─────────────────────
-window.addEventListener('load', async function() {
-  var { data: { session } } = await sb.auth.getSession();
-  if (session && session.user) {
-    await startApp(session.user);
-  }
+function showAuthOverlay() {
+  State.currentUser = null;
+  document.getElementById('authOverlay').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
 
-  // Listen for auth state changes (handles OAuth redirect)
-  sb.auth.onAuthStateChange(async function(event, session) {
-    if (event === 'SIGNED_IN' && session && session.user) {
-      await startApp(session.user);
-    }
-    if (event === 'SIGNED_OUT') {
-      document.getElementById('authOverlay').style.display = 'flex';
-      document.getElementById('app').style.display = 'none';
+// ── Boot ──────────────────────────────────────────────────
+
+window.addEventListener('load', function() {
+  // onAuthStateChange is the single source of truth for session state
+  sb.auth.onAuthStateChange(function(event, session) {
+    if (session && session.user) {
+      startApp(session.user);
+    } else if (event === 'SIGNED_OUT') {
+      showAuthOverlay();
     }
   });
 });
