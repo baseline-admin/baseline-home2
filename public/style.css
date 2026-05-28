@@ -205,3 +205,30 @@ select option { background:var(--surface); color:var(--text); }
   font-size:11px; cursor:pointer; font-weight:600; white-space:nowrap;
 }
 .name-prompt-btn:hover { opacity:0.9; }
+
+/* Refine button */
+.refine-btn { padding:10px 28px; background:transparent; color:var(--text); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; }
+.refine-btn:hover { border-color:var(--accent); }
+.refine-btn-active { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); font-weight:600; }
+
+/* Pro link */
+.pro-link { font-family:var(--mono); font-size:11px; color:var(--muted); margin-left:auto; }
+
+/* Refine panel */
+#refinePanel { border:1px solid var(--border); border-radius:var(--radius); padding:20px; background:var(--surface); margin-top:12px; }
+.refine-cols { display:flex; gap:0; }
+.refine-group { flex:1; padding:0 20px; }
+.refine-group:first-child { padding-left:0; }
+.refine-group:last-child { padding-right:0; }
+.refine-divider { width:1px; background:var(--border); flex-shrink:0; }
+.refine-group-label { font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:12px; }
+.refine-opt { display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:10px; padding:2px 0; }
+.refine-opt:last-child { margin-bottom:0; }
+.refine-opt-text { font-family:var(--mono); font-size:11px; color:var(--text); text-decoration:underline; text-underline-offset:3px; }
+.refine-opt-muted { color:var(--muted); }
+.refine-tick { font-family:var(--mono); font-size:11px; color:var(--text); opacity:0; }
+.refine-tick-muted { color:var(--muted); }
+.refine-footer { margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
+.refine-regen-btn { padding:10px 28px; background:var(--accent); color:var(--bg-dark); border:none; border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; font-weight:600; }
+.refine-regen-btn:hover { opacity:0.9; }
+.card-reps-row { display:flex; align-items:baseline; }
