@@ -11,10 +11,7 @@ var FORMAT_MAP = {
   'EM3':['E3MOM 15m','E3MOM 17m'],'EM4':['E4MOM 16m','E4MOM 20m'],'EM5':['E5MOM 15m','E5MOM 20m']
 };
 var T3_TRIGGER_COLS = ['AM','FT3','FT4','EM4','EM5'];
-var NO_SCORE_TYPES  = ['recovery','bodyweight'];
 var REFINE_EXCLUDE_TYPES = ['recovery'];
-
-// Exclusions state - reset on each fresh generate
 var Exclusions = { exercises: [], types: [] };
 
 function rnd(a){return a[Math.floor(Math.random()*a.length)];}
@@ -29,12 +26,14 @@ function isRecovery(typeStr){
   for(var i=0;i<types.length;i++){if(REFINE_EXCLUDE_TYPES.indexOf(types[i].toLowerCase())!==-1)return true;}
   return false;
 }
-function isExcluded(name, typeStr) {
-  if (Exclusions.exercises.indexOf(name) !== -1) return true;
-  var types = parseList(typeStr||'');
-  for (var i=0;i<types.length;i++) {
-    if (Exclusions.types.indexOf(types[i].toLowerCase()) !== -1) return true;
-  }
+function repLabel(typeStr, ub){
+  if(isRecovery(typeStr)) return 'seconds';
+  return isUni(ub) ? 'reps each side' : 'reps';
+}
+function isExcluded(name, typeStr){
+  if(Exclusions.exercises.indexOf(name)!==-1)return true;
+  var types=parseList(typeStr||'');
+  for(var i=0;i<types.length;i++){if(Exclusions.types.indexOf(types[i].toLowerCase())!==-1)return true;}
   return false;
 }
 
@@ -48,7 +47,7 @@ async function loadSheetData(){
       return p&&p.trim()!==''&&p!=='PROMPT RULES'&&!p.startsWith('Controls');
     });
     sel.innerHTML='<option value="" disabled selected>Choose</option>'+prompts.map(function(p){
-      return'<option value="'+p+'">'+p+'</option>';
+      return '<option value="'+p+'">'+p+'</option>';
     }).join('');
     sel.disabled=false;
     document.getElementById('timeSelect').disabled=false;
@@ -58,23 +57,19 @@ async function loadSheetData(){
   }
 }
 
-// ── Generate ──────────────────────────────────────────────
-
 function generate(){
-  // Reset exclusions on a fresh generate (not regenerate)
-  Exclusions = { exercises: [], types: [] };
-  _doGenerate();
+  Exclusions={exercises:[],types:[]};
+  _doGenerate(false);
 }
 
 function regenerate(){
-  // Read current exclusion selections from the refine panel
-  Exclusions = { exercises: [], types: [] };
+  Exclusions={exercises:[],types:[]};
   document.querySelectorAll('.refine-group').forEach(function(group){
-    var exName  = group.getAttribute('data-exercise');
-    var exType  = group.getAttribute('data-type');
-    var selVal  = group.getAttribute('data-selected');
-    if (selVal === 'exercise') Exclusions.exercises.push(exName);
-    if (selVal === 'type')     Exclusions.types.push(exType.toLowerCase());
+    var exName=group.getAttribute('data-exercise');
+    var exType=group.getAttribute('data-type');
+    var selVal=group.getAttribute('data-selected');
+    if(selVal==='exercise')Exclusions.exercises.push(exName);
+    if(selVal==='type')Exclusions.types.push(exType.toLowerCase());
   });
   _doGenerate(true);
 }
@@ -146,133 +141,125 @@ function _doGenerate(isRegen){
     t3:t3?{row:t3.row,col:t3.col,val:t3.val,type:t3type,ub:t3ub}:null,t3n:t3n,
     fmt:f,taP:taP,tzP:tzP,prompt:prompt,timeStr:ts
   };
-
   renderOutput(isRegen);
 }
 
-// ── Render ────────────────────────────────────────────────
-
 function renderOutput(isRegen){
-  var r = State.lastResult;
-  var h = buildResults(r);
-
-  // Save + Refine row
-  h += '<div class="save-area" id="saveArea">'
-    + '<button class="save-btn" id="saveBtn" onclick="saveWorkout()">Save workout</button>'
-    + '<button class="refine-btn" id="refineBtn" onclick="toggleRefine()">Refine workout</button>'
-    + '<span class="save-msg" id="saveMsg">' + (isRegen ? 'Regenerated' : '') + '</span>'
-    + (isRegen ? '<span class="pro-link">Need something more personalised? Try <span onclick="showPage(\'pro\',null)" style="text-decoration:underline;cursor:pointer;color:#1E2C35;">Baseline Pro</span></span>' : '')
-    + '</div>';
-
-  // Refine panel
-  h += buildRefinePanel(r);
-
-  document.getElementById('output').innerHTML = h;
-}
-
-function buildRefinePanel(r){
-  // Only show refine for non-recovery exercises
-  var exercises = [];
-  if (r.t1 && !isRecovery(r.t1.type)) exercises.push({name:r.t1.row, type:r.t1.type});
-  if (r.t2 && !isRecovery(r.t2.type)) exercises.push({name:r.t2.row, type:r.t2.type});
-  if (r.t3 && !isRecovery(r.t3.type)) exercises.push({name:r.t3.row, type:r.t3.type});
-
-  if (!exercises.length) return '<div id="refinePanel" style="display:none"></div>';
-
-  var cols = exercises.map(function(ex){
-    var typePrimary = parseList(ex.type)[0] || '';
-    return '<div class="refine-group" data-exercise="'+ex.name+'" data-type="'+typePrimary+'" data-selected="">'
-      + '<div class="refine-group-label">'+ex.name+'</div>'
-      + '<div class="refine-opt" data-val="exercise" onclick="selectRefineOpt(this)">'
-      +   '<span class="refine-opt-text">Exclude this exercise</span>'
-      +   '<span class="refine-tick">&#10003;</span>'
-      + '</div>'
-      + '<div class="refine-opt" data-val="type" onclick="selectRefineOpt(this)">'
-      +   '<span class="refine-opt-text refine-opt-muted">Exclude '+typePrimary+' exercises</span>'
-      +   '<span class="refine-tick refine-tick-muted">&#10003;</span>'
-      + '</div>'
-      + '</div>';
-  });
-
-  // Insert dividers between columns
-  var inner = cols.join('<div class="refine-divider"></div>');
-
-  return '<div id="refinePanel" style="display:none">'
-    + '<div class="refine-cols">' + inner + '</div>'
-    + '<div class="refine-footer">'
-    +   '<button class="refine-regen-btn" onclick="regenerate()">Regenerate</button>'
-    + '</div>'
-    + '</div>';
-}
-
-function toggleRefine(){
-  var panel = document.getElementById('refinePanel');
-  var btn   = document.getElementById('refineBtn');
-  var open  = panel.style.display === 'block';
-  panel.style.display = open ? 'none' : 'block';
-  btn.classList.toggle('refine-btn-active', !open);
-}
-
-function selectRefineOpt(opt){
-  var group   = opt.closest('.refine-group');
-  var selVal  = group.getAttribute('data-selected');
-  var thisVal = opt.getAttribute('data-val');
-
-  // Deselect all in group first
-  group.querySelectorAll('.refine-opt').forEach(function(o){
-    o.querySelector('.refine-tick').style.opacity = '0';
-    o.querySelector('.refine-opt-text').style.opacity = '1';
-  });
-
-  // Toggle: if clicking the already-selected one, just deselect
-  if (selVal === thisVal) {
-    group.setAttribute('data-selected', '');
-  } else {
-    group.setAttribute('data-selected', thisVal);
-    opt.querySelector('.refine-tick').style.opacity = '1';
-    opt.querySelector('.refine-opt-text').style.opacity = '0.45';
+  var r=State.lastResult;
+  var h=buildResults(r);
+  h+='<div class="save-area">';
+  h+='<button class="save-btn" id="saveBtn" onclick="saveWorkout()">Save workout</button>';
+  h+='<button class="refine-btn" id="refineBtn" onclick="toggleRefine()">Refine workout</button>';
+  h+='<span class="save-msg" id="saveMsg">'+(isRegen?'Regenerated':'')+'</span>';
+  if(isRegen){
+    h+='<span class="pro-link">Need something more personalised? Try <span onclick="showPage(\'pro\',null)" style="text-decoration:underline;cursor:pointer;color:#1E2C35;">Baseline Pro</span></span>';
   }
+  h+='</div>';
+  h+=buildRefinePanel(r);
+  document.getElementById('output').innerHTML=h;
 }
-
-// ── Build results HTML ────────────────────────────────────
 
 function buildResults(r){
   var ec=function(csstype,label,name,col,reps,ub,extype){
-    var repsVal=reps!==null&&reps!==undefined?reps:'—';
-    var _unit=isRecovery(extype||'')?'seconds':isUni(ub)?'reps each side':'reps';
-    var eachSide='<span class="card-col" style="margin-left:8px;font-size:12px;">'+_unit+'</span>';
-    return'<div class="exercise-card '+csstype+'">'
-      +'<div class="card-label '+csstype+"'>'+label+'</div>'
-      +'<div class="card-exercise">'+name+'</div>'
-      +(col?'<div class="card-col">'+col+'</div>':'')
-      +'<div class="card-reps-row"><span class="card-reps">'+repsVal+'</span>'+eachSide+'</div>'
-      +'</div>';
+    var repsVal=reps!==null&&reps!==undefined?reps:'--';
+    var unit=repLabel(extype,ub);
+    var unitSpan='<span class="card-col" style="margin-left:8px;font-size:12px;">'+unit+'</span>';
+    var html='<div class="exercise-card '+csstype+'">';
+    html+='<div class="card-label '+csstype+'">'+label+'</div>';
+    html+='<div class="card-exercise">'+name+'</div>';
+    if(col)html+='<div class="card-col">'+col+'</div>';
+    html+='<div class="card-reps-row"><span class="card-reps">'+repsVal+'</span>'+unitSpan+'</div>';
+    html+='</div>';
+    return html;
   };
   var ac=function(csstype,label,name,reps,ub,rounds,extype){
-    var repsVal=reps!==null&&reps!==undefined?reps:'—';
-    var _unit=isRecovery(extype||'')?'seconds':isUni(ub)?'reps each side':'reps';
-    var eachSide='<span class="card-col" style="margin-left:8px;font-size:12px;">'+_unit+'</span>';
+    var repsVal=reps!==null&&reps!==undefined?reps:'--';
+    var unit=repLabel(extype,ub);
+    var unitSpan='<span class="card-col" style="margin-left:8px;font-size:12px;">'+unit+'</span>';
     var roundsStr=rounds&&parseInt(rounds)>1?'<div class="card-col" style="margin-top:4px;">x'+rounds+' rounds</div>':'';
-    return'<div class="acc-card '+type+'">'
-      +'<div class="card-label '+csstype+"'>'+label+'</div>'
-      +'<div class="acc-name">'+name+'</div>'
-      +'<div class="card-reps-row"><span class="acc-reps">'+repsVal+'</span>'+eachSide+'</div>'
-      +roundsStr+'</div>';
+    var html='<div class="acc-card '+csstype+'">';
+    html+='<div class="card-label '+csstype+'">'+label+'</div>';
+    html+='<div class="acc-name">'+name+'</div>';
+    html+='<div class="card-reps-row"><span class="acc-reps">'+repsVal+'</span>'+unitSpan+'</div>';
+    html+=roundsStr+'</div>';
+    return html;
   };
+
   var taC=r.taP.map(function(p,i){return ac('ta','Prep '+(i+1),p.name,parseRange(p.val),p.ub,p.rounds,p.type);}).join('');
   var tzC=r.tzP.map(function(p,i){return ac('tz','Mobility '+(i+1),p.name,parseRange(p.val),p.ub,p.rounds,p.type);}).join('');
+
   var h='<div class="results">';
   if(r.taP.length)h+='<div class="results-section"><div class="section-label">Prep</div><div class="acc-grid">'+taC+'</div></div><div class="divider"></div>';
-  h+='<div class="results-section"><div class="section-label">Main Work</div><div class="format-badge">'+r.fmt+'</div>'
-    +'<div class="exercise-pair">'
-    +ec('t1','Exercise 1',r.t1.row,r.t1.col,r.t1n,r.t1.ub,r.t1.type)
-    +(r.t2?ec('t2','Exercise 2',r.t2.row,r.t2.col,r.t2n,r.t2.ub,r.t2.type):'<div class="exercise-card t2"><div class="card-label t2">Exercise 2</div><div class="card-empty">No pair for this selection</div></div>')
-    +'</div>'
-    +(r.t3?'<div class="exercise-pair" style="margin-top:12px">'+ec('t3','Exercise 3',r.t3.row,r.t3.col,r.t3n,r.t3.ub,r.t3.type)+'<div></div></div>':'')
-    +'</div>';
+  h+='<div class="results-section"><div class="section-label">Main Work</div><div class="format-badge">'+r.fmt+'</div>';
+  h+='<div class="exercise-pair">';
+  h+=ec('t1','Exercise 1',r.t1.row,r.t1.col,r.t1n,r.t1.ub,r.t1.type);
+  if(r.t2){
+    h+=ec('t2','Exercise 2',r.t2.row,r.t2.col,r.t2n,r.t2.ub,r.t2.type);
+  }else{
+    h+='<div class="exercise-card t2"><div class="card-label t2">Exercise 2</div><div class="card-empty">No pair for this selection</div></div>';
+  }
+  h+='</div>';
+  if(r.t3)h+='<div class="exercise-pair" style="margin-top:12px">'+ec('t3','Exercise 3',r.t3.row,r.t3.col,r.t3n,r.t3.ub,r.t3.type)+'<div></div></div>';
+  h+='</div>';
   if(r.tzP.length)h+='<div class="divider"></div><div class="results-section"><div class="section-label">Mobility</div><div class="acc-grid">'+tzC+'</div></div>';
   h+='</div>';
   return h;
+}
+
+function buildRefinePanel(r){
+  var exercises=[];
+  if(r.t1&&!isRecovery(r.t1.type))exercises.push({name:r.t1.row,type:r.t1.type});
+  if(r.t2&&!isRecovery(r.t2.type))exercises.push({name:r.t2.row,type:r.t2.type});
+  if(r.t3&&!isRecovery(r.t3.type))exercises.push({name:r.t3.row,type:r.t3.type});
+  if(!exercises.length)return'<div id="refinePanel" style="display:none"></div>';
+
+  var cols=exercises.map(function(ex){
+    var typePrimary=parseList(ex.type)[0]||'';
+    return'<div class="refine-group" data-exercise="'+ex.name+'" data-type="'+typePrimary+'" data-selected="">'
+      +'<div class="refine-group-label">'+ex.name+'</div>'
+      +'<div class="refine-opt" data-val="exercise" onclick="selectRefineOpt(this)">'
+      +'<span class="refine-opt-text">Exclude this exercise</span>'
+      +'<span class="refine-tick">&#10003;</span>'
+      +'</div>'
+      +'<div class="refine-opt" data-val="type" onclick="selectRefineOpt(this)">'
+      +'<span class="refine-opt-text refine-opt-muted">Exclude '+typePrimary+' exercises</span>'
+      +'<span class="refine-tick refine-tick-muted">&#10003;</span>'
+      +'</div>'
+      +'</div>';
+  });
+
+  var inner=cols.join('<div class="refine-divider"></div>');
+  return'<div id="refinePanel" style="display:none">'
+    +'<div class="refine-cols">'+inner+'</div>'
+    +'<div class="refine-footer">'
+    +'<button class="refine-regen-btn" onclick="regenerate()">Regenerate</button>'
+    +'</div>'
+    +'</div>';
+}
+
+function toggleRefine(){
+  var panel=document.getElementById('refinePanel');
+  var btn=document.getElementById('refineBtn');
+  var open=panel.style.display==='block';
+  panel.style.display=open?'none':'block';
+  btn.classList.toggle('refine-btn-active',!open);
+}
+
+function selectRefineOpt(opt){
+  var group=opt.closest('.refine-group');
+  var selVal=group.getAttribute('data-selected');
+  var thisVal=opt.getAttribute('data-val');
+  group.querySelectorAll('.refine-opt').forEach(function(o){
+    o.querySelector('.refine-tick').style.opacity='0';
+    o.querySelector('.refine-opt-text').style.opacity='1';
+  });
+  if(selVal===thisVal){
+    group.setAttribute('data-selected','');
+  }else{
+    group.setAttribute('data-selected',thisVal);
+    opt.querySelector('.refine-tick').style.opacity='1';
+    opt.querySelector('.refine-opt-text').style.opacity='0.45';
+  }
 }
 
 function makeTitle(r){var p=[r.t1.row];if(r.t2)p.push(r.t2.row);p.push(r.fmt);return p.join(' - ');}
