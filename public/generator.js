@@ -237,36 +237,38 @@ function selectRefineOpt(opt){
 // ── Build results HTML ────────────────────────────────────
 
 function buildResults(r){
-  var ec=function(type,label,name,col,reps,ub){
+  var ec=function(csstype,label,name,col,reps,ub,extype){
     var repsVal=reps!==null&&reps!==undefined?reps:'—';
-    var eachSide=isUni(ub)?'<span class="card-col" style="margin-left:8px;font-size:12px;">reps each side</span>':'<span class="card-col" style="margin-left:8px;font-size:12px;">reps</span>';
-    return'<div class="exercise-card '+type+'">'
-      +'<div class="card-label '+type+'">'+label+'</div>'
+    var _unit=isRecovery(extype||'')?'seconds':isUni(ub)?'reps each side':'reps';
+    var eachSide='<span class="card-col" style="margin-left:8px;font-size:12px;">'+_unit+'</span>';
+    return'<div class="exercise-card '+csstype+'">'
+      +'<div class="card-label '+csstype+"'>'+label+'</div>'
       +'<div class="card-exercise">'+name+'</div>'
       +(col?'<div class="card-col">'+col+'</div>':'')
       +'<div class="card-reps-row"><span class="card-reps">'+repsVal+'</span>'+eachSide+'</div>'
       +'</div>';
   };
-  var ac=function(type,label,name,reps,ub,rounds){
+  var ac=function(csstype,label,name,reps,ub,rounds,extype){
     var repsVal=reps!==null&&reps!==undefined?reps:'—';
-    var eachSide=isUni(ub)?'<span class="card-col" style="margin-left:8px;font-size:12px;">reps each side</span>':'<span class="card-col" style="margin-left:8px;font-size:12px;">reps</span>';
+    var _unit=isRecovery(extype||'')?'seconds':isUni(ub)?'reps each side':'reps';
+    var eachSide='<span class="card-col" style="margin-left:8px;font-size:12px;">'+_unit+'</span>';
     var roundsStr=rounds&&parseInt(rounds)>1?'<div class="card-col" style="margin-top:4px;">x'+rounds+' rounds</div>':'';
     return'<div class="acc-card '+type+'">'
-      +'<div class="card-label '+type+'">'+label+'</div>'
+      +'<div class="card-label '+csstype+"'>'+label+'</div>'
       +'<div class="acc-name">'+name+'</div>'
       +'<div class="card-reps-row"><span class="acc-reps">'+repsVal+'</span>'+eachSide+'</div>'
       +roundsStr+'</div>';
   };
-  var taC=r.taP.map(function(p,i){return ac('ta','Prep '+(i+1),p.name,parseRange(p.val),p.ub,p.rounds);}).join('');
-  var tzC=r.tzP.map(function(p,i){return ac('tz','Mobility '+(i+1),p.name,parseRange(p.val),p.ub,p.rounds);}).join('');
+  var taC=r.taP.map(function(p,i){return ac('ta','Prep '+(i+1),p.name,parseRange(p.val),p.ub,p.rounds,p.type);}).join('');
+  var tzC=r.tzP.map(function(p,i){return ac('tz','Mobility '+(i+1),p.name,parseRange(p.val),p.ub,p.rounds,p.type);}).join('');
   var h='<div class="results">';
   if(r.taP.length)h+='<div class="results-section"><div class="section-label">Prep</div><div class="acc-grid">'+taC+'</div></div><div class="divider"></div>';
   h+='<div class="results-section"><div class="section-label">Main Work</div><div class="format-badge">'+r.fmt+'</div>'
     +'<div class="exercise-pair">'
-    +ec('t1','Exercise 1',r.t1.row,r.t1.col,r.t1n,r.t1.ub)
-    +(r.t2?ec('t2','Exercise 2',r.t2.row,r.t2.col,r.t2n,r.t2.ub):'<div class="exercise-card t2"><div class="card-label t2">Exercise 2</div><div class="card-empty">No pair for this selection</div></div>')
+    +ec('t1','Exercise 1',r.t1.row,r.t1.col,r.t1n,r.t1.ub,r.t1.type)
+    +(r.t2?ec('t2','Exercise 2',r.t2.row,r.t2.col,r.t2n,r.t2.ub,r.t2.type):'<div class="exercise-card t2"><div class="card-label t2">Exercise 2</div><div class="card-empty">No pair for this selection</div></div>')
     +'</div>'
-    +(r.t3?'<div class="exercise-pair" style="margin-top:12px">'+ec('t3','Exercise 3',r.t3.row,r.t3.col,r.t3n,r.t3.ub)+'<div></div></div>':'')
+    +(r.t3?'<div class="exercise-pair" style="margin-top:12px">'+ec('t3','Exercise 3',r.t3.row,r.t3.col,r.t3n,r.t3.ub,r.t3.type)+'<div></div></div>':'')
     +'</div>';
   if(r.tzP.length)h+='<div class="divider"></div><div class="results-section"><div class="section-label">Mobility</div><div class="acc-grid">'+tzC+'</div></div>';
   h+='</div>';
