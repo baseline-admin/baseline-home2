@@ -165,12 +165,14 @@ select option { background:var(--surface); color:var(--text); }
 
 /* RESPONSIVE */
 @media(max-width:640px) {
-  header { padding:16px 20px; }
+  header { padding:16px 20px; flex-wrap:wrap; gap:10px; }
   .page { padding:24px 20px; }
   .controls { grid-template-columns:1fr 1fr; }
   .gen-btn { grid-column:1/-1; }
   .exercise-pair { grid-template-columns:1fr; }
-  .nav-tabs { display:none; }
+  .nav-tabs { display:flex; order:3; width:100%; border-top:1px solid var(--border); padding-top:10px; }
+  .nav-tab { flex:1; text-align:center; }
+  .header-right { margin-left:auto; }
 }
 
 /* ── Additional auth styles ── */
@@ -187,3 +189,19 @@ select option { background:var(--surface); color:var(--text); }
 
 /* Reps row - number and 'each side' sit on same baseline */
 .card-reps-row { display:flex; align-items:baseline; gap:0; }
+
+/* Name prompt */
+.name-prompt-wrap { display:flex; align-items:center; gap:8px; }
+.name-prompt-input {
+  padding:4px 10px; border:1px solid var(--border); border-radius:var(--radius);
+  font-family:var(--mono); font-size:11px; background:var(--surface-2);
+  color:var(--text); width:120px;
+}
+.name-prompt-input:focus { outline:none; border-color:var(--accent); }
+.name-prompt-input::placeholder { color:var(--muted); }
+.name-prompt-btn {
+  padding:4px 10px; background:var(--accent); color:var(--bg-dark);
+  border:none; border-radius:var(--radius); font-family:var(--mono);
+  font-size:11px; cursor:pointer; font-weight:600; white-space:nowrap;
+}
+.name-prompt-btn:hover { opacity:0.9; }
