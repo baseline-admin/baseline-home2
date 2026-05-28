@@ -239,7 +239,7 @@ function selectRefineOpt(opt){
 function buildResults(r){
   var ec=function(type,label,name,col,reps,ub){
     var repsVal=reps!==null&&reps!==undefined?reps:'—';
-    var eachSide=isUni(ub)?'<span class="card-col" style="margin-left:8px;font-size:12px;">each side</span>':'';
+    var eachSide=isUni(ub)?'<span class="card-col" style="margin-left:8px;font-size:12px;">reps each side</span>':'<span class="card-col" style="margin-left:8px;font-size:12px;">reps</span>';
     return'<div class="exercise-card '+type+'">'
       +'<div class="card-label '+type+'">'+label+'</div>'
       +'<div class="card-exercise">'+name+'</div>'
@@ -249,7 +249,7 @@ function buildResults(r){
   };
   var ac=function(type,label,name,reps,ub,rounds){
     var repsVal=reps!==null&&reps!==undefined?reps:'—';
-    var eachSide=isUni(ub)?'<span class="card-col" style="margin-left:8px;font-size:12px;">each side</span>':'';
+    var eachSide=isUni(ub)?'<span class="card-col" style="margin-left:8px;font-size:12px;">reps each side</span>':'<span class="card-col" style="margin-left:8px;font-size:12px;">reps</span>';
     var roundsStr=rounds&&parseInt(rounds)>1?'<div class="card-col" style="margin-top:4px;">x'+rounds+' rounds</div>':'';
     return'<div class="acc-card '+type+'">'
       +'<div class="card-label '+type+'">'+label+'</div>'
