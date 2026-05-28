@@ -26,7 +26,7 @@ async function loadSheetData(){
     if(!r.ok)throw new Error();
     State.sheetData=await r.json();
     var sel=document.getElementById('promptSelect');
-    sel.innerHTML=State.sheetData.prompts.filter(function(p){return p&&p.trim()!==''&&p!=='PROMPT RULES'&&!p.startsWith('Controls');}).map(function(p){return'<option value="'+p+'">'+p+'</option>';}).join('');
+    sel.innerHTML=State.sheetData.prompts.map(function(p){return'<option value="'+p+'">'+p+'</option>';}).join('');
     sel.disabled=false;document.getElementById('timeSelect').disabled=false;document.getElementById('genBtn').disabled=false;
   }catch(e){
     document.getElementById('output').innerHTML='<div class="state-msg">Could not load workout data. Please refresh.</div>';
@@ -85,8 +85,8 @@ function generate(){
 }
 
 function buildResults(r){
-  var ec=function(type,label,name,col,reps,ub){var es=isUni(ub)?'<div class="card-each-side">each side</div>':'';return'<div class="exercise-card '+type+'"><div class="card-label '+type+'">'+label+'</div><div class="card-exercise">'+name+'</div>'+(col?'<div class="card-col">'+col+'</div>':'')+'<div class="card-reps">'+(reps!==null&&reps!==undefined?reps:'—')+'</div>'+es+'</div>';};
-  var ac=function(type,label,name,reps,ub,rounds){var es=isUni(ub)?'<div class="acc-each-side">each side</div>':'';var rs=rounds&&parseInt(rounds)>1?'<div class="acc-rounds">x'+rounds+' rounds</div>':'';return'<div class="acc-card '+type+'"><div class="card-label '+type+'">'+label+'</div><div class="acc-name">'+name+'</div><div class="acc-reps">'+(reps!==null&&reps!==undefined?reps:'—')+'</div>'+es+rs+'</div>';};
+  var ec=function(type,label,name,col,reps,ub){var es=isUni(ub)?'<div class="each-side">each side</div>':'';return'<div class="exercise-card '+type+'"><div class="card-label '+type+'">'+label+'</div><div class="card-exercise">'+name+'</div>'+(col?'<div class="card-col">'+col+'</div>':'')+'<div class="card-reps">'+(reps!==null&&reps!==undefined?reps:'—')+'</div>'+es+'</div>';};
+  var ac=function(type,label,name,reps,ub,rounds){var es=isUni(ub)?'<div class="each-side">each side</div>':'';var rs=rounds&&parseInt(rounds)>1?'<div class="card-col" style="margin-top:4px;margin-bottom:0">x'+rounds+' rounds</div>':'';return'<div class="acc-card '+type+'"><div class="card-label '+type+'">'+label+'</div><div class="acc-name">'+name+'</div><div class="acc-reps">'+(reps!==null&&reps!==undefined?reps:'—')+'</div>'+es+rs+'</div>';};
   var taC=r.taP.map(function(p,i){return ac('ta','Conditioning '+(i+1),p.name,parseRange(p.val),p.ub,p.rounds);}).join('');
   var tzC=r.tzP.map(function(p,i){return ac('tz','Mobility '+(i+1),p.name,parseRange(p.val),p.ub,p.rounds);}).join('');
   var h='<div class="results">';
