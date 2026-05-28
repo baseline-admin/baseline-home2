@@ -1,5 +1,5 @@
 /* ============================================================
-   BASELINE — app.js
+   BASELINE - app.js
    Shared state, db helpers, page navigation, boot.
    ============================================================ */
 
@@ -7,11 +7,7 @@ var SUPABASE_URL = 'https://zugyathhuiliaszixnlm.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_eTwm5JbLf6nW9zu3roUt6Q_D9JiacF4';
 
 var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  }
+  auth: { autoRefreshToken:true, persistSession:true, detectSessionInUrl:true }
 });
 
 var State = {
@@ -45,7 +41,7 @@ async function dbGetWorkouts() {
 
 async function dbInsertWorkout(title, prompt, timeSelection, workoutData) {
   var { data, error } = await sb.from('workouts')
-    .insert({ user_id: State.currentUser.id, title: title, prompt: prompt, time_selection: timeSelection, workout_data: workoutData })
+    .insert({ user_id: State.currentUser.id, title:title, prompt:prompt, time_selection:timeSelection, workout_data:workoutData })
     .select().single();
   if (error) throw error;
   return data;
@@ -57,7 +53,7 @@ async function dbDeleteWorkout(id) {
 
 async function dbInsertScore(workoutId, scoresData) {
   var { data, error } = await sb.from('scores')
-    .insert({ workout_id: workoutId, user_id: State.currentUser.id, scores_data: scoresData, completed_at: new Date().toISOString() })
+    .insert({ workout_id:workoutId, user_id:State.currentUser.id, scores_data:scoresData, completed_at:new Date().toISOString() })
     .select().single();
   if (error) throw error;
   return data;
@@ -71,6 +67,7 @@ async function dbDeleteScore(id) {
 
 function setBusy(id, busy, label) {
   var b = document.getElementById(id);
+  if (!b) return;
   b.disabled = busy;
   b.textContent = busy ? 'Please wait...' : label;
 }
@@ -83,24 +80,65 @@ function showPage(name, btn) {
   if (name === 'myWorkouts') loadWorkouts();
 }
 
+// ── Name prompt ───────────────────────────────────────────
+
+function showNamePrompt() {
+  var wrap = document.getElementById('headerRight');
+  wrap.innerHTML = '<div class="name-prompt-wrap">'
+    + '<input class="name-prompt-input" id="nameInput" type="text" placeholder="Enter your name" maxlength="30" />'
+    + '<button class="name-prompt-btn" onclick="saveName()">Save</button>'
+    + '</div>';
+  setTimeout(function(){ var el=document.getElementById('nameInput'); if(el) el.focus(); }, 100);
+  document.getElementById('nameInput').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') saveName();
+  });
+}
+
+async function saveName() {
+  var input = document.getElementById('nameInput');
+  if (!input) return;
+  var name = input.value.trim();
+  if (!name) return;
+  await dbUpsertProfile(name);
+  setHeaderName(name);
+  updateGreeting(name);
+}
+
+function setHeaderName(name) {
+  var wrap = document.getElementById('headerRight');
+  wrap.innerHTML = '<span class="user-name">'+name+'</span>'
+    + '<button class="sign-out-btn" onclick="signOut()">Sign out</button>';
+}
+
+function updateGreeting(name) {
+  var el = document.getElementById('greeting');
+  if (el) el.innerHTML = 'Hello <strong>' + name + '</strong><span> - what would you like to work on today?</span>';
+}
+
 // ── Start app ─────────────────────────────────────────────
 
 async function startApp(user) {
-  if (State.currentUser && State.currentUser.id === user.id) return; // already running
+  if (State.currentUser && State.currentUser.id === user.id) return;
   State.currentUser = user;
 
   var profile = await dbGetProfile();
-  if (!profile || !profile.first_name) {
-    var meta = user.user_metadata || {};
-    var firstName = meta.first_name || meta.given_name
-      || (meta.full_name ? meta.full_name.split(' ')[0] : '');
-    if (firstName) profile = await dbUpsertProfile(firstName);
+  var name = profile && profile.first_name ? profile.first_name : '';
+
+  // Update greeting
+  var greetingEl = document.getElementById('greeting');
+  if (greetingEl) {
+    greetingEl.innerHTML = name
+      ? 'Hello <strong>' + name + '</strong><span> - what would you like to work on today?</span>'
+      : 'Hello<span> - what would you like to work on today?</span>';
   }
 
-  var name = (profile && profile.first_name) || '';
-  var greeting = document.getElementById('greeting');
-  if (greeting) greeting.innerHTML = (name ? 'Hello <strong>' + name + '</strong>' : 'Hello') + '<span> — what would you like to work on today?</span>';
-  document.getElementById('headerName').textContent = name;
+  // Header right: show name or prompt
+  if (name) {
+    setHeaderName(name);
+  } else {
+    showNamePrompt();
+  }
+
   document.getElementById('authOverlay').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 
@@ -117,7 +155,6 @@ function showAuthOverlay() {
 // ── Boot ──────────────────────────────────────────────────
 
 window.addEventListener('load', function() {
-  // onAuthStateChange is the single source of truth for session state
   sb.auth.onAuthStateChange(function(event, session) {
     if (session && session.user) {
       startApp(session.user);
