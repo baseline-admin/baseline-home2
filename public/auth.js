@@ -4,7 +4,7 @@
    All auth goes through Supabase JS - no custom token handling.
    ============================================================ */
 
-var APP_URL = 'https://baseline-home-login.vercel.app';
+var APP_URL = 'https://www.baseline.fitness';
 var pendingEmail = '';
 
 function showStep1() {
