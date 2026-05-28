@@ -12,6 +12,7 @@ var FORMAT_MAP = {
 };
 var T3_TRIGGER_COLS = ['AM','FT3','FT4','EM4','EM5'];
 var NO_SCORE_TYPES  = ['recovery','bodyweight'];
+var REFINE_EXCLUDE_TYPES = ['recovery'];
 
 // Exclusions state - reset on each fresh generate
 var Exclusions = { exercises: [], types: [] };
@@ -25,7 +26,7 @@ function getFormat(col){var o=FORMAT_MAP[col];return o?rnd(o):col;}
 function isUni(ubVal){return(ubVal||'').toString().trim().toUpperCase()==='U';}
 function isRecovery(typeStr){
   var types=parseList(typeStr||'');
-  for(var i=0;i<types.length;i++){if(NO_SCORE_TYPES.indexOf(types[i].toLowerCase())!==-1)return true;}
+  for(var i=0;i<types.length;i++){if(REFINE_EXCLUDE_TYPES.indexOf(types[i].toLowerCase())!==-1)return true;}
   return false;
 }
 function isExcluded(name, typeStr) {
@@ -158,9 +159,9 @@ function renderOutput(isRegen){
   // Save + Refine row
   h += '<div class="save-area" id="saveArea">'
     + '<button class="save-btn" id="saveBtn" onclick="saveWorkout()">Save workout</button>'
-    + '<button class="refine-btn" id="refineBtn" onclick="toggleRefine()">Refine</button>'
+    + '<button class="refine-btn" id="refineBtn" onclick="toggleRefine()">Refine workout</button>'
     + '<span class="save-msg" id="saveMsg">' + (isRegen ? 'Regenerated' : '') + '</span>'
-    + (isRegen ? '<span class="pro-link">Need something more personalised? Try <span onclick="showPage(\'pro\',null)" style="text-decoration:underline;cursor:pointer;color:var(--accent);">Baseline Pro</span></span>' : '')
+    + (isRegen ? '<span class="pro-link">Need something more personalised? Try <span onclick="showPage(\'pro\',null)" style="text-decoration:underline;cursor:pointer;color:#1E2C35;">Baseline Pro</span></span>' : '')
     + '</div>';
 
   // Refine panel
