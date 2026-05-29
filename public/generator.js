@@ -80,6 +80,8 @@ function generate(){
 // ── Regenerate (refine — keep unflagged, re-pick flagged) ─
 
 function regenerate(){
+  // Apply any filter removals first
+  applyFilterRemovals();
   // Read new selections from the panel and ADD to persistent exclusions
   document.querySelectorAll('.refine-group').forEach(function(group){
     var slot=group.getAttribute('data-slot');
@@ -271,10 +273,21 @@ function buildRefinePanel(r,startOpen){
   if(r.t3&&!isRecovery(r.t3.type))exercises.push({slot:'t3',name:r.t3.row,type:r.t3.type});
   if(!exercises.length)return'<div id="refinePanel" style="display:none"></div>';
 
-  // For each exercise, check if its options would still have eligible alternatives
+  // Check if excluding an exercise/type would leave valid alternatives
+  // For T2/T3 this must also respect pairing rules with the current T1
+  function getValidT2Types(t1type){
+    var t1T=parseList(t1type),aT2=[];
+    t1T.forEach(function(t){
+      if(d.typePairingRules&&d.typePairingRules[t]!==undefined){
+        parseList(d.typePairingRules[t]).forEach(function(r2){if(aT2.indexOf(r2)===-1)aT2.push(r2);});
+      }
+    });
+    return aT2;
+  }
+
   function hasAlternativeExercise(slot,exName,excl){
-    var testExcl={exercises:excl.exercises.concat([exName]),types:excl.types.slice()};
-    var d=State.sheetData;
+    var testExcl={exercises:excl.exercises.slice(),types:excl.types.slice()};
+    if(exName)testExcl.exercises=testExcl.exercises.concat([exName]);
     if(slot==='t1'){
       var pRule=d.promptRules[r.prompt]||{};
       var t1RL=parseList(pRule.allowedRows||''),t1CL=parseList(pRule.allowedCols||'');
@@ -288,14 +301,28 @@ function buildRefinePanel(r,startOpen){
       });
     }
     if(slot==='t2'){
+      // Must respect T1->T2 pairing rules
+      var aT2=getValidT2Types(r.t1.type);
       return(d.t2Rows||[]).some(function(row){
         if(isExcluded(row,(d.t2TypeData||{})[row],testExcl))return false;
+        var et=parseList((d.t2TypeData||{})[row]||'');
+        if(aT2.length&&!anyMatch(et,aT2))return false;
         var v=(d.t2Data[row]||{})[r.t1.col];return v&&v.trim();
       });
     }
     if(slot==='t3'){
+      // Must respect T2->T3 pairing rules
+      var t2type=r.t2?r.t2.type:'';
+      var t2T=parseList(t2type),aT3=[];
+      t2T.forEach(function(t){
+        if(d.t3PairingRules&&d.t3PairingRules[t]!==undefined){
+          parseList(d.t3PairingRules[t]).forEach(function(r3){if(aT3.indexOf(r3)===-1)aT3.push(r3);});
+        }
+      });
       return(d.t3Rows||[]).some(function(row){
         if(isExcluded(row,(d.t3TypeData||{})[row],testExcl))return false;
+        var et=parseList((d.t3TypeData||{})[row]||'');
+        if(aT3.length&&!anyMatch(et,aT3))return false;
         var v=(d.t3Data&&d.t3Data[row])?d.t3Data[row][r.t1.col]:'';return v&&v.trim();
       });
     }
@@ -304,7 +331,7 @@ function buildRefinePanel(r,startOpen){
 
   function hasAlternativeType(slot,exType,excl){
     var testExcl={exercises:excl.exercises.slice(),types:excl.types.concat([exType.toLowerCase()])};
-    return hasAlternativeExercise(slot,'' ,testExcl);
+    return hasAlternativeExercise(slot,'',testExcl);
   }
 
   var cols=exercises.map(function(ex){
@@ -332,15 +359,21 @@ function buildRefinePanel(r,startOpen){
       +'</div>';
   });
 
-  // Previously applied filters — shown between divider and Regenerate button
+  // Previously applied filters — clickable to remove
   var prevFilters='';
   if(PersistentExclusions.exercises.length||PersistentExclusions.types.length){
     var items=[];
     PersistentExclusions.exercises.forEach(function(ex){
-      items.push('<div class="refine-prev-item"><span class="refine-opt-text refine-opt-muted" style="opacity:0.45;">'+ex+' excluded</span><span class="refine-tick refine-tick-muted" style="opacity:1;">&#10003;</span></div>');
+      items.push('<div class="refine-prev-item" data-remove-exercise="'+ex+'" onclick="removePersistentFilter(this)">'
+        +'<span class="refine-opt-text refine-opt-muted refine-prev-text">'+ex+' excluded</span>'
+        +'<span class="refine-prev-tick">&#10003;</span>'
+        +'</div>');
     });
     PersistentExclusions.types.forEach(function(t){
-      items.push('<div class="refine-prev-item"><span class="refine-opt-text refine-opt-muted" style="opacity:0.45;">'+t+' exercises excluded</span><span class="refine-tick refine-tick-muted" style="opacity:1;">&#10003;</span></div>');
+      items.push('<div class="refine-prev-item" data-remove-type="'+t+'" onclick="removePersistentFilter(this)">'
+        +'<span class="refine-opt-text refine-opt-muted refine-prev-text">'+t+' exercises excluded</span>'
+        +'<span class="refine-prev-tick">&#10003;</span>'
+        +'</div>');
     });
     prevFilters='<div class="refine-prev-filters">'+items.join('')+'</div>';
   }
@@ -380,6 +413,38 @@ function selectRefineOpt(opt){
     opt.querySelector('.refine-tick').style.opacity='1';
     opt.querySelector('.refine-opt-text').style.opacity='0.45';
   }
+}
+
+function removePersistentFilter(el){
+  var exName=el.getAttribute('data-remove-exercise');
+  var exType=el.getAttribute('data-remove-type');
+  var tick=el.querySelector('.refine-prev-tick');
+  // Toggle: if already marked for removal, re-add it; if active, mark for removal
+  if(el.classList.contains('refine-prev-removing')){
+    el.classList.remove('refine-prev-removing');
+    tick.innerHTML='&#10003;';
+    tick.style.color='';
+  }else{
+    el.classList.add('refine-prev-removing');
+    tick.innerHTML='&#x2715;';
+    tick.style.color='';
+  }
+}
+
+// Called by regenerate() — applies removals before building new workout
+function applyFilterRemovals(){
+  document.querySelectorAll('.refine-prev-item.refine-prev-removing').forEach(function(el){
+    var exName=el.getAttribute('data-remove-exercise');
+    var exType=el.getAttribute('data-remove-type');
+    if(exName){
+      var idx=PersistentExclusions.exercises.indexOf(exName);
+      if(idx!==-1)PersistentExclusions.exercises.splice(idx,1);
+    }
+    if(exType){
+      var idx=PersistentExclusions.types.indexOf(exType);
+      if(idx!==-1)PersistentExclusions.types.splice(idx,1);
+    }
+  });
 }
 
 function makeTitle(r){var p=[r.t1.row];if(r.t2)p.push(r.t2.row);p.push(r.fmt);return p.join(' - ');}
