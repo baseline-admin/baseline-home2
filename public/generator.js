@@ -12,7 +12,9 @@ var FORMAT_MAP = {
 };
 var T3_TRIGGER_COLS = ['AM','FT3','FT4','EM4','EM5'];
 var REFINE_EXCLUDE_TYPES = ['recovery'];
-var Exclusions = { exercises: [], types: [] };
+
+// Accumulates across regenerations — reset only on a fresh Generate
+var PersistentExclusions = { exercises: [], types: [] };
 
 function rnd(a){return a[Math.floor(Math.random()*a.length)];}
 function pickN(arr,n){var p=arr.slice(),r=[];n=Math.min(n,p.length);for(var i=0;i<n;i++){var x=Math.floor(Math.random()*p.length);r.push(p.splice(x,1)[0]);}return r;}
@@ -30,11 +32,14 @@ function repLabel(typeStr,ub){
   if(isRecovery(typeStr))return'seconds';
   return isUni(ub)?'reps each side':'reps';
 }
-function typeMatchesExclusion(typeStr){
-  // Returns true if this exercise contains a globally excluded type
+function typeMatchesExclusion(typeStr,excl){
   var types=parseList(typeStr||'');
-  for(var i=0;i<types.length;i++){if(Exclusions.types.indexOf(types[i].toLowerCase())!==-1)return true;}
+  for(var i=0;i<types.length;i++){if(excl.types.indexOf(types[i].toLowerCase())!==-1)return true;}
   return false;
+}
+function isExcluded(name,typeStr,excl){
+  if(excl.exercises.indexOf(name)!==-1)return true;
+  return typeMatchesExclusion(typeStr,excl);
 }
 
 // ── Load sheet data ───────────────────────────────────────
@@ -59,53 +64,48 @@ async function loadSheetData(){
   }
 }
 
-// ── Generate (fresh) ──────────────────────────────────────
+// ── Generate (fresh — resets all filters) ────────────────
 
 function generate(){
-  Exclusions={exercises:[],types:[]};
+  PersistentExclusions={exercises:[],types:[]};
   var prompt=document.getElementById('promptSelect').value;
   var ts=document.getElementById('timeSelect').value;
   if(!prompt||!ts)return;
-  var result=_buildWorkout(prompt,ts,null);
+  var result=_buildWorkout(prompt,ts,null,PersistentExclusions);
   if(!result)return;
   State.lastResult=result;
   renderOutput(false);
 }
 
-// ── Regenerate (refine — keep what's good, re-pick flagged) ──
+// ── Regenerate (refine — keep unflagged, re-pick flagged) ─
 
 function regenerate(){
-  // Read selections from refine panel
-  Exclusions={exercises:[],types:[]};
-  var slotsToReplace={}; // {t1: true, t2: true, t3: true}
-
+  // Read new selections from the panel and ADD to persistent exclusions
   document.querySelectorAll('.refine-group').forEach(function(group){
     var slot=group.getAttribute('data-slot');
     var exName=group.getAttribute('data-exercise');
     var exType=group.getAttribute('data-type');
     var selVal=group.getAttribute('data-selected');
     if(!selVal)return;
-
-    if(selVal==='exercise'){
-      // Exclude just this exercise name, only re-pick this slot
-      Exclusions.exercises.push(exName);
-      slotsToReplace[slot]=true;
+    if(selVal==='exercise'&&PersistentExclusions.exercises.indexOf(exName)===-1){
+      PersistentExclusions.exercises.push(exName);
     }
-    if(selVal==='type'){
-      // Exclude this type globally — re-pick any slot containing this type
-      Exclusions.types.push(exType.toLowerCase());
+    if(selVal==='type'&&PersistentExclusions.types.indexOf(exType.toLowerCase())===-1){
+      PersistentExclusions.types.push(exType.toLowerCase());
     }
   });
 
-  // For type exclusions, mark any slot whose exercise matches the excluded type
+  // Determine which slots need re-picking
+  var slotsToReplace={};
   var r=State.lastResult;
-  if(r.t1&&typeMatchesExclusion(r.t1.type))slotsToReplace['t1']=true;
-  if(r.t2&&typeMatchesExclusion(r.t2.type))slotsToReplace['t2']=true;
-  if(r.t3&&typeMatchesExclusion(r.t3.type))slotsToReplace['t3']=true;
+  // Any slot whose exercise is now excluded gets replaced
+  if(r.t1&&isExcluded(r.t1.row,r.t1.type,PersistentExclusions))slotsToReplace['t1']=true;
+  if(r.t2&&isExcluded(r.t2.row,r.t2.type,PersistentExclusions))slotsToReplace['t2']=true;
+  if(r.t3&&isExcluded(r.t3.row,r.t3.type,PersistentExclusions))slotsToReplace['t3']=true;
 
   var prompt=document.getElementById('promptSelect').value;
   var ts=document.getElementById('timeSelect').value;
-  var newResult=_buildWorkout(prompt,ts,slotsToReplace);
+  var newResult=_buildWorkout(prompt,ts,slotsToReplace,PersistentExclusions);
   if(!newResult)return;
   State.lastResult=newResult;
   renderOutput(true);
@@ -113,15 +113,13 @@ function regenerate(){
 
 // ── Core workout builder ──────────────────────────────────
 
-function _buildWorkout(prompt,ts,slotsToReplace){
-  // slotsToReplace: null = build everything fresh
-  // {t1:true, t2:true, t3:true} = only re-pick flagged slots, keep rest from State.lastResult
-  var keep = slotsToReplace && State.lastResult ? State.lastResult : null;
+function _buildWorkout(prompt,ts,slotsToReplace,excl){
+  var keep=slotsToReplace&&State.lastResult?State.lastResult:null;
   var nAZ=ts==='60mins'?3:ts==='45mins'?2:1;
   var d=State.sheetData,pRule=d.promptRules[prompt];
   if(!pRule){alert('No rule for: '+prompt);return null;}
 
-  // ── T1 ──
+  // T1
   var t1,t1n;
   if(keep&&!slotsToReplace['t1']){
     t1={row:keep.t1.row,col:keep.t1.col,val:keep.t1.val,type:keep.t1.type,ub:keep.t1.ub};
@@ -130,8 +128,7 @@ function _buildWorkout(prompt,ts,slotsToReplace){
     var t1RL=parseList(pRule.allowedRows),t1CL=parseList(pRule.allowedCols),elig=[];
     d.t1Rows.forEach(function(row){
       if(t1RL.length&&t1RL.indexOf(row)===-1)return;
-      if(Exclusions.exercises.indexOf(row)!==-1)return;
-      if(typeMatchesExclusion((d.t1TypeData||{})[row]))return;
+      if(isExcluded(row,(d.t1TypeData||{})[row],excl))return;
       d.t1Cols.forEach(function(col){
         if(t1CL.length&&t1CL.indexOf(col)===-1)return;
         var v=(d.t1Data[row]||{})[col];if(!v||!v.trim())return;
@@ -148,7 +145,7 @@ function _buildWorkout(prompt,ts,slotsToReplace){
   }
   var f=keep&&!slotsToReplace['t1']?keep.fmt:getFormat(t1.col);
 
-  // ── T2 ──
+  // T2
   var t2=null,t2n=null;
   if(keep&&!slotsToReplace['t2']){
     t2=keep.t2;t2n=keep.t2n;
@@ -158,8 +155,7 @@ function _buildWorkout(prompt,ts,slotsToReplace){
     if(hasT2&&aT2.length){
       var t2e=[];
       (d.t2Rows||[]).forEach(function(row){
-        if(Exclusions.exercises.indexOf(row)!==-1)return;
-        if(typeMatchesExclusion((d.t2TypeData||{})[row]))return;
+        if(isExcluded(row,(d.t2TypeData||{})[row],excl))return;
         var et=parseList((d.t2TypeData||{})[row]||'');if(!anyMatch(et,aT2))return;
         var v=(d.t2Data[row]||{})[t1.col];if(!v||!v.trim())return;
         t2e.push({row:row,col:t1.col,val:v,type:(d.t2TypeData||{})[row]||'',ub:(d.t2UBData||{})[row]||'B'});
@@ -168,7 +164,7 @@ function _buildWorkout(prompt,ts,slotsToReplace){
     }
   }
 
-  // ── T3 ──
+  // T3
   var t3=null,t3n=null;
   if(keep&&!slotsToReplace['t3']){
     t3=keep.t3;t3n=keep.t3n;
@@ -177,8 +173,7 @@ function _buildWorkout(prompt,ts,slotsToReplace){
     t2T.forEach(function(t){if(d.t3PairingRules&&d.t3PairingRules[t]!==undefined){parseList(d.t3PairingRules[t]).forEach(function(r){if(aT3.indexOf(r)===-1)aT3.push(r);});}});
     var t3e=[];
     (d.t3Rows||[]).forEach(function(row){
-      if(Exclusions.exercises.indexOf(row)!==-1)return;
-      if(typeMatchesExclusion((d.t3TypeData||{})[row]))return;
+      if(isExcluded(row,(d.t3TypeData||{})[row],excl))return;
       var et=parseList((d.t3TypeData||{})[row]||'');if(aT3.length&&!anyMatch(et,aT3))return;
       var v=(d.t3Data&&d.t3Data[row])?d.t3Data[row][t1.col]:'';if(!v||!v.trim())return;
       t3e.push({row:row,col:t1.col,val:v,type:(d.t3TypeData||{})[row]||'',ub:(d.t3UBData||{})[row]||'B'});
@@ -186,7 +181,7 @@ function _buildWorkout(prompt,ts,slotsToReplace){
     if(t3e.length){var t3p=rnd(t3e);t3={row:t3p.row,col:t3p.col,val:t3p.val,type:t3p.type,ub:t3p.ub};t3n=parseRange(t3p.val);}
   }
 
-  // ── TA / TZ (always keep on refine) ──
+  // TA / TZ — always kept on refine, freshly picked on generate
   var taP,tzP;
   if(keep){
     taP=keep.taP;tzP=keep.tzP;
@@ -209,13 +204,13 @@ function renderOutput(isRegen){
   var h=buildResults(r);
   h+='<div class="save-area">';
   h+='<button class="save-btn" id="saveBtn" onclick="saveWorkout()">Save workout</button>';
-  h+='<button class="refine-btn" id="refineBtn" onclick="toggleRefine()">Refine workout</button>';
+  h+='<button class="refine-btn refine-btn-active" id="refineBtn" onclick="toggleRefine()">Refine workout</button>';
   h+='<span class="save-msg" id="saveMsg">'+(isRegen?'Refined':'')+'</span>';
   if(isRegen){
     h+='<span class="pro-link">Need something more personalised? Try <span onclick="showPage(\'pro\',null)" style="text-decoration:underline;cursor:pointer;color:#1E2C35;">Baseline Pro</span></span>';
   }
   h+='</div>';
-  h+=buildRefinePanel(r);
+  h+=buildRefinePanel(r,isRegen);
   document.getElementById('output').innerHTML=h;
 }
 
@@ -266,32 +261,97 @@ function buildResults(r){
   return h;
 }
 
-function buildRefinePanel(r){
+// ── Refine panel ──────────────────────────────────────────
+
+function buildRefinePanel(r,startOpen){
+  var d=State.sheetData;
   var exercises=[];
   if(r.t1&&!isRecovery(r.t1.type))exercises.push({slot:'t1',name:r.t1.row,type:r.t1.type});
   if(r.t2&&!isRecovery(r.t2.type))exercises.push({slot:'t2',name:r.t2.row,type:r.t2.type});
   if(r.t3&&!isRecovery(r.t3.type))exercises.push({slot:'t3',name:r.t3.row,type:r.t3.type});
   if(!exercises.length)return'<div id="refinePanel" style="display:none"></div>';
 
+  // For each exercise, check if its options would still have eligible alternatives
+  function hasAlternativeExercise(slot,exName,excl){
+    var testExcl={exercises:excl.exercises.concat([exName]),types:excl.types.slice()};
+    var d=State.sheetData;
+    if(slot==='t1'){
+      var pRule=d.promptRules[r.prompt]||{};
+      var t1RL=parseList(pRule.allowedRows||''),t1CL=parseList(pRule.allowedCols||'');
+      return d.t1Rows.some(function(row){
+        if(t1RL.length&&t1RL.indexOf(row)===-1)return false;
+        if(isExcluded(row,(d.t1TypeData||{})[row],testExcl))return false;
+        return d.t1Cols.some(function(col){
+          if(t1CL.length&&t1CL.indexOf(col)===-1)return false;
+          var v=(d.t1Data[row]||{})[col];return v&&v.trim();
+        });
+      });
+    }
+    if(slot==='t2'){
+      return(d.t2Rows||[]).some(function(row){
+        if(isExcluded(row,(d.t2TypeData||{})[row],testExcl))return false;
+        var v=(d.t2Data[row]||{})[r.t1.col];return v&&v.trim();
+      });
+    }
+    if(slot==='t3'){
+      return(d.t3Rows||[]).some(function(row){
+        if(isExcluded(row,(d.t3TypeData||{})[row],testExcl))return false;
+        var v=(d.t3Data&&d.t3Data[row])?d.t3Data[row][r.t1.col]:'';return v&&v.trim();
+      });
+    }
+    return true;
+  }
+
+  function hasAlternativeType(slot,exType,excl){
+    var testExcl={exercises:excl.exercises.slice(),types:excl.types.concat([exType.toLowerCase()])};
+    return hasAlternativeExercise(slot,'' ,testExcl);
+  }
+
   var cols=exercises.map(function(ex){
     var typePrimary=parseList(ex.type)[0]||'';
+    var alreadyExcludedEx=PersistentExclusions.exercises.indexOf(ex.name)!==-1;
+    var alreadyExcludedType=PersistentExclusions.types.indexOf(typePrimary.toLowerCase())!==-1;
+    var canExcludeEx=!alreadyExcludedEx&&hasAlternativeExercise(ex.slot,ex.name,PersistentExclusions);
+    var canExcludeType=!alreadyExcludedType&&hasAlternativeType(ex.slot,typePrimary,PersistentExclusions);
+
+    var exOptClass='refine-opt'+(canExcludeEx?'':' refine-opt-disabled');
+    var typeOptClass='refine-opt'+(canExcludeType?'':' refine-opt-disabled');
+    var exOnclick=canExcludeEx?'onclick="selectRefineOpt(this)"':'';
+    var typeOnclick=canExcludeType?'onclick="selectRefineOpt(this)"':'';
+
     return'<div class="refine-group" data-slot="'+ex.slot+'" data-exercise="'+ex.name+'" data-type="'+typePrimary+'" data-selected="">'
       +'<div class="refine-group-label">'+ex.name+'</div>'
-      +'<div class="refine-opt" data-val="exercise" onclick="selectRefineOpt(this)">'
-      +'<span class="refine-opt-text">Swap this exercise</span>'
+      +'<div class="'+exOptClass+'" data-val="exercise" '+exOnclick+'>'
+      +'<span class="refine-opt-text">Exclude this exercise</span>'
       +'<span class="refine-tick">&#10003;</span>'
       +'</div>'
-      +'<div class="refine-opt" data-val="type" onclick="selectRefineOpt(this)">'
-      +'<span class="refine-opt-text refine-opt-muted">Swap all '+typePrimary+' exercises</span>'
+      +'<div class="'+typeOptClass+'" data-val="type" '+typeOnclick+'>'
+      +'<span class="refine-opt-text refine-opt-muted">Exclude '+typePrimary+' exercises</span>'
       +'<span class="refine-tick refine-tick-muted">&#10003;</span>'
       +'</div>'
       +'</div>';
   });
 
+  // Previously applied filters — shown between divider and Regenerate button
+  var prevFilters='';
+  if(PersistentExclusions.exercises.length||PersistentExclusions.types.length){
+    var items=[];
+    PersistentExclusions.exercises.forEach(function(ex){
+      items.push('<div class="refine-prev-item"><span class="refine-opt-text refine-opt-muted" style="opacity:0.45;">'+ex+' excluded</span><span class="refine-tick refine-tick-muted" style="opacity:1;">&#10003;</span></div>');
+    });
+    PersistentExclusions.types.forEach(function(t){
+      items.push('<div class="refine-prev-item"><span class="refine-opt-text refine-opt-muted" style="opacity:0.45;">'+t+' exercises excluded</span><span class="refine-tick refine-tick-muted" style="opacity:1;">&#10003;</span></div>');
+    });
+    prevFilters='<div class="refine-prev-filters">'+items.join('')+'</div>';
+  }
+
   var inner=cols.join('<div class="refine-divider"></div>');
-  return'<div id="refinePanel" style="display:none">'
+  var display=startOpen?'block':'none';
+
+  return'<div id="refinePanel" style="display:'+display+'">'
     +'<div class="refine-cols">'+inner+'</div>'
     +'<div class="refine-footer">'
+    +prevFilters
     +'<button class="refine-regen-btn" onclick="regenerate()">Regenerate</button>'
     +'</div>'
     +'</div>';
@@ -309,7 +369,7 @@ function selectRefineOpt(opt){
   var group=opt.closest('.refine-group');
   var selVal=group.getAttribute('data-selected');
   var thisVal=opt.getAttribute('data-val');
-  group.querySelectorAll('.refine-opt').forEach(function(o){
+  group.querySelectorAll('.refine-opt:not(.refine-opt-disabled)').forEach(function(o){
     o.querySelector('.refine-tick').style.opacity='0';
     o.querySelector('.refine-opt-text').style.opacity='1';
   });
