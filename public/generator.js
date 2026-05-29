@@ -206,7 +206,7 @@ function renderOutput(isRegen){
   var h=buildResults(r);
   h+='<div class="save-area">';
   h+='<button class="save-btn" id="saveBtn" onclick="saveWorkout()">Save workout</button>';
-  h+='<button class="refine-btn refine-btn-active" id="refineBtn" onclick="toggleRefine()">Refine workout</button>';
+  h+='<button class="refine-btn" id="refineBtn" onclick="toggleRefine()">Refine workout</button>';
   h+='<span class="save-msg" id="saveMsg">'+(isRegen?'Refined':'')+'</span>';
   if(isRegen){
     h+='<span class="pro-link">Need something more personalised? Try <span onclick="showPage(\'pro\',null)" style="text-decoration:underline;cursor:pointer;color:#1E2C35;">Baseline Pro</span></span>';
