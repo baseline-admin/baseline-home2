@@ -207,10 +207,10 @@ select option { background:var(--surface); color:var(--text); }
 .name-prompt-btn:hover { opacity:0.9; }
 
 /* Refine button */
-.refine-btn { padding:10px 28px; background:transparent; color:var(--text); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; }
-.refine-btn:hover { border-color:var(--accent); color:var(--accent); }
-.refine-btn-active { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); font-weight:600; }
-.refine-btn-active:hover { opacity:0.9; }
+
+
+
+
 
 /* Pro link */
 .pro-link { font-family:var(--mono); font-size:11px; color:var(--muted); margin-left:auto; }
@@ -229,7 +229,7 @@ select option { background:var(--surface); color:var(--text); }
 .refine-opt-muted { color:var(--muted); }
 .refine-tick { font-family:var(--mono); font-size:11px; color:var(--text); opacity:0; }
 .refine-tick-muted { color:var(--muted); }
-.refine-footer { margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
+
 .refine-regen-btn { padding:10px 28px; background:var(--accent); color:var(--bg-dark); border:none; border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; font-weight:600; }
 .refine-regen-btn:hover { opacity:0.9; }
 .card-reps-row { display:flex; align-items:baseline; }
@@ -242,15 +242,13 @@ select option { background:var(--surface); color:var(--text); }
 .refine-opt-disabled { opacity:0.3; cursor:not-allowed; }
 .refine-opt-disabled .refine-opt-text { text-decoration:none; }
 
-/* Refine footer layout */
-.refine-footer {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-.refine-prev-filters { margin-bottom: 0; text-align: right; }
-.refine-prev-item { justify-content: flex-end; gap: 10px; }
+/* Refine button - identical to save button before and after click */
+.refine-btn { padding:10px 28px; background:transparent; color:var(--text); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; }
+.refine-btn:hover { border-color:var(--accent); color:var(--accent); }
+.refine-btn-active { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); font-weight:600; }
+.refine-btn-active:hover { opacity:0.9; color:var(--bg-dark); }
+
+/* Refine footer - regenerate left, filters right */
+.refine-footer { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
+.refine-prev-filters { text-align:right; }
+.refine-prev-item { display:flex; align-items:center; justify-content:flex-end; gap:10px; padding:2px 0; margin-bottom:6px; }
