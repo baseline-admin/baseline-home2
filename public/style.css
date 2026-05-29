@@ -232,3 +232,11 @@ select option { background:var(--surface); color:var(--text); }
 .refine-regen-btn { padding:10px 28px; background:var(--accent); color:var(--bg-dark); border:none; border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; font-weight:600; }
 .refine-regen-btn:hover { opacity:0.9; }
 .card-reps-row { display:flex; align-items:baseline; }
+
+/* Refine panel - previously applied filters */
+.refine-prev-filters { margin-bottom:12px; }
+.refine-prev-item { display:flex; align-items:center; justify-content:space-between; padding:2px 0; margin-bottom:6px; }
+
+/* Disabled refine options - greyed, not clickable */
+.refine-opt-disabled { opacity:0.3; cursor:not-allowed; }
+.refine-opt-disabled .refine-opt-text { text-decoration:none; }
