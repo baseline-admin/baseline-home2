@@ -351,8 +351,8 @@ function buildRefinePanel(r,startOpen){
   return'<div id="refinePanel" style="display:'+display+'">'
     +'<div class="refine-cols">'+inner+'</div>'
     +'<div class="refine-footer">'
-    +prevFilters
     +'<button class="refine-regen-btn" onclick="regenerate()">Regenerate</button>'
+    +prevFilters
     +'</div>'
     +'</div>';
 }
