@@ -252,3 +252,9 @@ select option { background:var(--surface); color:var(--text); }
 .refine-footer { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
 .refine-prev-filters { text-align:right; }
 .refine-prev-item { display:flex; align-items:center; justify-content:flex-end; gap:10px; padding:2px 0; margin-bottom:6px; }
+
+/* Previous filters - clickable, removable */
+.refine-prev-item { cursor:pointer; }
+.refine-prev-item:hover .refine-prev-text { opacity:0.7; }
+.refine-prev-tick { font-family:var(--mono); font-size:11px; color:var(--muted); margin-left:10px; }
+.refine-prev-removing .refine-prev-text { opacity:0.3; }
