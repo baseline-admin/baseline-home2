@@ -1,6 +1,7 @@
 /* ============================================================
-   BASELINE - generator.js
-   Workout generation, result rendering, refine/regenerate.
+   BASELINE v12 - generator.js
+   New selection logic: prompt > columns > exercise count > exercises
+   T1 and T2 filtered by type/mode/ULC. T3 random.
    Depends on: app.js
    ============================================================ */
 
@@ -10,23 +11,35 @@ var FORMAT_MAP = {
   'EM1':['EMOM 10m','EMOM 12m'],'EM2':['E2MOM 16m','E2MOM 20m'],
   'EM3':['E3MOM 15m','E3MOM 17m'],'EM4':['E4MOM 16m','E4MOM 20m'],'EM5':['E5MOM 15m','E5MOM 20m']
 };
-var T3_TRIGGER_COLS = ['AM','FT3','FT4','EM4','EM5'];
 var REFINE_EXCLUDE_TYPES = ['recovery'];
-
-// Accumulates across regenerations — reset only on a fresh Generate
 var PersistentExclusions = { exercises: [], types: [] };
 
 function rnd(a){return a[Math.floor(Math.random()*a.length)];}
 function pickN(arr,n){var p=arr.slice(),r=[];n=Math.min(n,p.length);for(var i=0;i<n;i++){var x=Math.floor(Math.random()*p.length);r.push(p.splice(x,1)[0]);}return r;}
-function parseRange(s){if(!s||!s.trim())return null;var p=s.split('/');if(p.length!==3)return null;var a=parseFloat(p[0]),b=parseFloat(p[1]),c=parseFloat(p[2]);if(isNaN(a)||isNaN(b)||isNaN(c)||c<=0||b<a)return null;var o=[];for(var n=a;n<=b+0.0001;n+=c)o.push(Math.round(n));return rnd(o);}
-function parseList(s){if(!s||!s.trim()||s.trim().toUpperCase()==='NONE')return[];return s.split(',').map(function(x){return x.trim();}).filter(function(x){return x!=='';});}
-function anyMatch(et,al){if(!al.length)return true;for(var i=0;i<al.length;i++){if(et.indexOf(al[i])!==-1)return true;}return false;}
+
+function parseRange(s){
+  if(!s||!s.trim())return null;
+  var p=s.split('/');if(p.length!==3)return null;
+  var a=parseFloat(p[0]),b=parseFloat(p[1]),c=parseFloat(p[2]);
+  if(isNaN(a)||isNaN(b)||isNaN(c)||c<=0||b<a)return null;
+  var o=[];for(var n=a;n<=b+0.0001;n+=c)o.push(Math.round(n));
+  return rnd(o);
+}
+function parseList(s){
+  if(!s||!s.trim()||s.trim().toUpperCase()==='NONE')return[];
+  return s.split(',').map(function(x){return x.trim().toLowerCase();}).filter(function(x){return x!=='';});
+}
+function matchesFilter(value, allowedList){
+  if(!allowedList||!allowedList.length)return true;
+  var vals=(value||'').split(',').map(function(v){return v.trim().toLowerCase();});
+  for(var i=0;i<vals.length;i++){if(vals[i]&&allowedList.indexOf(vals[i])!==-1)return true;}
+  return false;
+}
 function getFormat(col){var o=FORMAT_MAP[col];return o?rnd(o):col;}
 function isUni(ubVal){return(ubVal||'').toString().trim().toUpperCase()==='U';}
 function isRecovery(typeStr){
   var types=parseList(typeStr||'');
-  for(var i=0;i<types.length;i++){if(REFINE_EXCLUDE_TYPES.indexOf(types[i].toLowerCase())!==-1)return true;}
-  return false;
+  return types.indexOf('recovery')!==-1;
 }
 function repLabel(typeStr,ub){
   if(isRecovery(typeStr))return'seconds';
@@ -34,7 +47,7 @@ function repLabel(typeStr,ub){
 }
 function typeMatchesExclusion(typeStr,excl){
   var types=parseList(typeStr||'');
-  for(var i=0;i<types.length;i++){if(excl.types.indexOf(types[i].toLowerCase())!==-1)return true;}
+  for(var i=0;i<types.length;i++){if(excl.types.indexOf(types[i])!==-1)return true;}
   return false;
 }
 function isExcluded(name,typeStr,excl){
@@ -51,7 +64,7 @@ async function loadSheetData(){
     State.sheetData=await r.json();
     var sel=document.getElementById('promptSelect');
     var prompts=State.sheetData.prompts.filter(function(p){
-      return p&&p.trim()!==''&&p!=='PROMPT RULES'&&!p.startsWith('Controls');
+      return p&&p.trim()!==''&&p!=='PROMPT RULES'&&!p.startsWith('Controls')&&!p.startsWith('Each field');
     });
     sel.innerHTML='<option value="" disabled selected>Choose</option>'+prompts.map(function(p){
       return'<option value="'+p+'">'+p+'</option>';
@@ -64,7 +77,7 @@ async function loadSheetData(){
   }
 }
 
-// ── Generate (fresh — resets all filters) ────────────────
+// ── Generate (fresh) ──────────────────────────────────────
 
 function generate(){
   PersistentExclusions={exercises:[],types:[]};
@@ -77,30 +90,24 @@ function generate(){
   renderOutput(false);
 }
 
-// ── Regenerate (refine — keep unflagged, re-pick flagged) ─
+// ── Regenerate (refine) ───────────────────────────────────
 
 function regenerate(){
-  // Apply any filter removals first
   applyFilterRemovals();
-  // Read new selections from the panel and ADD to persistent exclusions
   document.querySelectorAll('.refine-group').forEach(function(group){
     var slot=group.getAttribute('data-slot');
     var exName=group.getAttribute('data-exercise');
     var exType=group.getAttribute('data-type');
     var selVal=group.getAttribute('data-selected');
     if(!selVal)return;
-    if(selVal==='exercise'&&PersistentExclusions.exercises.indexOf(exName)===-1){
+    if(selVal==='exercise'&&PersistentExclusions.exercises.indexOf(exName)===-1)
       PersistentExclusions.exercises.push(exName);
-    }
-    if(selVal==='type'&&PersistentExclusions.types.indexOf(exType.toLowerCase())===-1){
+    if(selVal==='type'&&PersistentExclusions.types.indexOf(exType.toLowerCase())===-1)
       PersistentExclusions.types.push(exType.toLowerCase());
-    }
   });
 
-  // Determine which slots need re-picking
   var slotsToReplace={};
   var r=State.lastResult;
-  // Any slot whose exercise is now excluded gets replaced
   if(r.t1&&isExcluded(r.t1.row,r.t1.type,PersistentExclusions))slotsToReplace['t1']=true;
   if(r.t2&&isExcluded(r.t2.row,r.t2.type,PersistentExclusions))slotsToReplace['t2']=true;
   if(r.t3&&isExcluded(r.t3.row,r.t3.type,PersistentExclusions))slotsToReplace['t3']=true;
@@ -118,85 +125,113 @@ function regenerate(){
 function _buildWorkout(prompt,ts,slotsToReplace,excl){
   var keep=slotsToReplace&&State.lastResult?State.lastResult:null;
   var nAZ=ts==='60mins'?3:ts==='45mins'?2:1;
-  var d=State.sheetData,pRule=d.promptRules[prompt];
+  var d=State.sheetData;
+  var pRule=d.promptRules[prompt];
   if(!pRule){alert('No rule for: '+prompt);return null;}
+
+  // Parse prompt filters
+  var t1TypesAllow=parseList(pRule.t1Types||'');
+  var t1ModesAllow=parseList(pRule.t1Modes||'');
+  var t1ULCAllow  =parseList(pRule.t1ULC||'');
+  var t2TypesAllow=parseList(pRule.t2Types||'');
+  var t2ModesAllow=parseList(pRule.t2Modes||'');
+  var t2ULCAllow  =parseList(pRule.t2ULC||'');
+  var allowedCols =parseList(pRule.allowedCols||'');
+
+  // Pick column (keep same column on refine)
+  var selectedCol, colIdx;
+  if(keep&&!slotsToReplace['t1']){
+    selectedCol=keep.selectedCol; colIdx=d.t1Cols.indexOf(selectedCol);
+  }else{
+    var eligCols=d.t1Cols.filter(function(c){return allowedCols.length===0||allowedCols.indexOf(c.toLowerCase())!==-1;});
+    if(!eligCols.length){
+      document.getElementById('output').innerHTML='<div class="state-msg">No eligible columns for this workout. Check Config_ColumnPairing.</div>';
+      return null;
+    }
+    selectedCol=rnd(eligCols); colIdx=d.t1Cols.indexOf(selectedCol);
+  }
+
+  // Get exercise count for this column
+  var countRange=(d.colPairingRules||{})[selectedCol]||'2/2/1';
+  var exCount=parseRange(countRange)||2;
+  exCount=Math.max(1,Math.min(3,exCount));
+  // On refine, keep same count unless more slots are being replaced
+  if(keep) exCount=keep.exCount;
+
+  var workoutFormat=keep&&!slotsToReplace['t1']?keep.fmt:getFormat(selectedCol);
 
   // T1
   var t1,t1n;
   if(keep&&!slotsToReplace['t1']){
-    t1={row:keep.t1.row,col:keep.t1.col,val:keep.t1.val,type:keep.t1.type,ub:keep.t1.ub};
-    t1n=keep.t1n;
+    t1=keep.t1; t1n=keep.t1n;
   }else{
-    var t1RL=parseList(pRule.allowedRows),t1CL=parseList(pRule.allowedCols),elig=[];
-    d.t1Rows.forEach(function(row){
-      if(t1RL.length&&t1RL.indexOf(row)===-1)return;
+    var t1e=[];
+    (d.t1Rows||[]).forEach(function(row){
       if(isExcluded(row,(d.t1TypeData||{})[row],excl))return;
-      d.t1Cols.forEach(function(col){
-        if(t1CL.length&&t1CL.indexOf(col)===-1)return;
-        var v=(d.t1Data[row]||{})[col];if(!v||!v.trim())return;
-        elig.push({row:row,col:col,val:v});
-      });
+      if(!matchesFilter((d.t1TypeData||{})[row],t1TypesAllow))return;
+      if(!matchesFilter((d.t1ModeData||{})[row],t1ModesAllow))return;
+      if(!matchesFilter((d.t1ULCData||{})[row],t1ULCAllow))return;
+      var v=(d.t1Data[row]||{})[selectedCol];if(!v||!v.trim())return;
+      t1e.push({row:row,col:selectedCol,val:v,type:(d.t1TypeData||{})[row]||'',mode:(d.t1ModeData||{})[row]||'',ulc:(d.t1ULCData||{})[row]||'',ub:(d.t1UBData||{})[row]||'B'});
     });
-    if(!elig.length){
-      document.getElementById('output').innerHTML='<div class="state-msg">No exercises available with current exclusions. Try removing some filters.</div>';
+    if(!t1e.length){
+      document.getElementById('output').innerHTML='<div class="state-msg">No T1 exercises available for this workout. Try a different prompt or check sheet filters.</div>';
       return null;
     }
-    var t1p=rnd(elig);
-    t1={row:t1p.row,col:t1p.col,val:t1p.val,type:(d.t1TypeData||{})[t1p.row]||'',ub:(d.t1UBData||{})[t1p.row]||'B'};
+    var t1p=rnd(t1e);
+    t1={row:t1p.row,col:selectedCol,val:t1p.val,type:t1p.type,mode:t1p.mode,ulc:t1p.ulc,ub:t1p.ub};
     t1n=parseRange(t1p.val);
   }
-  var f=keep&&!slotsToReplace['t1']?keep.fmt:getFormat(t1.col);
 
   // T2
   var t2=null,t2n=null;
-  if(keep&&!slotsToReplace['t2']){
-    t2=keep.t2;t2n=keep.t2n;
-  }else{
-    var t1T=parseList(t1.type),aT2=[],hasT2=false;
-    t1T.forEach(function(t){if(d.typePairingRules&&d.typePairingRules[t]!==undefined){hasT2=true;parseList(d.typePairingRules[t]).forEach(function(r){if(aT2.indexOf(r)===-1)aT2.push(r);});}});
-    if(hasT2&&aT2.length){
+  if(exCount>=2){
+    if(keep&&!slotsToReplace['t2']){
+      t2=keep.t2; t2n=keep.t2n;
+    }else{
       var t2e=[];
       (d.t2Rows||[]).forEach(function(row){
         if(isExcluded(row,(d.t2TypeData||{})[row],excl))return;
-        var et=parseList((d.t2TypeData||{})[row]||'');if(!anyMatch(et,aT2))return;
-        var v=(d.t2Data[row]||{})[t1.col];if(!v||!v.trim())return;
-        t2e.push({row:row,col:t1.col,val:v,type:(d.t2TypeData||{})[row]||'',ub:(d.t2UBData||{})[row]||'B'});
+        if(!matchesFilter((d.t2TypeData||{})[row],t2TypesAllow))return;
+        if(!matchesFilter((d.t2ModeData||{})[row],t2ModesAllow))return;
+        if(!matchesFilter((d.t2ULCData||{})[row],t2ULCAllow))return;
+        var v=(d.t2Data[row]||{})[selectedCol];if(!v||!v.trim())return;
+        t2e.push({row:row,col:selectedCol,val:v,type:(d.t2TypeData||{})[row]||'',mode:(d.t2ModeData||{})[row]||'',ulc:(d.t2ULCData||{})[row]||'',ub:(d.t2UBData||{})[row]||'B'});
       });
-      if(t2e.length){var t2p=rnd(t2e);t2={row:t2p.row,col:t2p.col,val:t2p.val,type:t2p.type,ub:t2p.ub};t2n=parseRange(t2p.val);}
+      if(t2e.length){var t2p=rnd(t2e);t2={row:t2p.row,col:selectedCol,val:t2p.val,type:t2p.type,mode:t2p.mode,ulc:t2p.ulc,ub:t2p.ub};t2n=parseRange(t2p.val);}
     }
   }
 
-  // T3
+  // T3 — random, no type/mode/ULC filters, only recovery rule
   var t3=null,t3n=null;
-  if(keep&&!slotsToReplace['t3']){
-    t3=keep.t3;t3n=keep.t3n;
-  }else if(T3_TRIGGER_COLS.indexOf(t1.col)!==-1&&t2&&d.t3Rows&&d.t3Rows.length){
-    var t2T=parseList(t2?t2.type:''),aT3=[];
-    t2T.forEach(function(t){if(d.t3PairingRules&&d.t3PairingRules[t]!==undefined){parseList(d.t3PairingRules[t]).forEach(function(r){if(aT3.indexOf(r)===-1)aT3.push(r);});}});
-    var t3e=[];
-    (d.t3Rows||[]).forEach(function(row){
-      if(isExcluded(row,(d.t3TypeData||{})[row],excl))return;
-      var et=parseList((d.t3TypeData||{})[row]||'');if(aT3.length&&!anyMatch(et,aT3))return;
-      var v=(d.t3Data&&d.t3Data[row])?d.t3Data[row][t1.col]:'';if(!v||!v.trim())return;
-      t3e.push({row:row,col:t1.col,val:v,type:(d.t3TypeData||{})[row]||'',ub:(d.t3UBData||{})[row]||'B'});
-    });
-    if(t3e.length){var t3p=rnd(t3e);t3={row:t3p.row,col:t3p.col,val:t3p.val,type:t3p.type,ub:t3p.ub};t3n=parseRange(t3p.val);}
+  if(exCount>=3){
+    if(keep&&!slotsToReplace['t3']){
+      t3=keep.t3; t3n=keep.t3n;
+    }else{
+      var t2IsRecovery=t2&&isRecovery(t2.type);
+      var t3e=[];
+      (d.t3Rows||[]).forEach(function(row){
+        if(isExcluded(row,(d.t3TypeData||{})[row],excl))return;
+        if(t2IsRecovery&&isRecovery((d.t3TypeData||{})[row]))return;
+        var v=(d.t3Data[row]||{})[selectedCol];if(!v||!v.trim())return;
+        t3e.push({row:row,col:selectedCol,val:v,type:(d.t3TypeData||{})[row]||'',ub:(d.t3UBData||{})[row]||'B'});
+      });
+      if(t3e.length){var t3p=rnd(t3e);t3={row:t3p.row,col:selectedCol,val:t3p.val,type:t3p.type,ub:t3p.ub};t3n=parseRange(t3p.val);}
+    }
   }
 
-  // TA / TZ — always kept on refine, freshly picked on generate
+  // TA / TZ
   var taP,tzP;
   if(keep){
-    taP=keep.taP;tzP=keep.tzP;
+    taP=keep.taP; tzP=keep.tzP;
   }else{
-    var taAL=parseList((d.taPairingRules||{})[t1.row]||'');
-    var taE=(d.taRows||[]).filter(function(ex){var v=(d.taData||{})[ex];if(!v||!v.trim())return false;return!taAL.length||taAL.indexOf(ex)!==-1;}).map(function(ex){return{name:ex,val:d.taData[ex],ub:(d.taUBData||{})[ex]||'B',rounds:(d.taRoundsData||{})[ex]||'2',type:(d.taTypeData||{})[ex]||''};});
+    var taE=(d.taRows||[]).filter(function(ex){var v=(d.taData||{})[ex];return v&&v.trim();}).map(function(ex){return{name:ex,val:d.taData[ex],ub:(d.taUBData||{})[ex]||'B',rounds:(d.taRoundsData||{})[ex]||'2',type:(d.taTypeData||{})[ex]||''};});
     taP=pickN(taE,nAZ);
-    var tzAL=parseList((d.tzPairingRules||{})[t1.row]||'');
-    var tzE=(d.tzRows||[]).filter(function(ex){var v=(d.tzData||{})[ex];if(!v||!v.trim())return false;return!tzAL.length||tzAL.indexOf(ex)!==-1;}).map(function(ex){return{name:ex,val:d.tzData[ex],ub:(d.tzUBData||{})[ex]||'B',rounds:(d.tzRoundsData||{})[ex]||'2',type:(d.tzTypeData||{})[ex]||''};});
+    var tzE=(d.tzRows||[]).filter(function(ex){var v=(d.tzData||{})[ex];return v&&v.trim();}).map(function(ex){return{name:ex,val:d.tzData[ex],ub:(d.tzUBData||{})[ex]||'B',rounds:(d.tzRoundsData||{})[ex]||'2',type:(d.tzTypeData||{})[ex]||''};});
     tzP=pickN(tzE,nAZ);
   }
 
-  return{t1:t1,t1n:t1n,t2:t2,t2n:t2n,t3:t3,t3n:t3n,fmt:f,taP:taP,tzP:tzP,prompt:prompt,timeStr:ts};
+  return{t1:t1,t1n:t1n,t2:t2,t2n:t2n,t3:t3,t3n:t3n,fmt:workoutFormat,selectedCol:selectedCol,exCount:exCount,taP:taP,tzP:tzP,prompt:prompt,timeStr:ts};
 }
 
 // ── Render ────────────────────────────────────────────────
@@ -273,121 +308,92 @@ function buildRefinePanel(r,startOpen){
   if(r.t3&&!isRecovery(r.t3.type))exercises.push({slot:'t3',name:r.t3.row,type:r.t3.type});
   if(!exercises.length)return'<div id="refinePanel" style="display:none"></div>';
 
-  // Check if excluding an exercise/type would leave valid alternatives
-  // For T2/T3 this must also respect pairing rules with the current T1
-  function getValidT2Types(t1type){
-    var t1T=parseList(t1type),aT2=[];
-    t1T.forEach(function(t){
-      if(d.typePairingRules&&d.typePairingRules[t]!==undefined){
-        parseList(d.typePairingRules[t]).forEach(function(r2){if(aT2.indexOf(r2)===-1)aT2.push(r2);});
-      }
-    });
-    return aT2;
-  }
+  var pRule=d.promptRules[r.prompt]||{};
+  var allowedCols=parseList(pRule.allowedCols||'');
+  var t1TypesAllow=parseList(pRule.t1Types||'');
+  var t1ModesAllow=parseList(pRule.t1Modes||'');
+  var t1ULCAllow  =parseList(pRule.t1ULC||'');
+  var t2TypesAllow=parseList(pRule.t2Types||'');
+  var t2ModesAllow=parseList(pRule.t2Modes||'');
+  var t2ULCAllow  =parseList(pRule.t2ULC||'');
 
-  function hasAlternativeExercise(slot,exName,excl){
-    var testExcl={exercises:excl.exercises.slice(),types:excl.types.slice()};
-    if(exName)testExcl.exercises=testExcl.exercises.concat([exName]);
+  function hasAltExercise(slot,exName,excl){
+    var testExcl={exercises:excl.exercises.concat(exName?[exName]:[]),types:excl.types.slice()};
+    var col=r.selectedCol;
     if(slot==='t1'){
-      var pRule=d.promptRules[r.prompt]||{};
-      var t1RL=parseList(pRule.allowedRows||''),t1CL=parseList(pRule.allowedCols||'');
-      return d.t1Rows.some(function(row){
-        if(t1RL.length&&t1RL.indexOf(row)===-1)return false;
+      return(d.t1Rows||[]).some(function(row){
         if(isExcluded(row,(d.t1TypeData||{})[row],testExcl))return false;
-        return d.t1Cols.some(function(col){
-          if(t1CL.length&&t1CL.indexOf(col)===-1)return false;
-          var v=(d.t1Data[row]||{})[col];return v&&v.trim();
-        });
+        if(!matchesFilter((d.t1TypeData||{})[row],t1TypesAllow))return false;
+        if(!matchesFilter((d.t1ModeData||{})[row],t1ModesAllow))return false;
+        if(!matchesFilter((d.t1ULCData||{})[row],t1ULCAllow))return false;
+        var v=(d.t1Data[row]||{})[col];return v&&v.trim();
       });
     }
     if(slot==='t2'){
-      // Must respect T1->T2 pairing rules
-      var aT2=getValidT2Types(r.t1.type);
       return(d.t2Rows||[]).some(function(row){
         if(isExcluded(row,(d.t2TypeData||{})[row],testExcl))return false;
-        var et=parseList((d.t2TypeData||{})[row]||'');
-        if(aT2.length&&!anyMatch(et,aT2))return false;
-        var v=(d.t2Data[row]||{})[r.t1.col];return v&&v.trim();
+        if(!matchesFilter((d.t2TypeData||{})[row],t2TypesAllow))return false;
+        if(!matchesFilter((d.t2ModeData||{})[row],t2ModesAllow))return false;
+        if(!matchesFilter((d.t2ULCData||{})[row],t2ULCAllow))return false;
+        var v=(d.t2Data[row]||{})[col];return v&&v.trim();
       });
     }
     if(slot==='t3'){
-      // Must respect T2->T3 pairing rules
-      var t2type=r.t2?r.t2.type:'';
-      var t2T=parseList(t2type),aT3=[];
-      t2T.forEach(function(t){
-        if(d.t3PairingRules&&d.t3PairingRules[t]!==undefined){
-          parseList(d.t3PairingRules[t]).forEach(function(r3){if(aT3.indexOf(r3)===-1)aT3.push(r3);});
-        }
-      });
       return(d.t3Rows||[]).some(function(row){
         if(isExcluded(row,(d.t3TypeData||{})[row],testExcl))return false;
-        var et=parseList((d.t3TypeData||{})[row]||'');
-        if(aT3.length&&!anyMatch(et,aT3))return false;
-        var v=(d.t3Data&&d.t3Data[row])?d.t3Data[row][r.t1.col]:'';return v&&v.trim();
+        var v=(d.t3Data[row]||{})[col];return v&&v.trim();
       });
     }
     return true;
   }
 
-  function hasAlternativeType(slot,exType,excl){
+  function hasAltType(slot,exType,excl){
     var testExcl={exercises:excl.exercises.slice(),types:excl.types.concat([exType.toLowerCase()])};
-    return hasAlternativeExercise(slot,'',testExcl);
+    return hasAltExercise(slot,'',testExcl);
   }
 
   var cols=exercises.map(function(ex){
     var typePrimary=parseList(ex.type)[0]||'';
-    var alreadyExcludedEx=PersistentExclusions.exercises.indexOf(ex.name)!==-1;
-    var alreadyExcludedType=PersistentExclusions.types.indexOf(typePrimary.toLowerCase())!==-1;
-    var canExcludeEx=!alreadyExcludedEx&&hasAlternativeExercise(ex.slot,ex.name,PersistentExclusions);
-    var canExcludeType=!alreadyExcludedType&&hasAlternativeType(ex.slot,typePrimary,PersistentExclusions);
-
-    var exOptClass='refine-opt'+(canExcludeEx?'':' refine-opt-disabled');
-    var typeOptClass='refine-opt'+(canExcludeType?'':' refine-opt-disabled');
-    var exOnclick=canExcludeEx?'onclick="selectRefineOpt(this)"':'';
-    var typeOnclick=canExcludeType?'onclick="selectRefineOpt(this)"':'';
-
+    var alreadyEx=PersistentExclusions.exercises.indexOf(ex.name)!==-1;
+    var alreadyType=PersistentExclusions.types.indexOf(typePrimary.toLowerCase())!==-1;
+    var canEx=!alreadyEx&&hasAltExercise(ex.slot,ex.name,PersistentExclusions);
+    var canType=!alreadyType&&hasAltType(ex.slot,typePrimary,PersistentExclusions);
+    var exCls='refine-opt'+(canEx?'':' refine-opt-disabled');
+    var tyCls='refine-opt'+(canType?'':' refine-opt-disabled');
     return'<div class="refine-group" data-slot="'+ex.slot+'" data-exercise="'+ex.name+'" data-type="'+typePrimary+'" data-selected="">'
       +'<div class="refine-group-label">'+ex.name+'</div>'
-      +'<div class="'+exOptClass+'" data-val="exercise" '+exOnclick+'>'
+      +'<div class="'+exCls+'" data-val="exercise"'+(canEx?' onclick="selectRefineOpt(this)"':'')+'>'
       +'<span class="refine-opt-text">Exclude this exercise</span>'
-      +'<span class="refine-tick">&#10003;</span>'
-      +'</div>'
-      +'<div class="'+typeOptClass+'" data-val="type" '+typeOnclick+'>'
+      +'<span class="refine-tick">&#10003;</span></div>'
+      +'<div class="'+tyCls+'" data-val="type"'+(canType?' onclick="selectRefineOpt(this)"':'')+'>'
       +'<span class="refine-opt-text refine-opt-muted">Exclude '+typePrimary+' exercises</span>'
-      +'<span class="refine-tick refine-tick-muted">&#10003;</span>'
-      +'</div>'
+      +'<span class="refine-tick refine-tick-muted">&#10003;</span></div>'
       +'</div>';
   });
 
-  // Previously applied filters — clickable to remove
   var prevFilters='';
   if(PersistentExclusions.exercises.length||PersistentExclusions.types.length){
     var items=[];
     PersistentExclusions.exercises.forEach(function(ex){
       items.push('<div class="refine-prev-item" data-remove-exercise="'+ex+'" onclick="removePersistentFilter(this)">'
         +'<span class="refine-opt-text refine-opt-muted refine-prev-text">'+ex+' excluded</span>'
-        +'<span class="refine-prev-tick">&#10003;</span>'
-        +'</div>');
+        +'<span class="refine-prev-tick">&#10003;</span></div>');
     });
     PersistentExclusions.types.forEach(function(t){
       items.push('<div class="refine-prev-item" data-remove-type="'+t+'" onclick="removePersistentFilter(this)">'
         +'<span class="refine-opt-text refine-opt-muted refine-prev-text">'+t+' exercises excluded</span>'
-        +'<span class="refine-prev-tick">&#10003;</span>'
-        +'</div>');
+        +'<span class="refine-prev-tick">&#10003;</span></div>');
     });
     prevFilters='<div class="refine-prev-filters">'+items.join('')+'</div>';
   }
 
   var inner=cols.join('<div class="refine-divider"></div>');
-  var display=startOpen?'block':'none';
-
-  return'<div id="refinePanel" style="display:'+display+'">'
+  return'<div id="refinePanel" style="display:'+(startOpen?'block':'none')+'">'
     +'<div class="refine-cols">'+inner+'</div>'
     +'<div class="refine-footer">'
     +'<button class="refine-regen-btn" onclick="regenerate()">Regenerate</button>'
     +prevFilters
-    +'</div>'
-    +'</div>';
+    +'</div></div>';
 }
 
 function toggleRefine(){
@@ -406,9 +412,8 @@ function selectRefineOpt(opt){
     o.querySelector('.refine-tick').style.opacity='0';
     o.querySelector('.refine-opt-text').style.opacity='1';
   });
-  if(selVal===thisVal){
-    group.setAttribute('data-selected','');
-  }else{
+  if(selVal===thisVal){group.setAttribute('data-selected','');}
+  else{
     group.setAttribute('data-selected',thisVal);
     opt.querySelector('.refine-tick').style.opacity='1';
     opt.querySelector('.refine-opt-text').style.opacity='0.45';
@@ -416,34 +421,22 @@ function selectRefineOpt(opt){
 }
 
 function removePersistentFilter(el){
-  var exName=el.getAttribute('data-remove-exercise');
-  var exType=el.getAttribute('data-remove-type');
   var tick=el.querySelector('.refine-prev-tick');
-  // Toggle: if already marked for removal, re-add it; if active, mark for removal
   if(el.classList.contains('refine-prev-removing')){
     el.classList.remove('refine-prev-removing');
     tick.innerHTML='&#10003;';
-    tick.style.color='';
   }else{
     el.classList.add('refine-prev-removing');
     tick.innerHTML='&#x2715;';
-    tick.style.color='';
   }
 }
 
-// Called by regenerate() — applies removals before building new workout
 function applyFilterRemovals(){
   document.querySelectorAll('.refine-prev-item.refine-prev-removing').forEach(function(el){
     var exName=el.getAttribute('data-remove-exercise');
     var exType=el.getAttribute('data-remove-type');
-    if(exName){
-      var idx=PersistentExclusions.exercises.indexOf(exName);
-      if(idx!==-1)PersistentExclusions.exercises.splice(idx,1);
-    }
-    if(exType){
-      var idx=PersistentExclusions.types.indexOf(exType);
-      if(idx!==-1)PersistentExclusions.types.splice(idx,1);
-    }
+    if(exName){var idx=PersistentExclusions.exercises.indexOf(exName);if(idx!==-1)PersistentExclusions.exercises.splice(idx,1);}
+    if(exType){var idx=PersistentExclusions.types.indexOf(exType);if(idx!==-1)PersistentExclusions.types.splice(idx,1);}
   });
 }
 
