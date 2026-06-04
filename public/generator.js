@@ -43,6 +43,8 @@ function isRecovery(typeStr){
 }
 function repLabel(typeStr,ub){
   if(isRecovery(typeStr))return'seconds';
+  var types=parseList(typeStr||'');
+  if(types.indexOf('machine')!==-1)return'meters';
   return isUni(ub)?'reps each side':'reps';
 }
 function typeMatchesExclusion(typeStr,excl){
@@ -64,12 +66,387 @@ async function loadSheetData(){
     State.sheetData=await r.json();
     var sel=document.getElementById('promptSelect');
     var prompts=State.sheetData.prompts.filter(function(p){
-      return p&&p.trim()!==''&&p!=='PROMPT RULES'&&!p.startsWith('Controls')&&!p.startsWith('Each field');
+      return p&&p.trim()!==''
+        &&p!=='PROMPT RULES'
+        &&!p.toLowerCase().startsWith('prompt rules')
+        &&!p.startsWith('Controls')
+        &&!p.startsWith('Each field');
     });
     sel.innerHTML='<option value="" disabled selected>Choose</option>'+prompts.map(function(p){
       return'<option value="'+p+'">'+p+'</option>';
     }).join('');
     sel.disabled=false;
+    document.getElementById('timeSelect').disabled=false;
+    document.getElementById('genBtn').disabled=false;
+  }catch(e){
+    document.getElementById('output').innerHTML='<div class="state-msg">Could not load workout data. Please refresh.</div>';
+  }
+}
+
+// ── Generate (fresh) ──────────────────────────────────────
+
+function generate(){
+  PersistentExclusions={exercises:[],types:[]};
+  var prompt=document.getElementById('promptSelect').value;
+  var ts=document.getElementById('timeSelect').value;
+  if(!prompt||!ts)return;
+  var result=_buildWorkout(prompt,ts,null,PersistentExclusions);
+  if(!result)return;
+  State.lastResult=result;
+  renderOutput(false);
+}
+
+// ── Regenerate (refine) ───────────────────────────────────
+
+function regenerate(){
+  applyFilterRemovals();
+  document.querySelectorAll('.refine-group').forEach(function(group){
+    var slot=group.getAttribute('data-slot');
+    var exName=group.getAttribute('data-exercise');
+    var exType=group.getAttribute('data-type');
+    var selVal=group.getAttribute('data-selected');
+    if(!selVal)return;
+    if(selVal==='exercise'&&PersistentExclusions.exercises.indexOf(exName)===-1)
+      PersistentExclusions.exercises.push(exName);
+    if(selVal==='type'&&PersistentExclusions.types.indexOf(exType.toLowerCase())===-1)
+      PersistentExclusions.types.push(exType.toLowerCase());
+  });
+
+  var slotsToReplace={};
+  var r=State.lastResult;
+  if(r.t1&&isExcluded(r.t1.row,r.t1.type,PersistentExclusions))slotsToReplace['t1']=true;
+  if(r.t2&&isExcluded(r.t2.row,r.t2.type,PersistentExclusions))slotsToReplace['t2']=true;
+  if(r.t3&&isExcluded(r.t3.row,r.t3.type,PersistentExclusions))slotsToReplace['t3']=true;
+
+  var prompt=document.getElementById('promptSelect').value;
+  var ts=document.getElementById('timeSelect').value;
+  var newResult=_buildWorkout(prompt,ts,slotsToReplace,PersistentExclusions);
+  if(!newResult)return;
+  State.lastResult=newResult;
+  renderOutput(true);
+}
+
+// ── Core workout builder ──────────────────────────────────
+
+function _buildWorkout(prompt,ts,slotsToReplace,excl){
+  var keep=slotsToReplace&&State.lastResult?State.lastResult:null;
+  var nAZ=ts==='60mins'?3:ts==='45mins'?2:1;
+  var d=State.sheetData;
+  var pRule=d.promptRules[prompt];
+  if(!pRule){alert('No rule for: '+prompt);return null;}
+
+  // Parse prompt filters
+  var t1TypesAllow=parseList(pRule.t1Types||'');
+  var t1ModesAllow=parseList(pRule.t1Modes||'');
+  var t1ULCAllow  =parseList(pRule.t1ULC||'');
+  var t2TypesAllow=parseList(pRule.t2Types||'');
+  var t2ModesAllow=parseList(pRule.t2Modes||'');
+  var t2ULCAllow  =parseList(pRule.t2ULC||'');
+  var allowedCols =parseList(pRule.allowedCols||'');
+
+  // Pick column (keep same column on refine)
+  var selectedCol, colIdx;
+  if(keep&&!slotsToReplace['t1']){
+    selectedCol=keep.selectedCol; colIdx=d.t1Cols.indexOf(selectedCol);
+  }else{
+    var eligCols=d.t1Cols.filter(function(c){return allowedCols.length===0||allowedCols.indexOf(c.toLowerCase())!==-1;});
+    if(!eligCols.length){
+      document.getElementById('output').innerHTML='<div class="state-msg">No eligible columns for this workout. Check Config_ColumnPairing.</div>';
+      return null;
+    }
+    selectedCol=rnd(eligCols); colIdx=d.t1Cols.indexOf(selectedCol);
+  }
+
+  // Get exercise count for this column
+  var countRange=(d.colPairingRules||{})[selectedCol]||'2/2/1';
+  var exCount=parseRange(countRange)||2;
+  exCount=Math.max(1,Math.min(3,exCount));
+  // On refine, keep same count unless more slots are being replaced
+  if(keep) exCount=keep.exCount;
+
+  var workoutFormat=keep&&!slotsToReplace['t1']?keep.fmt:getFormat(selectedCol);
+
+  // T1
+  var t1,t1n;
+  if(keep&&!slotsToReplace['t1']){
+    t1=keep.t1; t1n=keep.t1n;
+  }else{
+    var t1e=[];
+    (d.t1Rows||[]).forEach(function(row){
+      if(isExcluded(row,(d.t1TypeData||{})[row],excl))return;
+      if(!matchesFilter((d.t1TypeData||{})[row],t1TypesAllow))return;
+      if(!matchesFilter((d.t1ModeData||{})[row],t1ModesAllow))return;
+      if(!matchesFilter((d.t1ULCData||{})[row],t1ULCAllow))return;
+      var v=(d.t1Data[row]||{})[selectedCol];if(!v||!v.trim())return;
+      t1e.push({row:row,col:selectedCol,val:v,type:(d.t1TypeData||{})[row]||'',mode:(d.t1ModeData||{})[row]||'',ulc:(d.t1ULCData||{})[row]||'',ub:(d.t1UBData||{})[row]||'B'});
+    });
+    if(!t1e.length){
+      document.getElementById('output').innerHTML='<div class="state-msg">No T1 exercises available for this workout. Try a different prompt or check sheet filters.</div>';
+      return null;
+    }
+    var t1p=rnd(t1e);
+    t1={row:t1p.row,col:selectedCol,val:t1p.val,type:t1p.type,mode:t1p.mode,ulc:t1p.ulc,ub:t1p.ub};
+    t1n=parseRange(t1p.val);
+  }
+
+  // T2
+  var t2=null,t2n=null;
+  if(exCount>=2){
+    if(keep&&!slotsToReplace['t2']){
+      t2=keep.t2; t2n=keep.t2n;
+    }else{
+      var t2e=[];
+      (d.t2Rows||[]).forEach(function(row){
+        if(isExcluded(row,(d.t2TypeData||{})[row],excl))return;
+        if(!matchesFilter((d.t2TypeData||{})[row],t2TypesAllow))return;
+        if(!matchesFilter((d.t2ModeData||{})[row],t2ModesAllow))return;
+        if(!matchesFilter((d.t2ULCData||{})[row],t2ULCAllow))return;
+        var v=(d.t2Data[row]||{})[selectedCol];if(!v||!v.trim())return;
+        t2e.push({row:row,col:selectedCol,val:v,type:(d.t2TypeData||{})[row]||'',mode:(d.t2ModeData||{})[row]||'',ulc:(d.t2ULCData||{})[row]||'',ub:(d.t2UBData||{})[row]||'B'});
+      });
+      if(t2e.length){var t2p=rnd(t2e);t2={row:t2p.row,col:selectedCol,val:t2p.val,type:t2p.type,mode:t2p.mode,ulc:t2p.ulc,ub:t2p.ub};t2n=parseRange(t2p.val);}
+    }
+  }
+
+  // T3 — random, no type/mode/ULC filters, only recovery rule
+  var t3=null,t3n=null;
+  if(exCount>=3){
+    if(keep&&!slotsToReplace['t3']){
+      t3=keep.t3; t3n=keep.t3n;
+    }else{
+      var t2IsRecovery=t2&&isRecovery(t2.type);
+      var t3e=[];
+      (d.t3Rows||[]).forEach(function(row){
+        if(isExcluded(row,(d.t3TypeData||{})[row],excl))return;
+        if(t2IsRecovery&&isRecovery((d.t3TypeData||{})[row]))return;
+        var v=(d.t3Data[row]||{})[selectedCol];if(!v||!v.trim())return;
+        t3e.push({row:row,col:selectedCol,val:v,type:(d.t3TypeData||{})[row]||'',ub:(d.t3UBData||{})[row]||'B'});
+      });
+      if(t3e.length){var t3p=rnd(t3e);t3={row:t3p.row,col:selectedCol,val:t3p.val,type:t3p.type,ub:t3p.ub};t3n=parseRange(t3p.val);}
+    }
+  }
+
+  // TA / TZ
+  var taP,tzP;
+  if(keep){
+    taP=keep.taP; tzP=keep.tzP;
+  }else{
+    var taE=(d.taRows||[]).filter(function(ex){var v=(d.taData||{})[ex];return v&&v.trim();}).map(function(ex){return{name:ex,val:d.taData[ex],ub:(d.taUBData||{})[ex]||'B',rounds:(d.taRoundsData||{})[ex]||'2',type:(d.taTypeData||{})[ex]||''};});
+    taP=pickN(taE,nAZ);
+    var tzE=(d.tzRows||[]).filter(function(ex){var v=(d.tzData||{})[ex];return v&&v.trim();}).map(function(ex){return{name:ex,val:d.tzData[ex],ub:(d.tzUBData||{})[ex]||'B',rounds:(d.tzRoundsData||{})[ex]||'2',type:(d.tzTypeData||{})[ex]||''};});
+    tzP=pickN(tzE,nAZ);
+  }
+
+  return{t1:t1,t1n:t1n,t2:t2,t2n:t2n,t3:t3,t3n:t3n,fmt:workoutFormat,selectedCol:selectedCol,exCount:exCount,taP:taP,tzP:tzP,prompt:prompt,timeStr:ts};
+}
+
+// ── Render ────────────────────────────────────────────────
+
+function renderOutput(isRegen){
+  var r=State.lastResult;
+  var h=buildResults(r);
+  h+='<div class="save-area">';
+  h+='<button class="save-btn" id="saveBtn" onclick="saveWorkout()">Save workout</button>';
+  h+='<button class="refine-btn" id="refineBtn" onclick="toggleRefine()">Refine workout</button>';
+  h+='<span class="save-msg" id="saveMsg">'+(isRegen?'Refined':'')+'</span>';
+  if(isRegen){
+    h+='<span class="pro-link">Need something more personalised? Try <span onclick="showPage(\'pro\',null)" style="text-decoration:underline;cursor:pointer;color:#1E2C35;">Baseline Pro</span></span>';
+  }
+  h+='</div>';
+  h+=buildRefinePanel(r,isRegen);
+  document.getElementById('output').innerHTML=h;
+}
+
+function buildResults(r){
+  var ec=function(csstype,label,name,col,reps,ub,extype){
+    var repsVal=reps!==null&&reps!==undefined?reps:'--';
+    var unit=repLabel(extype,ub);
+    var unitSpan='<span class="card-col" style="margin-left:8px;font-size:12px;">'+unit+'</span>';
+    var html='<div class="exercise-card '+csstype+'">';
+    html+='<div class="card-label '+csstype+'">'+label+'</div>';
+    html+='<div class="card-exercise">'+name+'</div>';
+    if(col)html+='<div class="card-col">'+col+'</div>';
+    html+='<div class="card-reps-row"><span class="card-reps">'+repsVal+'</span>'+unitSpan+'</div>';
+    html+='</div>';
+    return html;
+  };
+  var ac=function(csstype,label,name,reps,ub,rounds,extype){
+    var repsVal=reps!==null&&reps!==undefined?reps:'--';
+    var unit=repLabel(extype,ub);
+    var unitSpan='<span class="card-col" style="margin-left:8px;font-size:12px;">'+unit+'</span>';
+    var roundsStr=rounds&&parseInt(rounds)>1?'<div class="card-col" style="margin-top:4px;">x'+rounds+' rounds</div>':'';
+    var html='<div class="acc-card '+csstype+'">';
+    html+='<div class="card-label '+csstype+'">'+label+'</div>';
+    html+='<div class="acc-name">'+name+'</div>';
+    html+='<div class="card-reps-row"><span class="acc-reps">'+repsVal+'</span>'+unitSpan+'</div>';
+    html+=roundsStr+'</div>';
+    return html;
+  };
+
+  var taC=r.taP.map(function(p,i){return ac('ta','Prep '+(i+1),p.name,parseRange(p.val),p.ub,p.rounds,p.type);}).join('');
+  var tzC=r.tzP.map(function(p,i){return ac('tz','Mobility '+(i+1),p.name,parseRange(p.val),p.ub,p.rounds,p.type);}).join('');
+
+  var h='<div class="results">';
+  if(r.taP.length)h+='<div class="results-section"><div class="section-label">Prep</div><div class="acc-grid">'+taC+'</div></div><div class="divider"></div>';
+  h+='<div class="results-section"><div class="section-label">Main Work</div><div class="format-badge">'+r.fmt+'</div>';
+  h+='<div class="exercise-pair">';
+  h+=ec('t1','Exercise 1',r.t1.row,r.t1.col,r.t1n,r.t1.ub,r.t1.type);
+  if(r.t2){
+    h+=ec('t2','Exercise 2',r.t2.row,r.t2.col,r.t2n,r.t2.ub,r.t2.type);
+  }else{
+    h+='<div class="exercise-card t2"><div class="card-label t2">Exercise 2</div><div class="card-empty">No pair for this selection</div></div>';
+  }
+  h+='</div>';
+  if(r.t3)h+='<div class="exercise-pair" style="margin-top:12px">'+ec('t3','Exercise 3',r.t3.row,r.t3.col,r.t3n,r.t3.ub,r.t3.type)+'<div></div></div>';
+  h+='</div>';
+  if(r.tzP.length)h+='<div class="divider"></div><div class="results-section"><div class="section-label">Mobility</div><div class="acc-grid">'+tzC+'</div></div>';
+  h+='</div>';
+  return h;
+}
+
+// ── Refine panel ──────────────────────────────────────────
+
+function buildRefinePanel(r,startOpen){
+  var d=State.sheetData;
+  var exercises=[];
+  if(r.t1&&!isRecovery(r.t1.type))exercises.push({slot:'t1',name:r.t1.row,type:r.t1.type});
+  if(r.t2&&!isRecovery(r.t2.type))exercises.push({slot:'t2',name:r.t2.row,type:r.t2.type});
+  if(r.t3&&!isRecovery(r.t3.type))exercises.push({slot:'t3',name:r.t3.row,type:r.t3.type});
+  if(!exercises.length)return'<div id="refinePanel" style="display:none"></div>';
+
+  var pRule=d.promptRules[r.prompt]||{};
+  var allowedCols=parseList(pRule.allowedCols||'');
+  var t1TypesAllow=parseList(pRule.t1Types||'');
+  var t1ModesAllow=parseList(pRule.t1Modes||'');
+  var t1ULCAllow  =parseList(pRule.t1ULC||'');
+  var t2TypesAllow=parseList(pRule.t2Types||'');
+  var t2ModesAllow=parseList(pRule.t2Modes||'');
+  var t2ULCAllow  =parseList(pRule.t2ULC||'');
+
+  function hasAltExercise(slot,exName,excl){
+    var testExcl={exercises:excl.exercises.concat(exName?[exName]:[]),types:excl.types.slice()};
+    var col=r.selectedCol;
+    if(slot==='t1'){
+      return(d.t1Rows||[]).some(function(row){
+        if(isExcluded(row,(d.t1TypeData||{})[row],testExcl))return false;
+        if(!matchesFilter((d.t1TypeData||{})[row],t1TypesAllow))return false;
+        if(!matchesFilter((d.t1ModeData||{})[row],t1ModesAllow))return false;
+        if(!matchesFilter((d.t1ULCData||{})[row],t1ULCAllow))return false;
+        var v=(d.t1Data[row]||{})[col];return v&&v.trim();
+      });
+    }
+    if(slot==='t2'){
+      return(d.t2Rows||[]).some(function(row){
+        if(isExcluded(row,(d.t2TypeData||{})[row],testExcl))return false;
+        if(!matchesFilter((d.t2TypeData||{})[row],t2TypesAllow))return false;
+        if(!matchesFilter((d.t2ModeData||{})[row],t2ModesAllow))return false;
+        if(!matchesFilter((d.t2ULCData||{})[row],t2ULCAllow))return false;
+        var v=(d.t2Data[row]||{})[col];return v&&v.trim();
+      });
+    }
+    if(slot==='t3'){
+      return(d.t3Rows||[]).some(function(row){
+        if(isExcluded(row,(d.t3TypeData||{})[row],testExcl))return false;
+        var v=(d.t3Data[row]||{})[col];return v&&v.trim();
+      });
+    }
+    return true;
+  }
+
+  function hasAltType(slot,exType,excl){
+    var testExcl={exercises:excl.exercises.slice(),types:excl.types.concat([exType.toLowerCase()])};
+    return hasAltExercise(slot,'',testExcl);
+  }
+
+  var cols=exercises.map(function(ex){
+    var typePrimary=parseList(ex.type)[0]||'';
+    var alreadyEx=PersistentExclusions.exercises.indexOf(ex.name)!==-1;
+    var alreadyType=PersistentExclusions.types.indexOf(typePrimary.toLowerCase())!==-1;
+    var canEx=!alreadyEx&&hasAltExercise(ex.slot,ex.name,PersistentExclusions);
+    var canType=!alreadyType&&hasAltType(ex.slot,typePrimary,PersistentExclusions);
+    var exCls='refine-opt'+(canEx?'':' refine-opt-disabled');
+    var tyCls='refine-opt'+(canType?'':' refine-opt-disabled');
+    return'<div class="refine-group" data-slot="'+ex.slot+'" data-exercise="'+ex.name+'" data-type="'+typePrimary+'" data-selected="">'
+      +'<div class="refine-group-label">'+ex.name+'</div>'
+      +'<div class="'+exCls+'" data-val="exercise"'+(canEx?' onclick="selectRefineOpt(this)"':'')+'>'
+      +'<span class="refine-opt-text">Exclude this exercise</span>'
+      +'<span class="refine-tick">&#10003;</span></div>'
+      +'<div class="'+tyCls+'" data-val="type"'+(canType?' onclick="selectRefineOpt(this)"':'')+'>'
+      +'<span class="refine-opt-text refine-opt-muted">Exclude '+typePrimary+' exercises</span>'
+      +'<span class="refine-tick refine-tick-muted">&#10003;</span></div>'
+      +'</div>';
+  });
+
+  var prevFilters='';
+  if(PersistentExclusions.exercises.length||PersistentExclusions.types.length){
+    var items=[];
+    PersistentExclusions.exercises.forEach(function(ex){
+      items.push('<div class="refine-prev-item" data-remove-exercise="'+ex+'" onclick="removePersistentFilter(this)">'
+        +'<span class="refine-opt-text refine-opt-muted refine-prev-text">'+ex+' excluded</span>'
+        +'<span class="refine-prev-tick">&#10003;</span></div>');
+    });
+    PersistentExclusions.types.forEach(function(t){
+      items.push('<div class="refine-prev-item" data-remove-type="'+t+'" onclick="removePersistentFilter(this)">'
+        +'<span class="refine-opt-text refine-opt-muted refine-prev-text">'+t+' exercises excluded</span>'
+        +'<span class="refine-prev-tick">&#10003;</span></div>');
+    });
+    prevFilters='<div class="refine-prev-filters">'+items.join('')+'</div>';
+  }
+
+  var inner=cols.join('<div class="refine-divider"></div>');
+  return'<div id="refinePanel" style="display:'+(startOpen?'block':'none')+'">'
+    +'<div class="refine-cols">'+inner+'</div>'
+    +'<div class="refine-footer">'
+    +'<button class="refine-regen-btn" onclick="regenerate()">Regenerate</button>'
+    +prevFilters
+    +'</div></div>';
+}
+
+function toggleRefine(){
+  var panel=document.getElementById('refinePanel');
+  var btn=document.getElementById('refineBtn');
+  var open=panel.style.display==='block';
+  panel.style.display=open?'none':'block';
+  btn.classList.toggle('refine-btn-active',!open);
+}
+
+function selectRefineOpt(opt){
+  var group=opt.closest('.refine-group');
+  var selVal=group.getAttribute('data-selected');
+  var thisVal=opt.getAttribute('data-val');
+  group.querySelectorAll('.refine-opt:not(.refine-opt-disabled)').forEach(function(o){
+    o.querySelector('.refine-tick').style.opacity='0';
+    o.querySelector('.refine-opt-text').style.opacity='1';
+  });
+  if(selVal===thisVal){group.setAttribute('data-selected','');}
+  else{
+    group.setAttribute('data-selected',thisVal);
+    opt.querySelector('.refine-tick').style.opacity='1';
+    opt.querySelector('.refine-opt-text').style.opacity='0.45';
+  }
+}
+
+function removePersistentFilter(el){
+  var tick=el.querySelector('.refine-prev-tick');
+  if(el.classList.contains('refine-prev-removing')){
+    el.classList.remove('refine-prev-removing');
+    tick.innerHTML='&#10003;';
+  }else{
+    el.classList.add('refine-prev-removing');
+    tick.innerHTML='&#x2715;';
+  }
+}
+
+function applyFilterRemovals(){
+  document.querySelectorAll('.refine-prev-item.refine-prev-removing').forEach(function(el){
+    var exName=el.getAttribute('data-remove-exercise');
+    var exType=el.getAttribute('data-remove-type');
+    if(exName){var idx=PersistentExclusions.exercises.indexOf(exName);if(idx!==-1)PersistentExclusions.exercises.splice(idx,1);}
+    if(exType){var idx=PersistentExclusions.types.indexOf(exType);if(idx!==-1)PersistentExclusions.types.splice(idx,1);}
+  });
+}
+
+function makeTitle(r){var p=[r.t1.row];if(r.t2)p.push(r.t2.row);p.push(r.fmt);return p.join(' - ');}
     document.getElementById('timeSelect').disabled=false;
     document.getElementById('genBtn').disabled=false;
   }catch(e){
