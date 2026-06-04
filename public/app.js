@@ -3,7 +3,7 @@
    Shared state, db helpers, page navigation, boot.
    ============================================================ */
 
-var SUPABASE_URL = 'https://zugyathhuiliaszixnlm.supabase.co';
+var SUPABASE_URL = 'https://www.baseline.fitness';
 var SUPABASE_KEY = 'sb_publishable_eTwm5JbLf6nW9zu3roUt6Q_D9JiacF4';
 
 var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
