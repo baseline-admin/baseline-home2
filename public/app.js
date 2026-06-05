@@ -1,166 +1,116 @@
 /* ============================================================
-   BASELINE - app.js
-   Shared state, db helpers, page navigation, boot.
+   BASELINE - auth.js
+   Google OAuth + email OTP + email/password registration.
+   All auth goes through Supabase JS - no custom token handling.
    ============================================================ */
 
-var SUPABASE_URL = 'https://zugyathhuiliaszixnlm.supabase.co';
-var SUPABASE_KEY = 'sb_publishable_eTwm5JbLf6nW9zu3roUt6Q_D9JiacF4';
+var APP_URL = 'https://www.baseline.fitness';
+var pendingEmail = '';
 
-var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { autoRefreshToken:true, persistSession:true, detectSessionInUrl:true }
-});
-
-var State = {
-  currentUser: null,
-  sheetData:   null,
-  lastResult:  null,
-  openWorkout: null
-};
-
-// ── DB helpers ────────────────────────────────────────────
-
-async function dbGetProfile() {
-  var { data } = await sb.from('profiles').select('*').eq('id', State.currentUser.id).single();
-  return data;
+function showStep1() {
+  document.getElementById('authStep1').style.display = 'block';
+  document.getElementById('authStep2').style.display = 'none';
+  document.getElementById('authStep3').style.display = 'none';
+  document.getElementById('err1').textContent = '';
 }
 
-async function dbUpsertProfile(firstName) {
-  var { data } = await sb.from('profiles')
-    .upsert({ id: State.currentUser.id, first_name: firstName, email: State.currentUser.email })
-    .select().single();
-  return data;
+function showRegister() {
+  document.getElementById('authStep1').style.display = 'none';
+  document.getElementById('authStep3').style.display = 'block';
+  document.getElementById('err3').textContent = '';
 }
 
-async function dbGetWorkouts() {
-  var { data } = await sb.from('workouts')
-    .select('*, scores(*)')
-    .eq('user_id', State.currentUser.id)
-    .order('generated_at', { ascending: false });
-  return data || [];
+// ── Google OAuth ──────────────────────────────────────────
+// Uses Supabase's authorize endpoint directly - plain redirect, no JS fetch
+function signInWithGoogle() {
+  window.location.href =
+    'https://zugyathhuiliaszixnlm.supabase.co/auth/v1/authorize?provider=google&redirect_to=' +
+    encodeURIComponent(APP_URL);
 }
 
-async function dbInsertWorkout(title, prompt, timeSelection, workoutData) {
-  var { data, error } = await sb.from('workouts')
-    .insert({ user_id: State.currentUser.id, title:title, prompt:prompt, time_selection:timeSelection, workout_data:workoutData })
-    .select().single();
-  if (error) throw error;
-  return data;
-}
+// ── Email OTP ─────────────────────────────────────────────
+async function sendOTP() {
+  var email = document.getElementById('authEmail').value.trim();
+  if (!email || !email.includes('@')) { document.getElementById('err1').textContent = 'Please enter a valid email.'; return; }
+  pendingEmail = email;
+  document.getElementById('err1').textContent = '';
+  document.getElementById('authStep1').querySelector('.auth-btn').disabled = true;
+  document.getElementById('authStep1').querySelector('.auth-btn').textContent = 'Sending...';
 
-async function dbDeleteWorkout(id) {
-  await sb.from('workouts').delete().eq('id', id).eq('user_id', State.currentUser.id);
-}
-
-async function dbInsertScore(workoutId, scoresData) {
-  var { data, error } = await sb.from('scores')
-    .insert({ workout_id:workoutId, user_id:State.currentUser.id, scores_data:scoresData, completed_at:new Date().toISOString() })
-    .select().single();
-  if (error) throw error;
-  return data;
-}
-
-async function dbDeleteScore(id) {
-  await sb.from('scores').delete().eq('id', id).eq('user_id', State.currentUser.id);
-}
-
-// ── UI helpers ────────────────────────────────────────────
-
-function setBusy(id, busy, label) {
-  var b = document.getElementById(id);
-  if (!b) return;
-  b.disabled = busy;
-  b.textContent = busy ? 'Please wait...' : label;
-}
-
-function showPage(name, btn) {
-  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
-  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
-  document.getElementById('page' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
-  if (btn) btn.classList.add('active');
-  if (name === 'myWorkouts') loadWorkouts();
-  if (name === 'library' && typeof renderLibrary === 'function') renderLibrary();
-}
-
-// ── Name prompt ───────────────────────────────────────────
-
-function showNamePrompt() {
-  var wrap = document.getElementById('headerRight');
-  wrap.innerHTML = '<div class="name-prompt-wrap">'
-    + '<input class="name-prompt-input" id="nameInput" type="text" placeholder="Enter your name" maxlength="30" />'
-    + '<button class="name-prompt-btn" onclick="saveName()">Save</button>'
-    + '</div>';
-  setTimeout(function(){ var el=document.getElementById('nameInput'); if(el) el.focus(); }, 100);
-  document.getElementById('nameInput').addEventListener('keydown', function(e){
-    if (e.key === 'Enter') saveName();
+  var { error } = await sb.auth.signInWithOtp({
+    email: email,
+    options: { shouldCreateUser: false }
   });
-}
 
-async function saveName() {
-  var input = document.getElementById('nameInput');
-  if (!input) return;
-  var name = input.value.trim();
-  if (!name) return;
-  await dbUpsertProfile(name);
-  setHeaderName(name);
-  updateGreeting(name);
-}
+  document.getElementById('authStep1').querySelector('.auth-btn').disabled = false;
+  document.getElementById('authStep1').querySelector('.auth-btn').textContent = 'Send sign-in code';
 
-function setHeaderName(name) {
-  var wrap = document.getElementById('headerRight');
-  wrap.innerHTML = '<span class="user-name">'+name+'</span>'
-    + '<button class="sign-out-btn" onclick="signOut()">Sign out</button>';
-}
-
-function updateGreeting(name) {
-  var el = document.getElementById('greeting');
-  if (el) el.innerHTML = 'Hello <strong>' + name + '</strong><span> - what would you like to work on today?</span>';
-}
-
-// ── Start app ─────────────────────────────────────────────
-
-async function startApp(user) {
-  if (State.currentUser && State.currentUser.id === user.id) return;
-  State.currentUser = user;
-
-  var profile = await dbGetProfile();
-  // Only use manually entered name — never fall back to OAuth metadata
-  var name = (profile && profile.first_name) ? profile.first_name : '';
-
-  var greetingEl = document.getElementById('greeting');
-  if (greetingEl) {
-    greetingEl.innerHTML = name
-      ? 'Hello <strong>' + name + '</strong><span> - what would you like to work on today?</span>'
-      : 'Hello<span> - what would you like to work on today?</span>';
+  if (error && error.message && error.message.toLowerCase().includes('not found')) {
+    document.getElementById('err1').textContent = 'No account found. Please create one below.';
+    return;
   }
+  if (error) { document.getElementById('err1').textContent = error.message || 'Could not send code.'; return; }
 
-  // Header: show name if known, otherwise show name prompt input
-  if (name) {
-    setHeaderName(name);
+  document.getElementById('otpSubtext').textContent = 'We sent a 6-digit code to ' + email + '. Enter it below - valid for 10 minutes.';
+  document.getElementById('authStep1').style.display = 'none';
+  document.getElementById('authStep2').style.display = 'block';
+  setTimeout(function(){ document.getElementById('otpCode').focus(); }, 100);
+}
+
+async function verifyOTP() {
+  var code = document.getElementById('otpCode').value.trim().replace(/\s/g, '');
+  if (code.length !== 6) { document.getElementById('err2').textContent = 'Please enter the 6-digit code.'; return; }
+  document.getElementById('err2').textContent = '';
+  setBusy ? setBusy('', true, '') : null;
+
+  var btn = document.getElementById('authStep2').querySelector('.auth-btn');
+  btn.disabled = true; btn.textContent = 'Verifying...';
+
+  var { data, error } = await sb.auth.verifyOtp({
+    email: pendingEmail,
+    token: code,
+    type: 'email'
+  });
+
+  btn.disabled = false; btn.textContent = 'Sign in';
+
+  if (error) { document.getElementById('err2').textContent = error.message || 'Invalid or expired code.'; return; }
+  // Session is set - onAuthStateChange in app.js handles the rest
+}
+
+// ── Register ──────────────────────────────────────────────
+async function register() {
+  var name  = document.getElementById('regName').value.trim();
+  var email = document.getElementById('regEmail').value.trim();
+  var pass  = document.getElementById('regPassword').value;
+  if (!name || !email || !pass) { document.getElementById('err3').textContent = 'Please fill in all fields.'; return; }
+  if (pass.length < 6) { document.getElementById('err3').textContent = 'Password must be at least 6 characters.'; return; }
+
+  setBusy('btnRegister', true, 'Create account');
+  var { data, error } = await sb.auth.signUp({
+    email: email,
+    password: pass,
+    options: { data: { first_name: name } }
+  });
+  setBusy('btnRegister', false, 'Create account');
+
+  if (error) { document.getElementById('err3').textContent = error.message || 'Registration failed.'; return; }
+
+  if (data.user && data.session) {
+    // Immediately signed in - save profile and go
+    await dbUpsertProfile(name);
+    // onAuthStateChange handles startApp
   } else {
-    showNamePrompt();
+    // Email confirmation required
+    document.getElementById('err3').textContent = 'Account created! Check your email to confirm, then sign in.';
   }
-
-  document.getElementById('authOverlay').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-
-  loadSheetData();
-  loadWorkouts();
 }
 
-function showAuthOverlay() {
-  State.currentUser = null;
-  document.getElementById('authOverlay').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
+// ── Sign out ──────────────────────────────────────────────
+async function signOut() {
+  State.sheetData = null; State.lastResult = null;
+  await sb.auth.signOut();
+  showStep1();
+  document.getElementById('authEmail').value = '';
+  document.getElementById('otpCode').value = '';
 }
-
-// ── Boot ──────────────────────────────────────────────────
-
-window.addEventListener('load', function() {
-  sb.auth.onAuthStateChange(function(event, session) {
-    if (session && session.user) {
-      startApp(session.user);
-    } else if (event === 'SIGNED_OUT') {
-      showAuthOverlay();
-    }
-  });
-});
