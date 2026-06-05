@@ -2,15 +2,17 @@
    BASELINE - library.js
    Exercise library with collapsible filter panels.
    AND logic across categories, OR logic within.
+   Default: no exercises shown. Filter or View All to browse.
    Depends on: app.js
    ============================================================ */
 
 var LibraryState = {
   exercises: [],
+  viewAll: false,
   activeFilters: { tennis: [], training: [], equipment: [], focus: [] }
 };
 
-// ── Build exercise list from sheetData ────────────────────
+// ── Build exercise list ───────────────────────────────────
 
 function buildLibrary() {
   if (!State.sheetData) return;
@@ -26,7 +28,6 @@ function buildLibrary() {
         type:   (type || '').toLowerCase().trim(),
         mode:   ((modeData || {})[name] || '').toLowerCase().trim(),
         ulc:    ((ulcData  || {})[name] || '').toLowerCase().trim(),
-        source: source,
         css:    cssClass
       });
     });
@@ -41,19 +42,19 @@ function buildLibrary() {
   LibraryState.exercises = exercises;
 }
 
-// ── Get all unique values for each filter category ────────
+// ── Unique individual tag values ──────────────────────────
 
 function getLibraryMeta() {
   var d = State.sheetData;
   var modes = [], types = [], ulcs = [], prompts = [];
 
   LibraryState.exercises.forEach(function(ex) {
-    if (ex.mode && modes.indexOf(ex.mode) === -1) modes.push(ex.mode);
-    if (ex.type && types.indexOf(ex.type) === -1) types.push(ex.type);
-    if (ex.ulc  && ulcs.indexOf(ex.ulc)   === -1) ulcs.push(ex.ulc);
+    // Split comma-separated values so "power, strength" becomes two separate tags
+    splitVals(ex.mode).forEach(function(v){ if(modes.indexOf(v)===-1) modes.push(v); });
+    splitVals(ex.type).forEach(function(v){ if(types.indexOf(v)===-1) types.push(v); });
+    splitVals(ex.ulc).forEach(function(v){  if(ulcs.indexOf(v)===-1)  ulcs.push(v);  });
   });
 
-  // Prompts from sheetData
   (d.prompts || []).forEach(function(p) {
     if (p && p.trim() && !p.toLowerCase().startsWith('prompt') && !p.startsWith('Each')) {
       prompts.push(p.trim());
@@ -64,7 +65,11 @@ function getLibraryMeta() {
   return { modes: modes, types: types, ulcs: ulcs, prompts: prompts };
 }
 
-// ── Check if exercise matches a prompt ────────────────────
+function splitVals(str) {
+  return (str || '').split(',').map(function(v){ return v.trim(); }).filter(Boolean);
+}
+
+// ── Prompt matching ───────────────────────────────────────
 
 function exerciseMatchesPrompt(ex, promptName) {
   var d = State.sheetData;
@@ -72,21 +77,14 @@ function exerciseMatchesPrompt(ex, promptName) {
   if (!rule) return false;
 
   function listMatch(value, ruleStr) {
-    if (!ruleStr || !ruleStr.trim()) return true; // blank = all allowed
+    if (!ruleStr || !ruleStr.trim()) return true;
     var allowed = ruleStr.split(',').map(function(s){ return s.trim().toLowerCase(); });
-    var vals = (value||'').split(',').map(function(s){ return s.trim().toLowerCase(); });
+    var vals = splitVals(value);
     return vals.some(function(v){ return allowed.indexOf(v) !== -1; });
   }
 
-  // Check T1 match
-  var t1Match = listMatch(ex.type, rule.t1Types)
-             && listMatch(ex.mode, rule.t1Modes)
-             && listMatch(ex.ulc,  rule.t1ULC);
-  // Check T2 match
-  var t2Match = listMatch(ex.type, rule.t2Types)
-             && listMatch(ex.mode, rule.t2Modes)
-             && listMatch(ex.ulc,  rule.t2ULC);
-
+  var t1Match = listMatch(ex.type, rule.t1Types) && listMatch(ex.mode, rule.t1Modes) && listMatch(ex.ulc, rule.t1ULC);
+  var t2Match = listMatch(ex.type, rule.t2Types) && listMatch(ex.mode, rule.t2Modes) && listMatch(ex.ulc, rule.t2ULC);
   return t1Match || t2Match;
 }
 
@@ -96,91 +94,112 @@ function renderLibrary() {
   buildLibrary();
   var meta = getLibraryMeta();
   var af = LibraryState.activeFilters;
+  var noFilters = !af.tennis.length && !af.training.length && !af.equipment.length && !af.focus.length;
 
-  // Filter exercises
-  var visible = LibraryState.exercises.filter(function(ex) {
-    // Tennis (OR within): must match at least one selected prompt (or none selected)
-    if (af.tennis.length > 0) {
-      var matchesAnyPrompt = af.tennis.some(function(p){ return exerciseMatchesPrompt(ex, p); });
-      if (!matchesAnyPrompt) return false;
-    }
-    // Training (OR within)
-    if (af.training.length > 0 && af.training.indexOf(ex.mode) === -1) return false;
-    // Equipment (OR within)
-    if (af.equipment.length > 0 && af.equipment.indexOf(ex.type) === -1) return false;
-    // Focus (OR within)
-    if (af.focus.length > 0 && af.focus.indexOf(ex.ulc) === -1) return false;
-    return true;
-  });
+  var visible = [];
+  if (LibraryState.viewAll && noFilters) {
+    visible = LibraryState.exercises.slice();
+  } else if (!noFilters) {
+    visible = LibraryState.exercises.filter(function(ex) {
+      // Tennis: OR within
+      if (af.tennis.length > 0) {
+        if (!af.tennis.some(function(p){ return exerciseMatchesPrompt(ex, p); })) return false;
+      }
+      // Training: OR within, split exercise mode
+      if (af.training.length > 0) {
+        if (!af.training.some(function(t){ return splitVals(ex.mode).indexOf(t) !== -1; })) return false;
+      }
+      // Equipment: OR within
+      if (af.equipment.length > 0) {
+        if (!af.equipment.some(function(t){ return splitVals(ex.type).indexOf(t) !== -1; })) return false;
+      }
+      // Focus: OR within
+      if (af.focus.length > 0) {
+        if (!af.focus.some(function(t){ return splitVals(ex.ulc).indexOf(t) !== -1; })) return false;
+      }
+      return true;
+    });
+  }
 
   var container = document.getElementById('libraryContainer');
   if (!container) return;
-
-  container.innerHTML = renderFilterPanels(meta) + renderExerciseGrid(visible);
+  container.innerHTML = renderFilterPanels(meta) + renderExerciseGrid(visible, noFilters);
 }
 
 function renderFilterPanels(meta) {
   var panels = [
-    { key:'tennis',    label:'Tennis',    items: meta.prompts,  note:'Show exercises used in each workout type' },
-    { key:'training',  label:'Training',  items: meta.modes,    note:'' },
-    { key:'equipment', label:'Equipment', items: meta.types,    note:'' },
-    { key:'focus',     label:'Focus',     items: meta.ulcs,     note:'' },
+    { key:'tennis',    label:'Tennis',    items: meta.prompts },
+    { key:'training',  label:'Training',  items: meta.modes   },
+    { key:'equipment', label:'Equipment', items: meta.types   },
+    { key:'focus',     label:'Focus',     items: meta.ulcs    },
   ];
 
-  return '<div class="lib-filters">'
-    + panels.map(function(panel) {
-        var af = LibraryState.activeFilters[panel.key];
-        var activeCount = af.length;
-        var isOpen = document.getElementById('libpanel-'+panel.key)
-          ? document.getElementById('libpanel-'+panel.key).classList.contains('lib-panel-open')
-          : false;
+  var html = '<div class="lib-filters">';
+  panels.forEach(function(panel) {
+    var af = LibraryState.activeFilters[panel.key];
+    var activeCount = af.length;
+    var bodyId = 'libpanel-body-' + panel.key;
+    var isOpen = false; // always start closed on re-render, state preserved via activeFilters
 
-        var tags = panel.items.map(function(item) {
-          var isActive = af.indexOf(item) !== -1;
-          return '<button class="lib-tag'+(isActive?' lib-tag-active':'')+'" '
-            + 'onclick="toggleLibFilter(\''+panel.key+'\',\''+item+'\')">'
-            + item + '</button>';
-        }).join('');
+    // Try to preserve open state
+    var existingBody = document.getElementById(bodyId);
+    if (existingBody) isOpen = existingBody.classList.contains('lib-panel-open');
 
-        return '<div class="lib-panel" id="libpanel-'+panel.key+'">'
-          + '<button class="lib-panel-header" onclick="toggleLibPanel(\''+panel.key+'\')">'
-          + '<span class="lib-panel-label">'+panel.label+'</span>'
-          + (activeCount ? '<span class="lib-panel-count">'+activeCount+'</span>' : '')
-          + '<span class="lib-panel-chevron">'+(isOpen?'&#x25B4;':'&#x25BE;')+'</span>'
-          + '</button>'
-          + '<div class="lib-panel-body'+(isOpen?' lib-panel-open':'')+'">'
-          + (panel.note ? '<div class="lib-panel-note">'+panel.note+'</div>' : '')
-          + '<div class="lib-tag-row">'+tags+'</div>'
-          + '</div></div>';
-      }).join('')
-    + (hasActiveFilters() ? '<button class="lib-clear-btn" onclick="clearLibFilters()">Clear all filters</button>' : '')
-    + '</div>';
+    var tags = panel.items.map(function(item) {
+      var isActive = af.indexOf(item) !== -1;
+      return '<button class="lib-tag' + (isActive ? ' lib-tag-active' : '') + '" '
+        + 'onclick="toggleLibFilter(\'' + panel.key + '\',\'' + item + '\')">'
+        + item + '</button>';
+    }).join('');
+
+    html += '<div class="lib-panel">'
+      + '<button class="lib-panel-header" onclick="toggleLibPanel(\'' + bodyId + '\')">'
+      + '<span class="lib-panel-label">' + panel.label + '</span>'
+      + (activeCount ? '<span class="lib-panel-count">' + activeCount + '</span>' : '')
+      + '<span class="lib-panel-chevron" id="chev-' + panel.key + '">' + (isOpen ? '&#x25B4;' : '&#x25BE;') + '</span>'
+      + '</button>'
+      + '<div class="lib-panel-body' + (isOpen ? ' lib-panel-open' : '') + '" id="' + bodyId + '">'
+      + '<div class="lib-tag-row">' + tags + '</div>'
+      + '</div></div>';
+  });
+
+  html += (hasActiveFilters() ? '<button class="lib-clear-btn" onclick="clearLibFilters()">Clear filters</button>' : '');
+  html += '</div>';
+  return html;
 }
 
-function renderExerciseGrid(exercises) {
+function renderExerciseGrid(exercises, noFilters) {
+  if (noFilters && !LibraryState.viewAll) {
+    return '<div class="empty-state" style="padding:40px 0;">'
+      + 'Select a filter above to browse, or '
+      + '<button class="lib-view-all-btn" onclick="viewAllLibrary()">view all exercises</button>'
+      + '</div>';
+  }
   if (!exercises.length) {
     return '<div class="empty-state">No exercises match the selected filters.</div>';
   }
   return '<div class="library-grid">'
     + exercises.map(function(ex) {
-        var tags = [ex.type, ex.mode, ex.ulc].filter(function(t){ return t && t.trim(); });
-        return '<div class="library-card '+ex.css+'">'
-          + '<div class="library-card-source">'+ex.source+'</div>'
-          + '<div class="library-card-name">'+ex.name+'</div>'
+        var tags = splitVals(ex.type).concat(splitVals(ex.mode)).concat(splitVals(ex.ulc))
+          .filter(function(t){ return t; });
+        var searchText = [ex.name, ex.type, ex.mode, ex.ulc].join(' ').toLowerCase();
+        return '<div class="library-card ' + ex.css + '" data-search="' + searchText + '">'
+          + '<div class="library-card-name">' + ex.name + '</div>'
           + '<div class="library-tags">'
-          + tags.map(function(t){ return '<span class="library-tag">'+t+'</span>'; }).join('')
+          + tags.map(function(t){ return '<span class="library-tag">' + t + '</span>'; }).join('')
           + '</div></div>';
       }).join('')
     + '</div>';
 }
 
-// ── Filter interactions ───────────────────────────────────
+// ── Interactions ──────────────────────────────────────────
 
-function toggleLibPanel(key) {
-  var body = document.querySelector('#libpanel-'+key+' .lib-panel-body');
+function toggleLibPanel(bodyId) {
+  var body = document.getElementById(bodyId);
   if (!body) return;
   body.classList.toggle('lib-panel-open');
-  var chev = document.querySelector('#libpanel-'+key+' .lib-panel-chevron');
+  var key = bodyId.replace('libpanel-body-', '');
+  var chev = document.getElementById('chev-' + key);
   if (chev) chev.innerHTML = body.classList.contains('lib-panel-open') ? '&#x25B4;' : '&#x25BE;';
 }
 
@@ -188,18 +207,28 @@ function toggleLibFilter(key, value) {
   var af = LibraryState.activeFilters[key];
   var idx = af.indexOf(value);
   if (idx === -1) af.push(value); else af.splice(idx, 1);
+  LibraryState.viewAll = false;
+
+  // Re-render but preserve open panel state
   renderLibrary();
-  // Re-open the panel that was just interacted with
-  var body = document.querySelector('#libpanel-'+key+' .lib-panel-body');
+  // Re-open the panel
+  var bodyId = 'libpanel-body-' + key;
+  var body = document.getElementById(bodyId);
   if (body && !body.classList.contains('lib-panel-open')) {
     body.classList.add('lib-panel-open');
-    var chev = document.querySelector('#libpanel-'+key+' .lib-panel-chevron');
+    var chev = document.getElementById('chev-' + key);
     if (chev) chev.innerHTML = '&#x25B4;';
   }
 }
 
+function viewAllLibrary() {
+  LibraryState.viewAll = true;
+  renderLibrary();
+}
+
 function clearLibFilters() {
   LibraryState.activeFilters = { tennis: [], training: [], equipment: [], focus: [] };
+  LibraryState.viewAll = false;
   renderLibrary();
 }
 
@@ -207,5 +236,3 @@ function hasActiveFilters() {
   var af = LibraryState.activeFilters;
   return af.tennis.length || af.training.length || af.equipment.length || af.focus.length;
 }
-
-// renderLibrary() is called from showPage() in app.js
