@@ -123,9 +123,9 @@ async function startApp(user) {
   State.currentUser = user;
 
   var profile = await dbGetProfile();
-  var name = profile && profile.first_name ? profile.first_name : '';
+  // Only use manually entered name — never fall back to OAuth metadata
+  var name = (profile && profile.first_name) ? profile.first_name : '';
 
-  // Update greeting
   var greetingEl = document.getElementById('greeting');
   if (greetingEl) {
     greetingEl.innerHTML = name
@@ -133,7 +133,7 @@ async function startApp(user) {
       : 'Hello<span> - what would you like to work on today?</span>';
   }
 
-  // Header right: show name or prompt
+  // Header: show name if known, otherwise show name prompt input
   if (name) {
     setHeaderName(name);
   } else {
