@@ -139,12 +139,22 @@
   </div>
 </div>
 
+<!-- Exercise Modal -->
+<div id="exerciseModal" class="ex-modal-overlay" onclick="handleExModalClick(event)">
+  <div class="ex-modal-box">
+    <button class="ex-modal-close" onclick="closeExerciseModal()">&#x2715;</button>
+    <div id="exerciseModalContent"></div>
+  </div>
+</div>
+
 <!-- Scripts -->
 <script src="app.js"></script>
 <script src="auth.js"></script>
 <script src="generator.js"></script>
 <script src="scores.js"></script>
 <script src="workouts.js"></script>
+<script src="create-workout.js"></script>
 <script src="library.js"></script>
+<script src="workouts_custom_patch.js"></script>
 </body>
 </html>
