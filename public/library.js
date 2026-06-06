@@ -3,7 +3,7 @@
    Exercise library with collapsible filter panels.
    AND logic across categories, OR logic within.
    Default: no exercises shown. Filter or View All to browse.
-   Depends on: app.js
+   Depends on: app.js, create-workout.js
    ============================================================ */
 
 var LibraryState = {
@@ -11,8 +11,6 @@ var LibraryState = {
   viewAll: false,
   activeFilters: { tennis: [], training: [], equipment: [], focus: [] }
 };
-
-// ── Build exercise list ───────────────────────────────────
 
 function buildLibrary() {
   if (!State.sheetData) return;
@@ -42,14 +40,11 @@ function buildLibrary() {
   LibraryState.exercises = exercises;
 }
 
-// ── Unique individual tag values ──────────────────────────
-
 function getLibraryMeta() {
   var d = State.sheetData;
   var modes = [], types = [], ulcs = [], prompts = [];
 
   LibraryState.exercises.forEach(function(ex) {
-    // Split comma-separated values so "power, strength" becomes two separate tags
     splitVals(ex.mode).forEach(function(v){ if(modes.indexOf(v)===-1) modes.push(v); });
     splitVals(ex.type).forEach(function(v){ if(types.indexOf(v)===-1) types.push(v); });
     splitVals(ex.ulc).forEach(function(v){  if(ulcs.indexOf(v)===-1)  ulcs.push(v);  });
@@ -69,8 +64,6 @@ function splitVals(str) {
   return (str || '').split(',').map(function(v){ return v.trim(); }).filter(Boolean);
 }
 
-// ── Prompt matching ───────────────────────────────────────
-
 function exerciseMatchesPrompt(ex, promptName) {
   var d = State.sheetData;
   var rule = (d.promptRules || {})[promptName];
@@ -79,16 +72,13 @@ function exerciseMatchesPrompt(ex, promptName) {
   function listMatch(value, ruleStr) {
     if (!ruleStr || !ruleStr.trim()) return true;
     var allowed = ruleStr.split(',').map(function(s){ return s.trim().toLowerCase(); });
-    var vals = splitVals(value);
-    return vals.some(function(v){ return allowed.indexOf(v) !== -1; });
+    return splitVals(value).some(function(v){ return allowed.indexOf(v) !== -1; });
   }
 
   var t1Match = listMatch(ex.type, rule.t1Types) && listMatch(ex.mode, rule.t1Modes) && listMatch(ex.ulc, rule.t1ULC);
   var t2Match = listMatch(ex.type, rule.t2Types) && listMatch(ex.mode, rule.t2Modes) && listMatch(ex.ulc, rule.t2ULC);
   return t1Match || t2Match;
 }
-
-// ── Render ────────────────────────────────────────────────
 
 function renderLibrary() {
   buildLibrary();
@@ -101,19 +91,15 @@ function renderLibrary() {
     visible = LibraryState.exercises.slice();
   } else if (!noFilters) {
     visible = LibraryState.exercises.filter(function(ex) {
-      // Tennis: OR within
       if (af.tennis.length > 0) {
         if (!af.tennis.some(function(p){ return exerciseMatchesPrompt(ex, p); })) return false;
       }
-      // Training: OR within, split exercise mode
       if (af.training.length > 0) {
         if (!af.training.some(function(t){ return splitVals(ex.mode).indexOf(t) !== -1; })) return false;
       }
-      // Equipment: OR within
       if (af.equipment.length > 0) {
         if (!af.equipment.some(function(t){ return splitVals(ex.type).indexOf(t) !== -1; })) return false;
       }
-      // Focus: OR within
       if (af.focus.length > 0) {
         if (!af.focus.some(function(t){ return splitVals(ex.ulc).indexOf(t) !== -1; })) return false;
       }
@@ -123,7 +109,22 @@ function renderLibrary() {
 
   var container = document.getElementById('libraryContainer');
   if (!container) return;
-  container.innerHTML = renderFilterPanels(meta) + renderExerciseGrid(visible, noFilters);
+
+  // Filter panels
+  var filterHtml = renderFilterPanels(meta);
+
+  // Create Workout section
+  var cwHtml = (typeof renderCreateWorkout === 'function') ? renderCreateWorkout() : '';
+
+  // Exercise grid — use CW grid renderer if segment is active, otherwise standard
+  var gridHtml;
+  if (typeof renderCWExerciseGrid === 'function' && CWState.activeSegment) {
+    gridHtml = renderCWExerciseGrid(visible, noFilters);
+  } else {
+    gridHtml = renderExerciseGrid(visible, noFilters);
+  }
+
+  container.innerHTML = filterHtml + cwHtml + gridHtml;
 }
 
 function renderFilterPanels(meta) {
@@ -139,9 +140,7 @@ function renderFilterPanels(meta) {
     var af = LibraryState.activeFilters[panel.key];
     var activeCount = af.length;
     var bodyId = 'libpanel-body-' + panel.key;
-    var isOpen = false; // always start closed on re-render, state preserved via activeFilters
-
-    // Try to preserve open state
+    var isOpen = false;
     var existingBody = document.getElementById(bodyId);
     if (existingBody) isOpen = existingBody.classList.contains('lib-panel-open');
 
@@ -182,8 +181,7 @@ function renderExerciseGrid(exercises, noFilters) {
     + exercises.map(function(ex) {
         var tags = splitVals(ex.type).concat(splitVals(ex.mode)).concat(splitVals(ex.ulc))
           .filter(function(t){ return t; });
-        var searchText = [ex.name, ex.type, ex.mode, ex.ulc].join(' ').toLowerCase();
-        return '<div class="library-card ' + ex.css + '" data-search="' + searchText + '">'
+        return '<div class="library-card ' + ex.css + '">'
           + '<div class="library-card-name">' + ex.name + '</div>'
           + '<div class="library-tags">'
           + tags.map(function(t){ return '<span class="library-tag">' + t + '</span>'; }).join('')
@@ -191,8 +189,6 @@ function renderExerciseGrid(exercises, noFilters) {
       }).join('')
     + '</div>';
 }
-
-// ── Interactions ──────────────────────────────────────────
 
 function toggleLibPanel(bodyId) {
   var body = document.getElementById(bodyId);
@@ -208,10 +204,7 @@ function toggleLibFilter(key, value) {
   var idx = af.indexOf(value);
   if (idx === -1) af.push(value); else af.splice(idx, 1);
   LibraryState.viewAll = false;
-
-  // Re-render but preserve open panel state
   renderLibrary();
-  // Re-open the panel
   var bodyId = 'libpanel-body-' + key;
   var body = document.getElementById(bodyId);
   if (body && !body.classList.contains('lib-panel-open')) {
