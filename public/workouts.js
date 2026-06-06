@@ -150,38 +150,52 @@ function renderCustomAccCard(ex, num, cssClass, segKey) {
     + '</div>';
 }
 
-function buildCustomScoreInputsHTML(data) {
+/* ── Override buildScoreKeys to handle custom workouts ── */
+/* scores.js defines buildScoreKeys for generator workouts. */
+/* workouts.js overrides it so saveScores, buildScoreHistoryHTML */
+/* and buildScoreInputsHTML all work identically for custom workouts. */
+
+var _origBuildScoreKeys = buildScoreKeys;
+function buildScoreKeys(r) {
+  if (r && r.custom) return buildCustomScoreKeys(r);
+  return _origBuildScoreKeys(r);
+}
+
+function buildCustomScoreKeys(data) {
   var segs = data.segments || {};
-  var allExercises = [];
+  var keys = [];
 
-  // Collect all exercises across segments with their labels
-  var segDefs = [
-    { key:'main',     label:'Main Workout' },
-    { key:'prep',     label:'Prep'         },
-    { key:'mobility', label:'Mobility'     }
-  ];
+  // Workout-level score (format)
+  var fmt = (segs.main && segs.main.formatTicked) ? segs.main.format : null;
+  var ws = getWorkoutScoreField(fmt);
+  if (ws) keys.push({ key:'workout', label:ws, unit:null });
 
-  segDefs.forEach(function(sd) {
-    var seg = segs[sd.key];
-    if (!seg || !seg.exercises || !seg.exercises.length) return;
-    seg.exercises.forEach(function(ex) {
-      allExercises.push({ ex:ex, segKey:sd.key, segLabel:sd.label });
-    });
+  // Main exercises
+  var mainExs = (segs.main && segs.main.exercises) || [];
+  mainExs.forEach(function(ex, i) {
+    var s = getExerciseScoreField(ex.type);
+    if (s) keys.push({ key:'ex'+(i+1), label:ex.name, unit:s });
   });
 
-  if (!allExercises.length) return '';
+  // Prep exercises
+  var prepExs = (segs.prep && segs.prep.exercises) || [];
+  prepExs.forEach(function(ex, i) {
+    var s = getExerciseScoreField(ex.type);
+    if (s) keys.push({ key:'ta'+i, label:ex.name, unit:s });
+  });
 
-  return allExercises.map(function(item) {
-    var ex = item.ex;
-    var unit = cwRepLabelForDisplay(ex, item.segKey);
-    var fieldId = 'score_custom_' + ex.name.replace(/[^a-zA-Z0-9]/g,'_');
-    return '<div class="score-field">'
-      + '<label class="score-label">' + ex.name + '</label>'
-      + '<div class="score-input-wrap">'
-      + '<input class="score-input" type="text" id="' + fieldId + '" placeholder="—" />'
-      + '<span class="score-unit">' + unit + '</span>'
-      + '</div></div>';
-  }).join('');
+  // Mobility exercises
+  var mobExs = (segs.mobility && segs.mobility.exercises) || [];
+  mobExs.forEach(function(ex, i) {
+    var s = getExerciseScoreField(ex.type);
+    if (s) keys.push({ key:'tz'+i, label:ex.name, unit:s });
+  });
+
+  return keys;
+}
+
+function buildCustomScoreInputsHTML(data) {
+  return buildScoreInputsHTML(data);
 }
 
 function cwRepLabelForDisplay(ex, segKey) {
