@@ -214,10 +214,12 @@ function renderCreateWorkout() {
   var isOpen = CWState.open;
   var canSave = cwCanSave();
 
+  var proLink = '<span class="pro-link" style="'+(isOpen?'':'display:none;')+'">Need something more personalised? Try <span onclick="showPage(\'pro\',null)" style="text-decoration:underline;cursor:pointer;color:#1E2C35;">Baseline Pro</span></span>';
   var btnHtml = '<div class="cw-btn-row">'
     + '<button class="refine-btn'+(isOpen?' refine-btn-active':'')+'" onclick="toggleCreateWorkout()">'
     + 'Create workout</button>'
     + '<span class="save-msg" id="cwSaveMsg"></span>'
+    + proLink
     + '</div>';
 
   if (!isOpen) return btnHtml;
