@@ -454,3 +454,13 @@ select option { background:var(--surface); color:var(--text); }
 
 /* Custom workout thumbnail — subtle teal left border */
 .custom-results .exercise-card { border-left-color: var(--t2); }
+
+/* Remove spinner arrows from number inputs */
+.cw-reps-input::-webkit-outer-spin-button,
+.cw-reps-input::-webkit-inner-spin-button,
+.cw-rounds-input::-webkit-outer-spin-button,
+.cw-rounds-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.cw-reps-input, .cw-rounds-input { -moz-appearance:textfield; }
+
+/* Custom workout card — subtle teal accent */
+.workout-card-custom { border-left:3px solid var(--t2); }
