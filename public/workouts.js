@@ -50,7 +50,7 @@ async function openWorkoutModal(id) {
 
   if (w.workout_data && w.workout_data.custom) {
     document.getElementById('modalResults').innerHTML = renderCustomWorkoutResults(w.workout_data);
-    document.getElementById('scoreInputs').innerHTML  = buildScoreInputsHTML(w.workout_data);
+    document.getElementById('scoreInputs').innerHTML  = buildCustomScoreInputsHTML(w.workout_data);
   } else {
     document.getElementById('modalResults').innerHTML = buildResults(w.workout_data);
     document.getElementById('scoreInputs').innerHTML  = buildScoreInputsHTML(w.workout_data);
@@ -148,6 +148,40 @@ function renderCustomAccCard(ex, num, cssClass, segKey) {
     + '<div class="card-reps-row"><span class="acc-reps">' + repsVal + '</span>'
     + '<span class="card-col" style="margin-left:8px;font-size:12px;">' + unit + '</span></div>'
     + '</div>';
+}
+
+function buildCustomScoreInputsHTML(data) {
+  var segs = data.segments || {};
+  var allExercises = [];
+
+  // Collect all exercises across segments with their labels
+  var segDefs = [
+    { key:'main',     label:'Main Workout' },
+    { key:'prep',     label:'Prep'         },
+    { key:'mobility', label:'Mobility'     }
+  ];
+
+  segDefs.forEach(function(sd) {
+    var seg = segs[sd.key];
+    if (!seg || !seg.exercises || !seg.exercises.length) return;
+    seg.exercises.forEach(function(ex) {
+      allExercises.push({ ex:ex, segKey:sd.key, segLabel:sd.label });
+    });
+  });
+
+  if (!allExercises.length) return '';
+
+  return allExercises.map(function(item) {
+    var ex = item.ex;
+    var unit = cwRepLabelForDisplay(ex, item.segKey);
+    var fieldId = 'score_custom_' + ex.name.replace(/[^a-zA-Z0-9]/g,'_');
+    return '<div class="score-field">'
+      + '<label class="score-label">' + ex.name + '</label>'
+      + '<div class="score-input-wrap">'
+      + '<input class="score-input" type="text" id="' + fieldId + '" placeholder="—" />'
+      + '<span class="score-unit">' + unit + '</span>'
+      + '</div></div>';
+  }).join('');
 }
 
 function cwRepLabelForDisplay(ex, segKey) {
