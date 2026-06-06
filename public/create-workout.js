@@ -181,7 +181,9 @@ async function saveCustomWorkout() {
 
   // Generate title from main exercises
   var mainNames = workoutData.segments.main.exercises.map(function(e){ return e.name; });
-  var title = mainNames.slice(0,2).join(' + ') + (workoutData.segments.main.format ? ' | ' + workoutData.segments.main.format : '');
+  var fmt = workoutData.segments.main.formatTicked ? workoutData.segments.main.format : (workoutData.segments.main.roundsTicked ? workoutData.segments.main.rounds + ' Rounds' : '');
+  var title = mainNames.slice(0,2).join(' + ') + (fmt ? ' | ' + fmt : '');
+  workoutData.title = title;
 
   try {
     await dbInsertWorkout(title, 'Custom', null, workoutData);
