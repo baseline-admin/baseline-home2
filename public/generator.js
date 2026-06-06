@@ -1,3 +1,4 @@
+
 /* ============================================================
    BASELINE v12 - generator.js
    New selection logic: prompt > columns > exercise count > exercises
@@ -78,6 +79,11 @@ async function loadSheetData(){
     sel.disabled=false;
     document.getElementById('timeSelect').disabled=false;
     document.getElementById('genBtn').disabled=false;
+    // Re-render library if it's the active page
+    var libPage = document.getElementById('pageLibrary');
+    if (libPage && libPage.classList.contains('active') && typeof renderLibrary === 'function') {
+      renderLibrary();
+    }
   }catch(e){
     document.getElementById('output').innerHTML='<div class="state-msg">Could not load workout data. Please refresh.</div>';
   }
@@ -85,11 +91,21 @@ async function loadSheetData(){
 
 // ── Generate (fresh) ──────────────────────────────────────
 
+function showGenerating(){
+  document.getElementById('output').innerHTML=
+    '<div class="generating-state">'
+    +'<span class="gen-dot"></span>'
+    +'<span class="gen-dot"></span>'
+    +'<span class="gen-dot"></span>'
+    +'</div>';
+}
+
 function generate(){
   PersistentExclusions={exercises:[],types:[]};
   var prompt=document.getElementById('promptSelect').value;
   var ts=document.getElementById('timeSelect').value;
   if(!prompt||!ts)return;
+  showGenerating();
   var result=_buildWorkout(prompt,ts,null,PersistentExclusions);
   if(!result)return;
   State.lastResult=result;
@@ -264,7 +280,12 @@ function buildResults(r){
     var unitSpan='<span class="card-col" style="margin-left:8px;font-size:12px;">'+unit+'</span>';
     var html='<div class="exercise-card '+csstype+'">';
     html+='<div class="card-label '+csstype+'">'+label+'</div>';
-    html+='<div class="card-exercise">'+name+'</div>';
+    var hasMedia=State.sheetData&&State.sheetData.exerciseMedia&&State.sheetData.exerciseMedia[name];
+    if(hasMedia){
+      html+='<div class="card-exercise card-exercise-link" data-exname="'+name+'" onclick="openExerciseModal(this)"><span class="ex-link-dot">&#9654;</span> '+name+'</div>';
+    }else{
+      html+='<div class="card-exercise">'+name+'</div>';
+    }
     if(col)html+='<div class="card-col">'+col+'</div>';
     html+='<div class="card-reps-row"><span class="card-reps">'+repsVal+'</span>'+unitSpan+'</div>';
     html+='</div>';
@@ -277,7 +298,12 @@ function buildResults(r){
     var roundsStr=rounds&&parseInt(rounds)>1?'<div class="card-col" style="margin-top:4px;">x'+rounds+' rounds</div>':'';
     var html='<div class="acc-card '+csstype+'">';
     html+='<div class="card-label '+csstype+'">'+label+'</div>';
-    html+='<div class="acc-name">'+name+'</div>';
+    var hasMediaAcc=State.sheetData&&State.sheetData.exerciseMedia&&State.sheetData.exerciseMedia[name];
+    if(hasMediaAcc){
+      html+='<div class="acc-name card-exercise-link" data-exname="'+name+'" onclick="openExerciseModal(this)">'+name+'</div>';
+    }else{
+      html+='<div class="acc-name">'+name+'</div>';
+    }
     html+='<div class="card-reps-row"><span class="acc-reps">'+repsVal+'</span>'+unitSpan+'</div>';
     html+=roundsStr+'</div>';
     return html;
@@ -444,6 +470,48 @@ function applyFilterRemovals(){
     if(exName){var idx=PersistentExclusions.exercises.indexOf(exName);if(idx!==-1)PersistentExclusions.exercises.splice(idx,1);}
     if(exType){var idx=PersistentExclusions.types.indexOf(exType);if(idx!==-1)PersistentExclusions.types.splice(idx,1);}
   });
+}
+
+function openExerciseModal(el) {
+  var name = el.getAttribute('data-exname');
+  var media = State.sheetData && State.sheetData.exerciseMedia && State.sheetData.exerciseMedia[name];
+  if (!media) return;
+
+  // Extract YouTube video ID from URL
+  var ytId = '';
+  var url = media.url || '';
+  var match = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (match) ytId = match[1];
+
+  var modal = document.getElementById('exerciseModal');
+  var content = document.getElementById('exerciseModalContent');
+
+  var html = '';
+  if (ytId) {
+    html += '<div class="ex-modal-video">'
+      + '<iframe src="https://www.youtube.com/embed/' + ytId + '?rel=0&modestbranding=1" '
+      + 'title="' + name + '" frameborder="0" allowfullscreen allow="picture-in-picture"></iframe>'
+      + '</div>';
+  }
+  html += '<div class="ex-modal-name">' + name + '</div>';
+  if (media.description) {
+    html += '<div class="ex-modal-desc">' + media.description + '</div>';
+  }
+
+  content.innerHTML = html;
+  modal.classList.add('open');
+}
+
+function handleExModalClick(e) {
+  if (e.target === document.getElementById('exerciseModal')) closeExerciseModal();
+}
+
+function closeExerciseModal() {
+  var modal = document.getElementById('exerciseModal');
+  modal.classList.remove('open');
+  // Stop video playing
+  var iframe = modal.querySelector('iframe');
+  if (iframe) iframe.src = iframe.src;
 }
 
 function makeTitle(r){var p=[r.t1.row];if(r.t2)p.push(r.t2.row);p.push(r.fmt);return p.join(' - ');}
