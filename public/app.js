@@ -123,8 +123,9 @@ async function startApp(user) {
   State.currentUser = user;
 
   var profile = await dbGetProfile();
-  // Only use manually entered name — never fall back to OAuth metadata
+  // Only use manually entered name — never use OAuth metadata, never show 'friend'
   var name = (profile && profile.first_name) ? profile.first_name : '';
+  if (name.toLowerCase() === 'friend' || name.toLowerCase() === 'there') name = '';
 
   var greetingEl = document.getElementById('greeting');
   if (greetingEl) {
