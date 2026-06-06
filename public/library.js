@@ -202,7 +202,12 @@ function toggleLibPanel(bodyId) {
 function toggleLibFilter(key, value) {
   var af = LibraryState.activeFilters[key];
   var idx = af.indexOf(value);
-  if (idx === -1) af.push(value); else af.splice(idx, 1);
+  // Radio behavior: only one selection per panel
+  if (idx === -1) {
+    LibraryState.activeFilters[key] = [value]; // replace, don't add
+  } else {
+    LibraryState.activeFilters[key] = []; // deselect if clicking active
+  }
   LibraryState.viewAll = false;
   renderLibrary();
   var bodyId = 'libpanel-body-' + key;
