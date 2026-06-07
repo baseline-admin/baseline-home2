@@ -1,486 +1,160 @@
-/* ============================================================
-   BASELINE — Stylesheet
-   All visual styling. No logic lives here.
-   ============================================================ */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Baseline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<!-- AUTH -->
+<div id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-logo"><span class="auth-logo-dot"></span>Baseline</div>
 
-:root {
-  --bg:        #7A9BAD;
-  --bg-dark:   #2C3A42;
-  --surface:   #1E2C35;
-  --surface-2: #263540;
-  --border:    #3D5563;
-  --text:      #FFFFFF;
-  --muted:     #C8DDE8;
-  --accent:    #FFFFFF;
-  --tag-bg:    #2C3A42;
-  --mono:      'DM Mono', monospace;
-  --sans:      'DM Sans', sans-serif;
-  --radius:    4px;
-  --t1:#F0F4F6; --t2:#7AAFC4; --t3:#5A8FA8; --ta:#A8C4D4; --tz:#C4D8E4;
-}
+    <!-- Step 1: choose method -->
+    <div id="authStep1">
+      <button class="google-btn" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+          <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+      <div class="auth-divider">or sign in with email</div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="authEmail" placeholder="you@example.com" />
+      </div>
+      <button class="auth-btn" onclick="sendOTP()">Send sign-in code</button>
+      <div class="auth-divider">new here?</div>
+      <button class="auth-btn-outline" onclick="showRegister()">Create account</button>
+      <div class="auth-error" id="err1"></div>
+    </div>
 
-html,body { min-height:100%; background:var(--bg); color:var(--text); font-family:var(--sans); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+    <!-- Step 2: enter OTP -->
+    <div id="authStep2" style="display:none">
+      <div class="auth-title">Check your email</div>
+      <div class="auth-sub" id="otpSubtext"></div>
+      <div class="form-group" style="margin-top:16px">
+        <label class="form-label">6-digit code</label>
+        <input class="form-input" type="text" id="otpCode" placeholder="000000" maxlength="6" inputmode="numeric" onkeydown="if(event.key==='Enter')verifyOTP()" />
+      </div>
+      <button class="auth-btn" onclick="verifyOTP()">Sign in</button>
+      <div class="auth-error" id="err2"></div>
+      <button class="auth-back" onclick="showStep1()">&#8592; Back</button>
+    </div>
 
-/* AUTH */
-#authOverlay { position:fixed; inset:0; background:var(--bg-dark); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px; }
-.auth-box { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:40px; width:100%; max-width:400px; }
-.auth-logo { font-family:var(--mono); font-size:12px; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:32px; color:var(--text); }
-.auth-logo-dot { display:inline-block; width:6px; height:6px; background:var(--accent); border-radius:50%; margin-right:8px; vertical-align:middle; position:relative; top:-1px; }
-.auth-tabs { display:flex; margin-bottom:28px; border-bottom:1px solid var(--border); }
-.auth-tab { font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; padding:8px 16px 10px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; color:var(--muted); background:none; border-top:none; border-left:none; border-right:none; }
-.auth-tab.active { color:var(--accent); border-bottom:2px solid var(--accent); }
-.auth-divider { display:flex; align-items:center; gap:12px; margin:20px 0; color:var(--muted); font-family:var(--mono); font-size:11px; }
-.auth-divider::before, .auth-divider::after { content:''; flex:1; height:1px; background:var(--border); }
-.google-btn { width:100%; padding:11px; background:var(--surface-2); color:var(--text); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--sans); font-size:14px; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:4px; }
-.google-btn:hover { border-color:var(--accent); }
-.form-group { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
-.form-label { font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); }
-.form-input { padding:10px 14px; border:1px solid var(--border); border-radius:var(--radius); font-family:var(--sans); font-size:14px; background:var(--surface-2); color:var(--text); width:100%; }
-.form-input:focus { outline:none; border-color:var(--accent); }
-.form-input::placeholder { color:var(--muted); }
-.auth-btn { width:100%; padding:11px; background:var(--accent); color:var(--bg-dark); border:none; border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; margin-top:8px; font-weight:600; }
-.auth-btn:hover:not(:disabled) { opacity:0.9; }
-.auth-btn:disabled { opacity:0.4; cursor:not-allowed; }
-.auth-error { font-size:12px; color:#E08080; margin-top:12px; min-height:16px; }
+    <!-- Step 3: register -->
+    <div id="authStep3" style="display:none">
+      <div class="auth-title">Create account</div>
+      <div class="auth-sub">Create an account to get started.</div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="regEmail" placeholder="you@example.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="regPassword" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter')register()" />
+      </div>
+      <button class="auth-btn" id="btnRegister" onclick="register()">Create account</button>
+      <div class="auth-error" id="err3"></div>
+      <button class="auth-back" onclick="showStep1()">&#8592; Back</button>
+    </div>
 
-/* APP SHELL */
-#app { display:none; min-height:100vh; }
-header { padding:24px 40px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--bg-dark); }
-.logo { font-family:var(--mono); font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text); }
-.logo-dot { display:inline-block; width:6px; height:6px; background:var(--accent); border-radius:50%; margin-right:8px; vertical-align:middle; position:relative; top:-1px; }
-.nav-tabs { display:flex; }
-.nav-tab { font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; padding:6px 16px; cursor:pointer; border-radius:20px; color:var(--muted); background:none; border:none; }
-.nav-tab.active { background:var(--accent); color:var(--bg-dark); font-weight:600; }
-.header-right { display:flex; align-items:center; gap:16px; }
-.user-name { font-family:var(--mono); font-size:11px; color:var(--muted); }
-.sign-out-btn { font-family:var(--mono); font-size:11px; color:var(--muted); background:none; border:none; cursor:pointer; text-decoration:underline; }
-.sign-out-btn:hover { color:var(--text); }
+    <div class="auth-footer"><a href="/privacy-policy.html" target="_blank">Privacy Policy</a> &middot; <a href="/terms-of-service.html" target="_blank">Terms of Service</a></div>
+  </div>
+</div>
 
-/* PAGES */
-.page { display:none; padding:40px; max-width:960px; margin:0 auto; }
-.page.active { display:block; }
-.page-title { font-size:22px; font-weight:600; margin-bottom:8px; }
-.page-sub { font-size:13px; color:var(--muted); margin-bottom:32px; }
+<!-- APP -->
+<div id="app">
+  <header>
+    <span class="logo"><span class="logo-dot"></span>Baseline</span>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showPage('generator',this)">Generator</button>
+      <button class="nav-tab" onclick="showPage('myWorkouts',this)">My Workouts</button>
+      <button class="nav-tab" onclick="showPage('library',this)">Library</button>
+      <button class="nav-tab" onclick="showPage('pro',this)">Pro</button>
+    </div>
+    <div class="header-right" id="headerRight">
+      <span class="user-name" id="headerName"></span>
+      <button class="sign-out-btn" onclick="signOut()">Sign out</button>
+    </div>
+  </header>
 
-/* GENERATOR */
-.greeting { font-size:18px; font-weight:500; margin-bottom:32px; }
-.greeting span { color:var(--muted); font-weight:300; }
-.controls { display:grid; grid-template-columns:1fr 1fr auto; gap:12px; margin-bottom:40px; align-items:end; }
-.control-group { display:flex; flex-direction:column; gap:6px; }
-.control-label { font-family:var(--mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
-select { appearance:none; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:10px 36px 10px 14px; font-family:var(--sans); font-size:14px; font-weight:500; color:var(--text); cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23C8DDE8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; }
-select:focus { outline:none; border-color:var(--accent); }
-select:disabled { opacity:0.4; cursor:not-allowed; }
-select option { background:var(--surface); color:var(--text); }
-.gen-btn { padding:10px 28px; background:var(--accent); color:var(--bg-dark); border:none; border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; white-space:nowrap; font-weight:600; }
-.gen-btn:hover:not(:disabled) { opacity:0.9; }
-.gen-btn:disabled { opacity:0.3; cursor:not-allowed; }
-.state-msg { text-align:center; padding:60px 0; color:var(--muted); font-family:var(--mono); font-size:13px; }
+  <!-- Generator -->
+  <div class="page active" id="pageGenerator">
+    <div class="greeting" id="greeting">Hello<span> - what would you like to work on today?</span></div>
+    <div class="controls">
+      <div class="control-group"><span class="control-label">Workout</span><select id="promptSelect" disabled><option value="" disabled selected>Choose</option></select></div>
+      <div class="control-group"><span class="control-label">Time</span><select id="timeSelect" disabled><option value="" disabled selected>Choose Duration</option><option value="30mins">30 mins</option><option value="45mins">45 mins</option><option value="60mins">60 mins</option></select></div>
+      <button class="gen-btn" id="genBtn" disabled onclick="generate()">Generate</button>
+    </div>
+    <div id="output"><div class="state-msg">Select a prompt and time, then click Generate.</div></div>
+  </div>
 
-/* RESULTS */
-.results { animation:fadeIn 0.3s ease; }
-@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-.section-label { font-family:var(--mono); font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
-.format-badge { display:inline-flex; padding:5px 14px; border-radius:20px; background:var(--bg-dark); border:1px solid var(--border); font-family:var(--mono); font-size:12px; font-weight:500; margin-bottom:16px; color:var(--accent); }
-.exercise-pair { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-.exercise-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px 24px; position:relative; overflow:hidden; }
-.exercise-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
-.exercise-card.t1::before { background:var(--t1); }
-.exercise-card.t2::before { background:var(--t2); }
-.exercise-card.t3::before { background:var(--t3); }
-.card-label { font-family:var(--mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:8px; }
-.card-label.t1{color:var(--t1);} .card-label.t2{color:var(--t2);} .card-label.t3{color:var(--t3);} .card-label.ta{color:var(--ta);} .card-label.tz{color:var(--tz);}
-.card-exercise { font-size:17px; font-weight:600; margin-bottom:4px; color:var(--text); }
-.card-col { font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:14px; }
-.card-reps { font-family:var(--mono); font-size:22px; font-weight:500; color:var(--accent); }
-.card-each-side { font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:4px; }
-.card-empty { opacity:0.4; font-style:italic; font-size:13px; color:var(--muted); }
-.acc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
-.acc-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; position:relative; overflow:hidden; }
-.acc-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
-.acc-card.ta::before { background:var(--ta); } .acc-card.tz::before { background:var(--tz); }
-.acc-name { font-size:14px; font-weight:600; margin-bottom:8px; color:var(--text); }
-.acc-reps { font-family:var(--mono); font-size:18px; font-weight:500; color:var(--accent); }
-.acc-each-side { font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:4px; }
-.acc-rounds { font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:4px; }
-.divider { height:1px; background:var(--border); margin:28px 0; }
-.results-section { margin-bottom:28px; }
-.save-area { margin-top:32px; display:flex; align-items:center; gap:16px; }
-.save-btn { padding:10px 28px; background:transparent; color:var(--text); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; }
-.save-btn:hover { border-color:var(--accent); color:var(--accent); }
-.save-btn.saved { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); font-weight:600; }
-.save-msg { font-family:var(--mono); font-size:11px; color:var(--muted); }
+  <!-- My Workouts -->
+  <div class="page" id="pageMyWorkouts">
+    <div class="page-title">My Workouts</div>
+    <div class="page-sub">Your saved workouts. Click any to view and log scores.</div>
+    <div id="workoutsContainer"><div class="empty-state">No saved workouts yet.</div></div>
+  </div>
 
-/* MY WORKOUTS */
-.workouts-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
-.workout-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; cursor:pointer; transition:border-color 0.15s; }
-.workout-card:hover { border-color:var(--accent); }
-.wc-date { font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:10px; }
-.wc-title { font-size:15px; font-weight:600; margin-bottom:8px; line-height:1.3; }
-.wc-meta { font-family:var(--mono); font-size:11px; color:var(--muted); }
-.wc-score-badge { display:inline-block; margin-top:10px; padding:3px 10px; background:var(--bg-dark); border:1px solid var(--border); border-radius:20px; font-family:var(--mono); font-size:10px; color:var(--muted); }
-.empty-state { text-align:center; padding:80px 20px; color:var(--muted); font-family:var(--mono); font-size:13px; }
+  <!-- Library -->
+  <div class="page" id="pageLibrary">
+    <div class="page-title">Exercise Library</div>
+    <div id="libraryContainer"></div>
+  </div>
 
-/* MODAL */
-#workoutModal { display:none; position:fixed; inset:0; background:rgba(28,40,50,0.85); z-index:200; align-items:flex-start; justify-content:center; padding:40px 20px; overflow-y:auto; }
-#workoutModal.open { display:flex; }
-.modal-box { background:var(--surface); border:1px solid var(--border); border-radius:8px; width:100%; max-width:700px; padding:40px; position:relative; }
-.modal-close { position:absolute; top:20px; right:20px; background:none; border:none; cursor:pointer; font-size:20px; color:var(--muted); }
-.modal-close:hover { color:var(--text); }
-.modal-title { font-size:20px; font-weight:600; margin-bottom:4px; }
-.modal-date { font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:28px; }
+  <!-- Pro -->
+  <div class="page" id="pagePro">
+    <div class="page-title">Baseline Pro</div>
+    <div class="page-sub">Advanced filters and personalisation. Coming soon.</div>
+  </div>
+</div>
 
-/* SCORES */
-.score-section { margin-top:28px; padding-top:28px; border-top:1px solid var(--border); }
-.score-section-title { font-family:var(--mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:16px; }
-.score-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
-.score-label { font-size:13px; font-weight:500; flex:1; color:var(--text); }
-.score-input { padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); font-family:var(--mono); font-size:13px; width:160px; background:var(--surface-2); color:var(--text); }
-.score-input:focus { outline:none; border-color:var(--accent); }
-.score-input::placeholder { color:var(--muted); }
-.score-divider { height:1px; background:var(--border); margin:16px 0; }
-.save-scores-btn { margin-top:20px; padding:10px 24px; background:var(--accent); color:var(--bg-dark); border:none; border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; font-weight:600; }
-.save-scores-btn:hover { opacity:0.9; }
-.scores-saved-msg { font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:12px; }
-.score-history { margin-top:28px; padding-top:28px; border-top:1px solid var(--border); }
-.score-history-title { font-family:var(--mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
-.score-entry { border:1px solid var(--border); border-radius:var(--radius); margin-bottom:8px; overflow:hidden; }
-.score-entry-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer; background:var(--surface-2); }
-.score-entry-header:hover { background:var(--bg-dark); }
-.score-entry-date { font-family:var(--mono); font-size:11px; color:var(--muted); }
-.score-entry-chevron { font-size:12px; color:var(--muted); transition:transform 0.2s; }
-.score-entry-chevron.open { transform:rotate(180deg); }
-.score-entry-body { display:none; padding:16px; background:var(--surface); border-top:1px solid var(--border); }
-.score-entry-body.open { display:block; }
-.score-history-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); }
-.score-history-row:last-child { border-bottom:none; }
-.score-history-label { font-size:13px; color:var(--muted); }
-.score-history-value { font-family:var(--mono); font-size:13px; font-weight:500; color:var(--accent); }
-.score-history-empty { font-family:var(--mono); font-size:11px; color:var(--muted); font-style:italic; }
-.delete-score-btn { font-family:var(--mono); font-size:10px; color:#E08080; background:none; border:none; cursor:pointer; margin-top:12px; text-decoration:underline; }
-.delete-btn { margin-top:12px; padding:8px 20px; background:none; color:#E08080; border:1px solid #E08080; border-radius:var(--radius); font-family:var(--mono); font-size:11px; text-transform:uppercase; cursor:pointer; }
-.delete-btn:hover { background:#E08080; color:var(--surface); }
+<!-- Modal -->
+<div id="workoutModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-date" id="modalDate"></div>
+    <div id="modalResults"></div>
+    <div class="score-section">
+      <div class="score-section-title">Log Scores</div>
+      <div id="scoreInputs"></div>
+      <button class="save-scores-btn" onclick="saveScores()">Save Scores</button>
+      <div class="scores-saved-msg" id="scoresSavedMsg"></div>
+    </div>
+    <div class="score-history" id="scoreHistory" style="display:none">
+      <div class="score-history-title">Previous Results</div>
+      <div id="scoreHistoryList"></div>
+    </div>
+    <div style="margin-top:24px"><button class="delete-btn" onclick="deleteWorkout()">Delete workout</button></div>
+  </div>
+</div>
 
-/* RESPONSIVE */
-@media(max-width:640px) {
-  header { padding:16px 20px; flex-wrap:wrap; gap:10px; }
-  .page { padding:24px 20px; }
-  .controls { grid-template-columns:1fr 1fr; }
-  .gen-btn { grid-column:1/-1; }
-  .exercise-pair { grid-template-columns:1fr; }
-  .nav-tabs { display:flex; order:3; width:100%; border-top:1px solid var(--border); padding-top:10px; }
-  .nav-tab { flex:1; text-align:center; }
-  .header-right { margin-left:auto; }
-}
+<!-- Exercise Modal -->
+<div id="exerciseModal" class="ex-modal-overlay" onclick="handleExModalClick(event)">
+  <div class="ex-modal-box">
+    <button class="ex-modal-close" onclick="closeExerciseModal()">&#x2715;</button>
+    <div id="exerciseModalContent"></div>
+  </div>
+</div>
 
-/* ── Additional auth styles ── */
-.auth-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
-.auth-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
-.auth-btn-outline { width: 100%; padding: 11px; background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; margin-top: 4px; }
-.auth-btn-outline:hover { border-color: var(--accent); }
-.auth-back { background: none; border: none; font-family: var(--mono); font-size: 11px; color: var(--muted); cursor: pointer; text-decoration: underline; margin-top: 20px; display: block; }
-.auth-back:hover { color: var(--text); }
-
-
-.card-each-side { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-.acc-each-side  { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-
-/* Reps row - number and 'each side' sit on same baseline */
-.card-reps-row { display:flex; align-items:baseline; gap:0; }
-
-/* Name prompt */
-.name-prompt-wrap { display:flex; align-items:center; gap:8px; }
-.name-prompt-input {
-  padding:4px 10px; border:1px solid var(--border); border-radius:var(--radius);
-  font-family:var(--mono); font-size:11px; background:var(--surface-2);
-  color:var(--text); width:120px;
-}
-.name-prompt-input:focus { outline:none; border-color:var(--accent); }
-.name-prompt-input::placeholder { color:var(--muted); }
-.name-prompt-btn {
-  padding:4px 10px; background:var(--accent); color:var(--bg-dark);
-  border:none; border-radius:var(--radius); font-family:var(--mono);
-  font-size:11px; cursor:pointer; font-weight:600; white-space:nowrap;
-}
-.name-prompt-btn:hover { opacity:0.9; }
-
-/* Refine button */
-
-
-
-
-
-/* Pro link */
-.pro-link { font-family:var(--mono); font-size:11px; color:var(--muted); margin-left:auto; }
-
-/* Refine panel */
-#refinePanel { border:1px solid var(--border); border-radius:var(--radius); padding:20px; background:var(--surface); margin-top:12px; }
-.refine-cols { display:flex; gap:0; }
-.refine-group { flex:1; padding:0 20px; }
-.refine-group:first-child { padding-left:0; }
-.refine-group:last-child { padding-right:0; }
-.refine-divider { width:1px; background:var(--border); flex-shrink:0; }
-.refine-group-label { font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:12px; }
-.refine-opt { display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:10px; padding:2px 0; }
-.refine-opt:last-child { margin-bottom:0; }
-.refine-opt-text { font-family:var(--mono); font-size:11px; color:var(--text); text-decoration:underline; text-underline-offset:3px; }
-.refine-opt-muted { color:var(--muted); }
-.refine-tick { font-family:var(--mono); font-size:11px; color:var(--text); opacity:0; }
-.refine-tick-muted { color:var(--muted); }
-
-.refine-regen-btn { padding:10px 28px; background:var(--accent); color:var(--bg-dark); border:none; border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; font-weight:600; }
-.refine-regen-btn:hover { opacity:0.9; }
-.card-reps-row { display:flex; align-items:baseline; }
-
-/* Refine panel - previously applied filters */
-.refine-prev-filters { margin-bottom:12px; }
-.refine-prev-item { display:flex; align-items:center; justify-content:space-between; padding:2px 0; margin-bottom:6px; }
-
-/* Disabled refine options - greyed, not clickable */
-.refine-opt-disabled { opacity:0.3; cursor:not-allowed; }
-.refine-opt-disabled .refine-opt-text { text-decoration:none; }
-
-/* Refine button - identical to save button before and after click */
-.refine-btn { padding:10px 28px; background:transparent; color:var(--text); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; }
-.refine-btn:hover { border-color:var(--accent); color:var(--accent); }
-.refine-btn-active { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); font-weight:600; }
-.refine-btn-active:hover { opacity:0.9; color:var(--bg-dark); }
-
-/* Refine footer - regenerate left, filters right */
-.refine-footer { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
-.refine-prev-filters { text-align:right; }
-.refine-prev-item { display:flex; align-items:center; justify-content:flex-end; gap:10px; padding:2px 0; margin-bottom:6px; }
-
-/* Previous filters - clickable, removable */
-.refine-prev-item { cursor:pointer; }
-.refine-prev-item:hover .refine-prev-text { opacity:0.7; }
-.refine-prev-tick { font-family:var(--mono); font-size:11px; color:var(--muted); margin-left:10px; }
-.refine-prev-removing .refine-prev-text { opacity:0.3; }
-
-/* Library */
-.library-search {
-  width:100%; padding:10px 14px; border:1px solid var(--border);
-  border-radius:var(--radius); font-family:var(--sans); font-size:14px;
-  background:var(--surface); color:var(--text); margin-bottom:24px;
-}
-.library-search:focus { outline:none; border-color:var(--accent); }
-.library-search::placeholder { color:var(--muted); }
-.library-grid {
-  display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px;
-}
-.library-card {
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--radius); padding:16px 20px;
-  position:relative; overflow:hidden;
-}
-.library-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
-.library-card.lc-t1::before { background:var(--t1); }
-.library-card.lc-t2::before { background:var(--t2); }
-.library-card.lc-t3::before { background:var(--t3); }
-.library-card.lc-ta::before { background:var(--ta); }
-.library-card.lc-tz::before { background:var(--tz); }
-.library-card-source { font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
-.library-card-name { font-size:15px; font-weight:600; color:var(--text); margin-bottom:10px; line-height:1.3; }
-.library-tags { display:flex; flex-wrap:wrap; gap:6px; }
-.library-tag {
-  font-family:var(--mono); font-size:10px; padding:2px 8px;
-  border-radius:20px; background:var(--bg-dark); border:1px solid var(--border);
-  color:var(--muted); text-transform:lowercase;
-}
-.library-card-hidden { display:none; }
-
-/* Library filter panels - vertical stack */
-.lib-filters { display:flex; flex-direction:column; gap:4px; margin-bottom:28px; }
-.lib-panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
-.lib-panel-header { display:flex; align-items:center; gap:8px; padding:12px 16px; background:none; border:none; cursor:pointer; width:100%; font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text); }
-.lib-panel-header:hover { background:var(--surface-2); }
-.lib-panel-label { flex:1; text-align:left; }
-.lib-panel-count { background:var(--accent); color:var(--bg-dark); border-radius:20px; padding:1px 7px; font-size:10px; font-weight:600; }
-.lib-panel-chevron { color:var(--muted); font-size:10px; }
-.lib-panel-body { display:none; padding:10px 16px 14px; border-top:1px solid var(--border); }
-.lib-panel-body.lib-panel-open { display:block; }
-.lib-tag-row { display:flex; flex-wrap:wrap; gap:6px; }
-.lib-tag { font-family:var(--mono); font-size:11px; padding:4px 12px; border-radius:20px; background:var(--bg-dark); border:1px solid var(--border); color:var(--muted); cursor:pointer; text-transform:lowercase; }
-.lib-tag:hover { border-color:var(--accent); color:var(--accent); }
-.lib-tag-active { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); font-weight:600; }
-.lib-clear-btn { font-family:var(--mono); font-size:11px; color:var(--muted); background:none; border:none; cursor:pointer; text-decoration:underline; padding:8px 0; }
-.lib-clear-btn:hover { color:var(--text); }
-.lib-view-all-btn { font-family:var(--mono); font-size:11px; color:var(--text); background:none; border:none; cursor:pointer; text-decoration:underline; padding:0; }
-.lib-view-all-btn:hover { color:var(--accent); }
-
-/* Clickable exercise names */
-.card-exercise-link { cursor:pointer; }
-.card-exercise-link:hover { color:var(--accent); }
-.ex-link-dot { font-size:9px; opacity:0.5; margin-right:2px; vertical-align:middle; }
-
-/* Exercise media modal */
-.ex-modal-overlay {
-  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7);
-  z-index:1000; align-items:center; justify-content:center; padding:20px;
-}
-.ex-modal-overlay.open { display:flex; }
-.ex-modal-box {
-  background:var(--surface); border-radius:var(--radius); width:100%;
-  max-width:560px; max-height:90vh; overflow-y:auto; position:relative; padding:24px;
-}
-.ex-modal-close {
-  position:absolute; top:14px; right:16px; background:none; border:none;
-  font-size:18px; color:var(--muted); cursor:pointer; line-height:1;
-}
-.ex-modal-close:hover { color:var(--text); }
-.ex-modal-video {
-  width:100%; aspect-ratio:16/9; border-radius:calc(var(--radius) - 4px);
-  overflow:hidden; margin-bottom:20px; background:#000;
-}
-.ex-modal-video iframe { width:100%; height:100%; border:none; }
-.ex-modal-name {
-  font-size:20px; font-weight:600; color:var(--text);
-  margin-bottom:12px; line-height:1.2;
-}
-.ex-modal-desc {
-  font-family:var(--mono); font-size:12px; color:var(--muted);
-  line-height:1.7; white-space:pre-wrap;
-}
-
-/* Generating animation */
-.generating-state {
-  display:flex; align-items:center; justify-content:center;
-  gap:8px; padding:80px 0;
-}
-.gen-dot {
-  width:8px; height:8px; border-radius:50%;
-  background:var(--accent); opacity:0.3;
-  animation:genPulse 1.2s ease-in-out infinite;
-}
-.gen-dot:nth-child(2) { animation-delay:0.2s; }
-.gen-dot:nth-child(3) { animation-delay:0.4s; }
-@keyframes genPulse {
-  0%,80%,100% { opacity:0.15; transform:scale(0.8); }
-  40%          { opacity:1;    transform:scale(1.2); }
-}
-
-/* Library cards when CW active */
-.cw-selectable { cursor:default; position:relative; }
-.cw-clickable { cursor:pointer; }
-.cw-clickable:hover { border-color:var(--accent); }
-.cw-card-check {
-  position:absolute; top:10px; right:10px;
-  width:22px; height:22px; border-radius:50%;
-  border:1px solid var(--border); background:var(--bg-dark);
-  font-family:var(--mono); font-size:11px; color:var(--muted);
-  display:flex; align-items:center; justify-content:center;
-}
-.cw-check-ticked { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); }
-.cw-check-crossed { background:transparent; color:var(--muted); border-color:var(--muted); }
-.cw-check-disabled { opacity:0.3; }
-
-/* Custom workout thumbnail — subtle teal left border */
-.custom-results .exercise-card { border-left-color: var(--t2); }
-
-/* Remove spinner arrows from number inputs */
-.cw-reps-input::-webkit-outer-spin-button,
-.cw-reps-input::-webkit-inner-spin-button,
-.cw-rounds-input::-webkit-outer-spin-button,
-.cw-rounds-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
-.cw-reps-input, .cw-rounds-input { -moz-appearance:textfield; }
-
-/* Custom workout card — subtle teal accent */
-.workout-card-custom { border-left:3px solid var(--t2); }
-
-/* ── Create Workout ──────────────────────────────────── */
-.cw-btn-row { margin-bottom:16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-
-/* Vertical panel — matches Log Scores style */
-.cw-panel-v {
-  border:1px solid var(--border); border-radius:var(--radius);
-  background:var(--surface); margin-bottom:24px; overflow:hidden;
-}
-.cw-segment-v { border-bottom:1px solid var(--border); }
-.cw-segment-v:last-of-type { border-bottom:none; }
-.cw-seg-header-v {
-  width:100%; display:flex; align-items:center; gap:10px;
-  padding:14px 20px; background:none; border:none; cursor:pointer;
-  font-family:var(--mono); font-size:11px; letter-spacing:0.08em;
-  text-transform:uppercase; color:var(--text); text-align:left;
-}
-.cw-seg-header-v:hover { background:var(--surface-2); }
-.cw-segment-v-open .cw-seg-header-v { color:var(--accent); }
-.cw-seg-v-label { flex:1; }
-.cw-seg-chevron { color:var(--muted); font-size:10px; }
-
-.cw-seg-body-v { padding:0 20px 16px; }
-
-/* Score rows — identical to Log Scores panel */
-.cw-score-row {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:12px 0; border-bottom:1px solid var(--border);
-}
-.cw-score-row:last-of-type { border-bottom:none; }
-.cw-score-row-crossed { opacity:0.35; }
-.cw-score-name {
-  font-size:14px; color:var(--text); cursor:pointer;
-  display:flex; align-items:center; gap:8px; flex:1;
-}
-.cw-score-name:hover { opacity:0.8; }
-.cw-row-tick { font-family:var(--mono); font-size:12px; color:var(--accent); width:14px; }
-.cw-row-cross { color:var(--muted); }
-.cw-score-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
-.cw-score-input {
-  width:90px; padding:6px 10px; border:1px solid var(--border);
-  border-radius:var(--radius); font-family:var(--mono); font-size:13px;
-  background:var(--bg-dark); color:var(--text); text-align:center;
-}
-.cw-score-input:focus { outline:none; border-color:var(--accent); }
-.cw-score-input:disabled { opacity:0.35; }
-.cw-score-unit { font-family:var(--mono); font-size:11px; color:var(--muted); white-space:nowrap; }
-
-/* Rounds row */
-.cw-rounds-row { margin-top:4px; }
-.cw-rounds-disabled { opacity:0.35; pointer-events:none; }
-.cw-rounds-label { cursor:pointer; }
-.cw-rounds-ticked .cw-row-tick { color:var(--accent); }
-
-/* Extras (Add rest / Workout format) */
-.cw-extras { display:flex; gap:8px; flex-wrap:wrap; padding:12px 0 4px; }
-.cw-extra-btn {
-  font-family:var(--mono); font-size:10px; padding:5px 12px;
-  border:1px solid var(--border); border-radius:20px;
-  background:var(--bg-dark); color:var(--muted); cursor:pointer;
-}
-.cw-extra-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
-.cw-extra-btn:disabled { opacity:0.3; cursor:not-allowed; }
-.cw-extra-active { border-color:var(--accent); color:var(--accent); }
-.cw-format-select {
-  width:100%; padding:8px 12px; border:1px solid var(--border);
-  border-radius:var(--radius); font-family:var(--mono); font-size:11px;
-  background:var(--bg-dark); color:var(--text); margin:8px 0 4px;
-}
-.cw-format-select:focus { outline:none; border-color:var(--accent); }
-
-/* Panel footer */
-.cw-panel-footer { padding:16px 20px; border-top:1px solid var(--border); }
-
-/* Library cards when CW active */
-.cw-selectable { position:relative; }
-.cw-clickable { cursor:pointer; }
-.cw-clickable:hover { border-color:var(--accent); }
-.cw-card-check {
-  position:absolute; top:10px; right:10px;
-  width:22px; height:22px; border-radius:50%;
-  border:1px solid var(--border); background:var(--bg-dark);
-  font-family:var(--mono); font-size:11px; color:var(--muted);
-  display:flex; align-items:center; justify-content:center;
-}
-.cw-check-ticked { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); }
-.cw-check-crossed { color:var(--muted); }
-.cw-check-disabled { opacity:0.3; }
-
-/* Custom workout thumbnail */
-.workout-card-custom { border-left:3px solid var(--t2); }
-
-/* Auth footer */
-.auth-footer { text-align:center; margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
-.auth-footer a { font-family:var(--mono); font-size:10px; color:var(--muted); text-decoration:none; letter-spacing:0.05em; }
-.auth-footer a:hover { color:var(--text); }
+<!-- Scripts -->
+<script src="app.js"></script>
+<script src="auth.js"></script>
+<script src="generator.js"></script>
+<script src="scores.js"></script>
+<script src="workouts.js"></script>
+<script src="create-workout.js"></script>
+<script src="library.js"></script>
+</body>
+</html>
