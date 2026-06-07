@@ -479,3 +479,8 @@ select option { background:var(--surface); color:var(--text); }
 
 /* Custom workout thumbnail */
 .workout-card-custom { border-left:3px solid var(--t2); }
+
+/* Auth footer */
+.auth-footer { text-align:center; margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
+.auth-footer a { font-family:var(--mono); font-size:10px; color:var(--muted); text-decoration:none; letter-spacing:0.05em; }
+.auth-footer a:hover { color:var(--text); }
