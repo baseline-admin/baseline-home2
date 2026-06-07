@@ -361,82 +361,6 @@ select option { background:var(--surface); color:var(--text); }
   40%          { opacity:1;    transform:scale(1.2); }
 }
 
-/* ── Create Workout ──────────────────────────────────── */
-.cw-btn-row { margin-bottom:16px; display:flex; align-items:center; gap:12px; }
-
-.cw-panel {
-  border:1px solid var(--border); border-radius:var(--radius);
-  padding:20px; background:var(--surface); margin-bottom:24px;
-}
-.cw-segment { min-width:0; }
-.cw-seg-header {
-  cursor:pointer; user-select:none;
-  display:flex; align-items:center; gap:8px;
-}
-.cw-seg-header:hover { color:var(--accent); }
-.cw-segment-active .cw-seg-header { color:var(--accent); }
-.cw-seg-body { margin-top:12px; }
-
-/* Exercise items in CW panel */
-.cw-ex-item { margin-bottom:10px; }
-.cw-ex-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.cw-ex-name {
-  font-family:var(--mono); font-size:11px; color:var(--text);
-  text-decoration:underline; text-underline-offset:3px;
-  cursor:pointer; flex:1; min-width:0;
-  display:flex; align-items:center; gap:4px;
-}
-.cw-ex-name:hover { opacity:0.7; }
-.cw-ex-crossed .cw-ex-name { opacity:0.35; }
-.cw-ex-crossed .cw-reps-wrap { display:none; }
-
-/* Reps input */
-.cw-reps-wrap { display:flex; align-items:center; gap:6px; flex-shrink:0; }
-.cw-reps-input {
-  width:52px; padding:3px 6px; border:1px solid var(--border);
-  border-radius:var(--radius); font-family:var(--mono); font-size:11px;
-  background:var(--bg-dark); color:var(--text); text-align:center;
-}
-.cw-reps-input:focus { outline:none; border-color:var(--accent); }
-.cw-reps-label { font-family:var(--mono); font-size:10px; color:var(--muted); }
-
-/* Main extras */
-.cw-extras { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-.cw-extra-btn {
-  font-family:var(--mono); font-size:10px; padding:4px 10px;
-  border:1px solid var(--border); border-radius:20px;
-  background:var(--bg-dark); color:var(--muted); cursor:pointer;
-}
-.cw-extra-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
-.cw-extra-btn:disabled { opacity:0.3; cursor:not-allowed; }
-.cw-extra-active { border-color:var(--accent); color:var(--accent); }
-
-/* Format select */
-.cw-format-wrap { margin-top:8px; }
-.cw-format-select {
-  width:100%; padding:6px 10px; border:1px solid var(--border);
-  border-radius:var(--radius); font-family:var(--mono); font-size:11px;
-  background:var(--bg-dark); color:var(--text);
-}
-.cw-format-select:focus { outline:none; border-color:var(--accent); }
-
-/* Rounds */
-.cw-rounds-row { display:flex; align-items:center; gap:8px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
-.cw-rounds-disabled { opacity:0.35; pointer-events:none; }
-.cw-rounds-label {
-  font-family:var(--mono); font-size:11px; color:var(--muted);
-  cursor:pointer; text-decoration:underline; text-underline-offset:3px;
-  flex:1; display:flex; align-items:center; gap:4px;
-}
-.cw-rounds-ticked { color:var(--text); }
-.cw-rounds-input {
-  width:52px; padding:3px 6px; border:1px solid var(--border);
-  border-radius:var(--radius); font-family:var(--mono); font-size:11px;
-  background:var(--bg-dark); color:var(--text); text-align:center;
-}
-.cw-rounds-input:focus { outline:none; border-color:var(--accent); }
-.cw-input-disabled { opacity:0.35; }
-
 /* Library cards when CW active */
 .cw-selectable { cursor:default; position:relative; }
 .cw-clickable { cursor:pointer; }
@@ -463,4 +387,95 @@ select option { background:var(--surface); color:var(--text); }
 .cw-reps-input, .cw-rounds-input { -moz-appearance:textfield; }
 
 /* Custom workout card — subtle teal accent */
+.workout-card-custom { border-left:3px solid var(--t2); }
+
+/* ── Create Workout ──────────────────────────────────── */
+.cw-btn-row { margin-bottom:16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+
+/* Vertical panel — matches Log Scores style */
+.cw-panel-v {
+  border:1px solid var(--border); border-radius:var(--radius);
+  background:var(--surface); margin-bottom:24px; overflow:hidden;
+}
+.cw-segment-v { border-bottom:1px solid var(--border); }
+.cw-segment-v:last-of-type { border-bottom:none; }
+.cw-seg-header-v {
+  width:100%; display:flex; align-items:center; gap:10px;
+  padding:14px 20px; background:none; border:none; cursor:pointer;
+  font-family:var(--mono); font-size:11px; letter-spacing:0.08em;
+  text-transform:uppercase; color:var(--text); text-align:left;
+}
+.cw-seg-header-v:hover { background:var(--surface-2); }
+.cw-segment-v-open .cw-seg-header-v { color:var(--accent); }
+.cw-seg-v-label { flex:1; }
+.cw-seg-chevron { color:var(--muted); font-size:10px; }
+
+.cw-seg-body-v { padding:0 20px 16px; }
+
+/* Score rows — identical to Log Scores panel */
+.cw-score-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 0; border-bottom:1px solid var(--border);
+}
+.cw-score-row:last-of-type { border-bottom:none; }
+.cw-score-row-crossed { opacity:0.35; }
+.cw-score-name {
+  font-size:14px; color:var(--text); cursor:pointer;
+  display:flex; align-items:center; gap:8px; flex:1;
+}
+.cw-score-name:hover { opacity:0.8; }
+.cw-row-tick { font-family:var(--mono); font-size:12px; color:var(--accent); width:14px; }
+.cw-row-cross { color:var(--muted); }
+.cw-score-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.cw-score-input {
+  width:90px; padding:6px 10px; border:1px solid var(--border);
+  border-radius:var(--radius); font-family:var(--mono); font-size:13px;
+  background:var(--bg-dark); color:var(--text); text-align:center;
+}
+.cw-score-input:focus { outline:none; border-color:var(--accent); }
+.cw-score-input:disabled { opacity:0.35; }
+.cw-score-unit { font-family:var(--mono); font-size:11px; color:var(--muted); white-space:nowrap; }
+
+/* Rounds row */
+.cw-rounds-row { margin-top:4px; }
+.cw-rounds-disabled { opacity:0.35; pointer-events:none; }
+.cw-rounds-label { cursor:pointer; }
+.cw-rounds-ticked .cw-row-tick { color:var(--accent); }
+
+/* Extras (Add rest / Workout format) */
+.cw-extras { display:flex; gap:8px; flex-wrap:wrap; padding:12px 0 4px; }
+.cw-extra-btn {
+  font-family:var(--mono); font-size:10px; padding:5px 12px;
+  border:1px solid var(--border); border-radius:20px;
+  background:var(--bg-dark); color:var(--muted); cursor:pointer;
+}
+.cw-extra-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+.cw-extra-btn:disabled { opacity:0.3; cursor:not-allowed; }
+.cw-extra-active { border-color:var(--accent); color:var(--accent); }
+.cw-format-select {
+  width:100%; padding:8px 12px; border:1px solid var(--border);
+  border-radius:var(--radius); font-family:var(--mono); font-size:11px;
+  background:var(--bg-dark); color:var(--text); margin:8px 0 4px;
+}
+.cw-format-select:focus { outline:none; border-color:var(--accent); }
+
+/* Panel footer */
+.cw-panel-footer { padding:16px 20px; border-top:1px solid var(--border); }
+
+/* Library cards when CW active */
+.cw-selectable { position:relative; }
+.cw-clickable { cursor:pointer; }
+.cw-clickable:hover { border-color:var(--accent); }
+.cw-card-check {
+  position:absolute; top:10px; right:10px;
+  width:22px; height:22px; border-radius:50%;
+  border:1px solid var(--border); background:var(--bg-dark);
+  font-family:var(--mono); font-size:11px; color:var(--muted);
+  display:flex; align-items:center; justify-content:center;
+}
+.cw-check-ticked { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); }
+.cw-check-crossed { color:var(--muted); }
+.cw-check-disabled { opacity:0.3; }
+
+/* Custom workout thumbnail */
 .workout-card-custom { border-left:3px solid var(--t2); }
