@@ -45,15 +45,10 @@
       <div class="auth-error" id="err1"></div>
     </div>
 
-    <!-- Step 2: enter OTP -->
+    <!-- Step 2: not used for magic link - kept for fallback -->
     <div id="authStep2" style="display:none">
       <div class="auth-title">Check your email</div>
       <div class="auth-sub" id="otpSubtext"></div>
-      <div class="form-group" style="margin-top:16px">
-        <label class="form-label">6-digit code</label>
-        <input class="form-input" type="text" id="otpCode" placeholder="000000" maxlength="6" inputmode="numeric" onkeydown="if(event.key==='Enter')verifyOTP()" />
-      </div>
-      <button class="auth-btn" onclick="verifyOTP()">Sign in</button>
       <div class="auth-error" id="err2"></div>
       <button class="auth-back" onclick="showStep1()">&#8592; Back</button>
     </div>
