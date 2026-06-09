@@ -147,6 +147,24 @@
   </div>
 </div>
 
+<!-- Install Modal -->
+<div id="installModal" class="ex-modal-overlay" onclick="handleInstallModalClick(event)">
+  <div class="ex-modal-box" style="max-width:400px;text-align:center;">
+    <button class="ex-modal-close" onclick="closeInstallModal()">&#x2715;</button>
+    <div class="ex-modal-name" style="margin-bottom:16px;">Install Baseline</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.9;">
+      <div style="margin-bottom:20px;">On <strong style="color:var(--text);">iPhone / iPad</strong></div>
+      <div style="margin-bottom:8px;">1. Open in <strong style="color:var(--text);">Safari</strong></div>
+      <div style="margin-bottom:8px;">2. Tap the <strong style="color:var(--text);">Share</strong> button <span style="font-size:14px;">&#x2B06;&#xFE0E;</span> at the bottom</div>
+      <div style="margin-bottom:24px;">3. Tap <strong style="color:var(--text);">"Add to Home Screen"</strong></div>
+      <div style="margin-bottom:20px;padding-top:20px;border-top:1px solid var(--border);"><strong style="color:var(--text);">Android</strong></div>
+      <div style="margin-bottom:8px;">1. Open in <strong style="color:var(--text);">Chrome</strong></div>
+      <div style="margin-bottom:8px;">2. Tap the <strong style="color:var(--text);">three dots</strong> menu</div>
+      <div>3. Tap <strong style="color:var(--text);">"Add to Home Screen"</strong></div>
+    </div>
+  </div>
+</div>
+
 <!-- Exercise Modal -->
 <div id="exerciseModal" class="ex-modal-overlay" onclick="handleExModalClick(event)">
   <div class="ex-modal-box">
@@ -170,92 +188,5 @@
     });
   }
 </script>
-</body>
-</html>
-
-<!-- APP -->
-<div id="app">
-  <header>
-    <span class="logo"><span class="logo-dot"></span>Baseline</span>
-    <div class="nav-tabs">
-      <button class="nav-tab active" onclick="showPage('generator',this)">Generator</button>
-      <button class="nav-tab" onclick="showPage('myWorkouts',this)">My Workouts</button>
-      <button class="nav-tab" onclick="showPage('library',this)">Library</button>
-      <button class="nav-tab" onclick="showPage('pro',this)">Pro</button>
-    </div>
-    <div class="header-right" id="headerRight">
-      <span class="user-name" id="headerName"></span>
-      <button class="sign-out-btn" onclick="signOut()">Sign out</button>
-    </div>
-  </header>
-
-  <!-- Generator -->
-  <div class="page active" id="pageGenerator">
-    <div class="greeting" id="greeting">Hello<span> - what would you like to work on today?</span></div>
-    <div class="controls">
-      <div class="control-group"><span class="control-label">Workout</span><select id="promptSelect" disabled><option value="" disabled selected>Choose</option></select></div>
-      <div class="control-group"><span class="control-label">Time</span><select id="timeSelect" disabled><option value="" disabled selected>Choose Duration</option><option value="30mins">30 mins</option><option value="45mins">45 mins</option><option value="60mins">60 mins</option></select></div>
-      <button class="gen-btn" id="genBtn" disabled onclick="generate()">Generate</button>
-    </div>
-    <div id="output"><div class="state-msg">Select a prompt and time, then click Generate.</div></div>
-  </div>
-
-  <!-- My Workouts -->
-  <div class="page" id="pageMyWorkouts">
-    <div class="page-title">My Workouts</div>
-    <div class="page-sub">Your saved workouts. Click any to view and log scores.</div>
-    <div id="workoutsContainer"><div class="empty-state">No saved workouts yet.</div></div>
-  </div>
-
-  <!-- Library -->
-  <div class="page" id="pageLibrary">
-    <div class="page-title">Exercise Library</div>
-    <div id="libraryContainer"></div>
-  </div>
-
-  <!-- Pro -->
-  <div class="page" id="pagePro">
-    <div class="page-title">Baseline Pro</div>
-    <div class="page-sub">Advanced filters and personalisation. Coming soon.</div>
-  </div>
-</div>
-
-<!-- Modal -->
-<div id="workoutModal">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeModal()">&#x2715;</button>
-    <div class="modal-title" id="modalTitle"></div>
-    <div class="modal-date" id="modalDate"></div>
-    <div id="modalResults"></div>
-    <div class="score-section">
-      <div class="score-section-title">Log Scores</div>
-      <div id="scoreInputs"></div>
-      <button class="save-scores-btn" onclick="saveScores()">Save Scores</button>
-      <div class="scores-saved-msg" id="scoresSavedMsg"></div>
-    </div>
-    <div class="score-history" id="scoreHistory" style="display:none">
-      <div class="score-history-title">Previous Results</div>
-      <div id="scoreHistoryList"></div>
-    </div>
-    <div style="margin-top:24px"><button class="delete-btn" onclick="deleteWorkout()">Delete workout</button></div>
-  </div>
-</div>
-
-<!-- Exercise Modal -->
-<div id="exerciseModal" class="ex-modal-overlay" onclick="handleExModalClick(event)">
-  <div class="ex-modal-box">
-    <button class="ex-modal-close" onclick="closeExerciseModal()">&#x2715;</button>
-    <div id="exerciseModalContent"></div>
-  </div>
-</div>
-
-<!-- Scripts -->
-<script src="app.js"></script>
-<script src="auth.js"></script>
-<script src="generator.js"></script>
-<script src="scores.js"></script>
-<script src="workouts.js"></script>
-<script src="create-workout.js"></script>
-<script src="library.js"></script>
 </body>
 </html>
