@@ -43,18 +43,17 @@ async function sendOTP() {
   });
 
   document.getElementById('authStep1').querySelector('.auth-btn').disabled = false;
-  document.getElementById('authStep1').querySelector('.auth-btn').textContent = 'Send sign-in code';
+  document.getElementById('authStep1').querySelector('.auth-btn').textContent = 'Send sign-in link';
 
   if (error && error.message && error.message.toLowerCase().includes('not found')) {
     document.getElementById('err1').textContent = 'No account found. Please create one below.';
     return;
   }
-  if (error) { document.getElementById('err1').textContent = error.message || 'Could not send code.'; return; }
+  if (error) { document.getElementById('err1').textContent = error.message || 'Could not send link.'; return; }
 
-  document.getElementById('otpSubtext').textContent = 'We sent a 6-digit code to ' + email + '. Enter it below - valid for 10 minutes.';
-  document.getElementById('authStep1').style.display = 'none';
-  document.getElementById('authStep2').style.display = 'block';
-  setTimeout(function(){ document.getElementById('otpCode').focus(); }, 100);
+  document.getElementById('err1').textContent = '';
+  document.getElementById('err1').style.color = 'var(--accent)';
+  document.getElementById('err1').textContent = 'Check your email for a sign-in link.';
 }
 
 async function verifyOTP() {
