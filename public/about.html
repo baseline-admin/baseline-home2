@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About — Baseline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #3D5A6C;
+      color: #F0F4F6;
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+    }
+    .card {
+      background: #2C3E50;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 56px 48px;
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+    }
+    .logo {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #F0F4F6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 40px;
+    }
+    .logo-dot {
+      width: 7px; height: 7px;
+      background: #7AAFC4;
+      border-radius: 50%;
+    }
+    .icon {
+      width: 96px; height: 96px;
+      margin: 0 auto 32px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      color: #F0F4F6;
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+    p {
+      font-size: 16px;
+      color: #C8DDE8;
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+    .features {
+      list-style: none;
+      margin: 28px 0 36px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 15px;
+      color: #C8DDE8;
+      line-height: 1.5;
+    }
+    .features li::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: #7AAFC4;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 8px;
+    }
+    .cta {
+      display: inline-block;
+      background: #F0F4F6;
+      color: #2C3E50;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 600;
+      padding: 14px 36px;
+      border-radius: 6px;
+      text-decoration: none;
+      margin-bottom: 32px;
+    }
+    .cta:hover { opacity: 0.9; }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .footer-links a {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      color: rgba(200,221,232,0.5);
+      text-decoration: none;
+    }
+    .footer-links a:hover { color: #C8DDE8; }
+    @media (max-width: 560px) {
+      .card { padding: 40px 24px; }
+      h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+
+    <div class="logo"><span class="logo-dot"></span>Baseline</div>
+
+    <svg class="icon" viewBox="0 0 680 680" xmlns="http://www.w3.org/2000/svg">
+      <rect width="680" height="680" fill="#1E2C35" rx="100"/>
+      <circle cx="340" cy="340" r="195" fill="none" stroke="#7AAFC4" stroke-width="14"/>
+      <line x1="136" y1="340" x2="544" y2="340" stroke="#7AAFC4" stroke-width="14" stroke-linecap="round"/>
+      <rect x="316" y="161" width="48" height="179" rx="8" fill="#F0F4F6"/>
+      <circle cx="340" cy="340" r="20" fill="#7AAFC4"/>
+    </svg>
+
+    <h1>Tennis fitness, built around your game</h1>
+
+    <p>Baseline generates sport-specific strength and conditioning workouts tailored to tennis players — and lets you build your own.</p>
+
+    <ul class="features">
+      <li>AI-powered workout generator with tennis-specific prompts — Serve, Power, Groundstrokes, Footwork, Stamina and more</li>
+      <li>Custom workout builder with exercise library, reps, rounds and formats</li>
+      <li>Log scores and track performance across every session</li>
+      <li>Works on any device, no app download required</li>
+    </ul>
+
+    <a class="cta" href="https://www.baseline.fitness">Get started</a>
+
+    <div class="footer-links">
+      <a href="/privacy-policy.html">Privacy Policy</a>
+      <a href="/terms-of-service.html">Terms of Service</a>
+      <a href="mailto:samuel@baseline.fitness">Contact</a>
+    </div>
+
+  </div>
+</body>
+</html>
