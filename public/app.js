@@ -83,13 +83,18 @@ function showPage(name, btn) {
 
 // ── Name prompt ───────────────────────────────────────────
 
+function isInstalledPWA() {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+}
+
 function showNamePrompt() {
   var wrap = document.getElementById('headerRight');
   wrap.innerHTML = '<div class="name-prompt-wrap">'
     + '<input class="name-prompt-input" id="nameInput" type="text" placeholder="Enter your name" maxlength="30" />'
     + '<button class="name-prompt-btn" onclick="saveName()">Save</button>'
     + '</div>'
-    + '<button class="install-btn" onclick="showInstallTip()">Install app</button>';
+    + (!isInstalledPWA() ? '<button class="install-btn" onclick="showInstallTip()">Install</button>' : '');
   setTimeout(function(){ var el=document.getElementById('nameInput'); if(el) el.focus(); }, 100);
   document.getElementById('nameInput').addEventListener('keydown', function(e){
     if (e.key === 'Enter') saveName();
@@ -109,7 +114,7 @@ async function saveName() {
 function setHeaderName(name) {
   var wrap = document.getElementById('headerRight');
   wrap.innerHTML = '<span class="user-name">'+name+'</span>'
-    + '<button class="install-btn" onclick="showInstallTip()">Install app</button>'
+    + (!isInstalledPWA() ? '<button class="install-btn" onclick="showInstallTip()">Install</button>' : '')
     + '<button class="sign-out-btn" onclick="signOut()">Sign out</button>';
 }
 
