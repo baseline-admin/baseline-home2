@@ -88,7 +88,8 @@ function showNamePrompt() {
   wrap.innerHTML = '<div class="name-prompt-wrap">'
     + '<input class="name-prompt-input" id="nameInput" type="text" placeholder="Enter your name" maxlength="30" />'
     + '<button class="name-prompt-btn" onclick="saveName()">Save</button>'
-    + '</div>';
+    + '</div>'
+    + '<button class="install-btn" onclick="showInstallTip()">Install app</button>';
   setTimeout(function(){ var el=document.getElementById('nameInput'); if(el) el.focus(); }, 100);
   document.getElementById('nameInput').addEventListener('keydown', function(e){
     if (e.key === 'Enter') saveName();
