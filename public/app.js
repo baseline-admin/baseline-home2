@@ -108,7 +108,20 @@ async function saveName() {
 function setHeaderName(name) {
   var wrap = document.getElementById('headerRight');
   wrap.innerHTML = '<span class="user-name">'+name+'</span>'
+    + '<button class="install-btn" onclick="showInstallTip()">Install app</button>'
     + '<button class="sign-out-btn" onclick="signOut()">Sign out</button>';
+}
+
+function showInstallTip() {
+  document.getElementById('installModal').classList.add('open');
+}
+
+function closeInstallModal() {
+  document.getElementById('installModal').classList.remove('open');
+}
+
+function handleInstallModalClick(e) {
+  if (e.target === document.getElementById('installModal')) closeInstallModal();
 }
 
 function updateGreeting(name) {
