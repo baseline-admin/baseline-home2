@@ -1,9 +1,9 @@
 /* ============================================================
    BASELINE - Service Worker
-   Caches shell assets for offline support and fast loads.
+   Cache version updates automatically invalidate old caches.
    ============================================================ */
 
-var CACHE_NAME = 'baseline-v1';
+var CACHE_NAME = 'baseline-202606091744';
 var SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -25,7 +25,7 @@ self.addEventListener('install', function(e) {
     caches.open(CACHE_NAME).then(function(cache) {
       return cache.addAll(SHELL_ASSETS);
     }).then(function() {
-      return self.skipWaiting();
+      return self.skipWaiting(); // activate immediately
     })
   );
 });
@@ -38,22 +38,32 @@ self.addEventListener('activate', function(e) {
             .map(function(k) { return caches.delete(k); })
       );
     }).then(function() {
-      return self.clients.claim();
+      return self.clients.claim(); // take control immediately
     })
   );
 });
 
 self.addEventListener('fetch', function(e) {
-  // Network first for API calls, cache first for shell assets
-  if (e.request.url.includes('/api/')) {
-    e.respondWith(fetch(e.request));
+  // Always network-first for HTML and JS so updates reach users fast
+  if (e.request.url.includes('/api/') ||
+      e.request.destination === 'document' ||
+      e.request.url.endsWith('.js') ||
+      e.request.url.endsWith('.css')) {
+    e.respondWith(
+      fetch(e.request).then(function(response) {
+        var clone = response.clone();
+        caches.open(CACHE_NAME).then(function(cache) { cache.put(e.request, clone); });
+        return response;
+      }).catch(function() {
+        return caches.match(e.request);
+      })
+    );
     return;
   }
+  // Cache-first for images and fonts
   e.respondWith(
     caches.match(e.request).then(function(cached) {
-      return cached || fetch(e.request).then(function(response) {
-        return response;
-      });
+      return cached || fetch(e.request);
     })
   );
 });
