@@ -484,3 +484,10 @@ select option { background:var(--surface); color:var(--text); }
 .auth-footer { text-align:center; margin-top:24px; padding-top:16px; border-top:1px solid var(--border); display:flex; justify-content:center; gap:16px; }
 .auth-footer a { font-family:var(--mono); font-size:10px; color:var(--muted); text-decoration:none; letter-spacing:0.05em; }
 .auth-footer a:hover { color:var(--text); }
+
+/* Install button */
+.install-btn {
+  font-family:var(--mono); font-size:11px; letter-spacing:0.05em;
+  background:none; border:none; color:var(--muted); cursor:pointer; padding:0;
+}
+.install-btn:hover { color:var(--text); }
