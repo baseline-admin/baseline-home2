@@ -24,7 +24,7 @@ async function loadWorkouts() {
   var ws = await dbGetWorkouts();
   var c = document.getElementById('workoutsContainer');
   if (!ws || !ws.length) {
-    c.innerHTML = '<div class="empty-state">No saved workouts yet. Generate one and hit Save!</div>';
+    c.innerHTML = '<div class="empty-state">No saved workouts yet.</div>';
     return;
   }
   c.innerHTML = '<div class="workouts-grid">' + ws.map(function(w) {
@@ -155,11 +155,11 @@ function renderCustomAccCard(ex, num, cssClass, segKey) {
 /* workouts.js overrides it so saveScores, buildScoreHistoryHTML */
 /* and buildScoreInputsHTML all work identically for custom workouts. */
 
-var _origBuildScoreKeys = buildScoreKeys;
-function buildScoreKeys(r) {
+var _origBuildScoreKeys = buildScoreKeys; // captures scores.js version before reassignment
+buildScoreKeys = function(r) {            // expression avoids hoisting issue
   if (r && r.custom) return buildCustomScoreKeys(r);
   return _origBuildScoreKeys(r);
-}
+};
 
 function buildCustomScoreKeys(data) {
   var segs = data.segments || {};
