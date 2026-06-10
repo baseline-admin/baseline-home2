@@ -63,6 +63,34 @@ async function dbDeleteScore(id) {
   await sb.from('scores').delete().eq('id', id).eq('user_id', State.currentUser.id);
 }
 
+// ── Splash ───────────────────────────────────────────────
+
+function dismissSplash() {
+  var splash = document.getElementById('splash');
+  if (!splash) return;
+  splash.classList.add('splash-out');
+  setTimeout(function(){ splash.style.display='none'; }, 600);
+}
+
+// ── Generator panel toggle ────────────────────────────────
+
+function toggleGeneratorPanel() {
+  var panel = document.getElementById('generatorPanel');
+  var chev  = document.getElementById('greetingChevron');
+  if (!panel) return;
+  var open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (chev) chev.innerHTML = open ? '&#x25BE;' : '&#x25B4;';
+}
+
+function openGeneratorPanel() {
+  var panel = document.getElementById('generatorPanel');
+  var chev  = document.getElementById('greetingChevron');
+  if (!panel) return;
+  panel.style.display = 'block';
+  if (chev) chev.innerHTML = '&#x25B4;';
+}
+
 // ── UI helpers ────────────────────────────────────────────
 
 function setBusy(id, busy, label) {
@@ -162,6 +190,7 @@ async function startApp(user) {
 
   document.getElementById('authOverlay').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  dismissSplash();
 
   loadSheetData();
   loadWorkouts();
@@ -171,6 +200,7 @@ function showAuthOverlay() {
   State.currentUser = null;
   document.getElementById('authOverlay').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
+  dismissSplash();
 }
 
 // ── Boot ──────────────────────────────────────────────────
