@@ -18,6 +18,14 @@
 </head>
 <body>
 
+<!-- Splash Screen -->
+<div id="splash">
+  <div class="splash-inner">
+    <span class="splash-dot"></span>
+    <span class="splash-wordmark">BASELINE</span>
+  </div>
+</div>
+
 <!-- AUTH -->
 <div id="authOverlay">
   <div class="auth-box">
@@ -92,13 +100,18 @@
 
   <!-- Generator -->
   <div class="page active" id="pageGenerator">
-    <div class="greeting" id="greeting">Hello<span> - what would you like to work on today?</span></div>
-    <div class="controls">
-      <div class="control-group"><span class="control-label">Workout</span><select id="promptSelect" disabled><option value="" disabled selected>Choose</option></select></div>
-      <div class="control-group"><span class="control-label">Time</span><select id="timeSelect" disabled><option value="" disabled selected>Choose Duration</option><option value="30mins">30 mins</option><option value="45mins">45 mins</option><option value="60mins">60 mins</option></select></div>
-      <button class="gen-btn" id="genBtn" disabled onclick="generate()">Generate</button>
+    <button class="greeting" id="greeting" onclick="toggleGeneratorPanel()">
+      Hello<span> - what would you like to work on today?</span>
+      <span class="greeting-chevron" id="greetingChevron">&#x25BE;</span>
+    </button>
+    <div class="generator-panel" id="generatorPanel" style="display:none;">
+      <div class="controls">
+        <div class="control-group"><span class="control-label">Workout</span><select id="promptSelect" disabled><option value="" disabled selected>Choose</option></select></div>
+        <div class="control-group"><span class="control-label">Time</span><select id="timeSelect" disabled><option value="" disabled selected>Choose Duration</option><option value="30mins">30 mins</option><option value="45mins">45 mins</option><option value="60mins">60 mins</option></select></div>
+        <button class="gen-btn" id="genBtn" disabled onclick="generate()">Generate</button>
+      </div>
     </div>
-    <div id="output"><div class="state-msg">Select a prompt and time, then click Generate.</div></div>
+    <div id="output"></div>
   </div>
 
   <!-- My Workouts -->
