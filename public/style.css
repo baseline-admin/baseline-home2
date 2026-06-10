@@ -167,7 +167,7 @@ select option { background:var(--surface); color:var(--text); }
 @media(max-width:640px) {
   header { padding:16px 20px; flex-wrap:wrap; gap:10px; }
   .page { padding:24px 20px; }
-  .controls { grid-template-columns:1fr 1fr; }
+  .controls { grid-template-columns:1fr; }
   .gen-btn { grid-column:1/-1; }
   .exercise-pair { grid-template-columns:1fr; }
   .nav-tabs { display:flex; order:3; width:100%; border-top:1px solid var(--border); padding-top:10px; }
@@ -546,3 +546,9 @@ button.greeting:hover .greeting-chevron { color:var(--text); }
   animation:panelSlide 0.2s ease;
 }
 .generator-panel .controls { margin-bottom:0; }
+
+/* Generator instructions inside panel */
+.gen-instructions {
+  font-family:var(--mono); font-size:12px; color:var(--muted);
+  margin-top:16px; padding-top:16px; border-top:1px solid var(--border);
+}
