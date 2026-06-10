@@ -160,7 +160,8 @@ function handleInstallModalClick(e) {
 
 function updateGreeting(name) {
   var el = document.getElementById('greeting');
-  if (el) el.innerHTML = 'Hello <strong>' + name + '</strong><span> - what would you like to work on today?</span>';
+  var chevron = '<span class="greeting-chevron" id="greetingChevron">&#x25BE;</span>';
+  if (el) el.innerHTML = 'Hello <strong>' + name + '</strong><span> - what would you like to work on today?</span>' + chevron;
 }
 
 // ── Start app ─────────────────────────────────────────────
@@ -175,10 +176,11 @@ async function startApp(user) {
   if (name.toLowerCase() === 'friend' || name.toLowerCase() === 'there') name = '';
 
   var greetingEl = document.getElementById('greeting');
+  var chevron = '<span class="greeting-chevron" id="greetingChevron">&#x25BE;</span>';
   if (greetingEl) {
     greetingEl.innerHTML = name
-      ? 'Hello <strong>' + name + '</strong><span> - what would you like to work on today?</span>'
-      : 'Hello<span> - what would you like to work on today?</span>';
+      ? 'Hello <strong>' + name + '</strong><span> - what would you like to work on today?</span>' + chevron
+      : 'Hello<span> - what would you like to work on today?</span>' + chevron;
   }
 
   // Header: show name if known, otherwise show name prompt input
