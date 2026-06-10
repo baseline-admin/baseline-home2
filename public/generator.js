@@ -259,6 +259,8 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
 
 function renderOutput(isRegen){
   if(typeof openGeneratorPanel==='function') openGeneratorPanel();
+  var inst=document.querySelector('.gen-instructions');
+  if(inst) inst.style.display='none';
   var r=State.lastResult;
   var h=buildResults(r);
   h+='<div class="save-area">';
