@@ -527,10 +527,22 @@ select option { background:var(--surface); color:var(--text); }
   to   { opacity:1; transform:translateY(0); }
 }
 
-/* Greeting as button */
+/* Greeting as button - preserve original text appearance exactly */
 button.greeting {
   background:none; border:none; padding:0;
-  text-align:left; width:100%;
-  cursor:pointer; display:flex; align-items:center; flex-wrap:wrap; gap:0;
+  text-align:left; width:100%; cursor:pointer;
+  font-size:18px; font-weight:500; color:var(--text);
+  font-family:var(--sans); line-height:1.4;
+  display:block; margin-bottom:32px;
 }
+button.greeting span { color:var(--muted); font-weight:300; }
 button.greeting:hover .greeting-chevron { color:var(--text); }
+
+/* Generator panel — styled like refine/create workout */
+.generator-panel {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:20px 24px;
+  margin-bottom:24px;
+  animation:panelSlide 0.2s ease;
+}
+.generator-panel .controls { margin-bottom:0; }
