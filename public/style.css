@@ -584,3 +584,26 @@ video::-webkit-media-controls { display:none !important; }
 video::-webkit-media-controls-enclosure { display:none !important; }
 video::-webkit-media-controls-panel { display:none !important; }
 video { -webkit-appearance:none; }
+
+/* ── Exercise wiki breadcrumb ────────────────────────── */
+.ex-breadcrumb {
+  display:flex; flex-wrap:wrap; align-items:center; gap:2px;
+  padding:0 0 14px; margin-bottom:16px;
+  border-bottom:1px solid var(--border);
+  font-family:var(--mono); font-size:10px;
+}
+.ex-crumb-link {
+  color:var(--accent); cursor:pointer; text-decoration:underline;
+  text-underline-offset:3px; white-space:nowrap;
+}
+.ex-crumb-link:hover { opacity:0.8; }
+.ex-crumb-sep { color:var(--muted); }
+.ex-crumb-current { color:var(--muted); white-space:nowrap; }
+
+/* Wiki links within descriptions */
+.ex-wiki-link {
+  color:var(--accent); cursor:pointer;
+  text-decoration:underline; text-underline-offset:3px;
+  font-style:normal;
+}
+.ex-wiki-link:hover { opacity:0.8; }
