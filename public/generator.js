@@ -484,8 +484,7 @@ function openExerciseModal(el) {
 }
 
 function openLinkedExercise(name) {
-  var currentName = document.querySelector('.ex-modal-name');
-  if (currentName) _exHistory.push(currentName.getAttribute('data-name'));
+  if (window._currentExName) _exHistory.push(window._currentExName);
   _renderExerciseModal(name);
 }
 
@@ -519,6 +518,7 @@ function _renderExerciseModal(name) {
   if (!thumbUrl && ytId) thumbUrl = 'https://img.youtube.com/vi/' + ytId + '/hqdefault.jpg';
 
   window._exWikiLinks = [];
+  window._currentExName = name;
   window._exMediaUrl   = url;
   window._exMediaIsMP4 = isMP4;
   window._exMediaYtId  = ytId;
@@ -616,6 +616,8 @@ function handleExModalClick(e) {
 function closeExerciseModal() {
   var modal = document.getElementById('exerciseModal');
   modal.classList.remove('open');
+  window._currentExName = null;
+  _exHistory = [];
   // Stop video playing
   var iframe = modal.querySelector('iframe');
   if (iframe) iframe.src = iframe.src;
