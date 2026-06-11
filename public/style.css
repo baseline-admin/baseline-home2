@@ -330,11 +330,38 @@ select option { background:var(--surface); color:var(--text); }
   font-size:18px; color:var(--muted); cursor:pointer; line-height:1;
 }
 .ex-modal-close:hover { color:var(--text); }
-.ex-modal-video {
-  width:100%; aspect-ratio:16/9; border-radius:calc(var(--radius) - 4px);
-  overflow:hidden; margin-bottom:20px; background:#000;
+.ex-modal-video { display:none; } /* replaced by new layout */
+
+/* Two-column exercise media layout */
+.ex-media-layout {
+  display:flex; gap:20px; align-items:flex-start;
 }
-.ex-modal-video iframe { width:100%; height:100%; border:none; }
+.ex-media-video-col {
+  flex:0 0 45%; max-width:45%;
+}
+.ex-media-text-col {
+  flex:1; min-width:0;
+}
+.ex-media-thumb {
+  width:100%; aspect-ratio:9/16;
+  border-radius:var(--radius); overflow:hidden;
+  background:#000; position:relative;
+}
+.ex-media-thumb img { display:block; width:100%; height:100%; object-fit:cover; }
+.ex-media-play-btn {
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:40px; color:rgba(255,255,255,0.9);
+  text-shadow:0 2px 8px rgba(0,0,0,0.5);
+  transition:opacity 0.2s;
+}
+.ex-media-thumb:hover .ex-media-play-btn { opacity:0.7; }
+.ex-media-thumb iframe { width:100%; height:100%; border:none; display:block; }
+
+@media(max-width:560px) {
+  .ex-media-layout { flex-direction:column; }
+  .ex-media-video-col { flex:none; width:60%; max-width:60%; margin:0 auto; }
+}
 .ex-modal-name {
   font-size:20px; font-weight:600; color:var(--text);
   margin-bottom:12px; line-height:1.2;
