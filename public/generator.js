@@ -479,25 +479,40 @@ function openExerciseModal(el) {
   var media = State.sheetData && State.sheetData.exerciseMedia && State.sheetData.exerciseMedia[name];
   if (!media) return;
 
-  var ytId = '';
   var url = media.url || '';
-  var match = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/) || url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
-  if (match) ytId = match[1];
+  var isMP4 = url.toLowerCase().indexOf('.mp4') !== -1 || url.indexOf('r2.dev') !== -1;
+  var isYT  = url.indexOf('youtube.com') !== -1 || url.indexOf('youtu.be') !== -1;
 
-  var modal = document.getElementById('exerciseModal');
+  // Extract YouTube ID
+  var ytId = '';
+  if (isYT) {
+    var m = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/) || url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+    if (m) ytId = m[1];
+  }
+
+  // Determine thumbnail
+  var thumbUrl = media.thumbnail || '';
+  if (!thumbUrl && ytId) thumbUrl = 'https://img.youtube.com/vi/' + ytId + '/hqdefault.jpg';
+
+  // Store for playback
+  window._exMediaUrl  = url;
+  window._exMediaIsMP4 = isMP4;
+  window._exMediaYtId  = ytId;
+
+  var modal   = document.getElementById('exerciseModal');
   var content = document.getElementById('exerciseModalContent');
 
-  // Two-column layout: video left, text right
-  window._currentExYtId = ytId;
+  // Video column — show if we have a URL
   var videoHtml = '';
-  if (ytId) {
-    var thumbUrl = 'https://img.youtube.com/vi/' + ytId + '/hqdefault.jpg';
+  if (url) {
+    var thumbInner = thumbUrl
+      ? '<img src="' + thumbUrl + '" alt="Play" style="width:100%;height:100%;object-fit:cover;" />'
+      : '<div style="width:100%;height:100%;background:#1E2C35;"></div>';
     videoHtml = '<div class="ex-media-video-col">'
       + '<div class="ex-media-thumb" id="exMediaThumb" onclick="playExerciseVideo()" style="cursor:pointer;">'
-      + '<img src="' + thumbUrl + '" alt="Play" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius);" />'
+      + thumbInner
       + '<div class="ex-media-play-btn">&#9654;</div>'
-      + '</div>'
-      + '</div>';
+      + '</div></div>';
   }
 
   var textHtml = '<div class="ex-media-text-col">'
@@ -510,13 +525,26 @@ function openExerciseModal(el) {
 }
 
 function playExerciseVideo() {
-  var ytId = window._currentExYtId;
   var thumb = document.getElementById('exMediaThumb');
-  if (!thumb || !ytId) return;
-  thumb.innerHTML = '<iframe src="https://www.youtube.com/embed/' + ytId + '?rel=0&modestbranding=1&autoplay=1" '
-    + 'frameborder="0" allowfullscreen allow="autoplay; picture-in-picture" '
-    + 'style="width:100%;height:100%;border-radius:var(--radius);"></iframe>';
-  thumb.style.cursor = 'default';
+  if (!thumb) return;
+  var playerHtml = '';
+  if (window._exMediaIsMP4) {
+    // Native video player for MP4/R2
+    playerHtml = '<video src="' + window._exMediaUrl + '" '
+      + 'controls autoplay playsinline '
+      + 'style="width:100%;height:100%;object-fit:contain;background:#000;border-radius:var(--radius);">'
+      + '</video>';
+  } else if (window._exMediaYtId) {
+    // YouTube embed
+    playerHtml = '<iframe src="https://www.youtube.com/embed/' + window._exMediaYtId
+      + '?rel=0&modestbranding=1&autoplay=1" '
+      + 'frameborder="0" allowfullscreen allow="autoplay; picture-in-picture" '
+      + 'style="width:100%;height:100%;border-radius:var(--radius);border:none;"></iframe>';
+  }
+  if (playerHtml) {
+    thumb.innerHTML = playerHtml;
+    thumb.style.cursor = 'default';
+  }
 }
 
 function handleExModalClick(e) {
