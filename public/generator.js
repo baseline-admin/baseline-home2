@@ -474,8 +474,34 @@ function applyFilterRemovals(){
   });
 }
 
+// ── Exercise wiki — history stack ────────────────────────
+var _exHistory = [];
+
 function openExerciseModal(el) {
+  _exHistory = [];
   var name = el.getAttribute('data-exname');
+  _renderExerciseModal(name);
+}
+
+function openLinkedExercise(name) {
+  var currentName = document.querySelector('.ex-modal-name');
+  if (currentName) _exHistory.push(currentName.getAttribute('data-name'));
+  _renderExerciseModal(name);
+}
+
+function exModalBack() {
+  if (!_exHistory.length) return;
+  var prev = _exHistory.pop();
+  _renderExerciseModal(prev);
+}
+
+function exModalGoTo(index) {
+  var targetName = _exHistory[index];
+  _exHistory = _exHistory.slice(0, index);
+  _renderExerciseModal(targetName);
+}
+
+function _renderExerciseModal(name) {
   var media = State.sheetData && State.sheetData.exerciseMedia && State.sheetData.exerciseMedia[name];
   if (!media) return;
 
@@ -483,26 +509,33 @@ function openExerciseModal(el) {
   var isMP4 = url.toLowerCase().indexOf('.mp4') !== -1 || url.indexOf('r2.dev') !== -1;
   var isYT  = url.indexOf('youtube.com') !== -1 || url.indexOf('youtu.be') !== -1;
 
-  // Extract YouTube ID
   var ytId = '';
   if (isYT) {
     var m = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/) || url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
     if (m) ytId = m[1];
   }
 
-  // Determine thumbnail
   var thumbUrl = media.thumbnail || '';
   if (!thumbUrl && ytId) thumbUrl = 'https://img.youtube.com/vi/' + ytId + '/hqdefault.jpg';
 
-  // Store for playback
-  window._exMediaUrl  = url;
+  window._exWikiLinks = [];
+  window._exMediaUrl   = url;
   window._exMediaIsMP4 = isMP4;
   window._exMediaYtId  = ytId;
 
-  var modal   = document.getElementById('exerciseModal');
-  var content = document.getElementById('exerciseModalContent');
+  // Breadcrumb
+  var breadcrumbHtml = '';
+  if (_exHistory.length > 0) {
+    var crumbs = _exHistory.map(function(n, i) {
+      return '<span class="ex-crumb-link" onclick="exModalGoTo(' + i + ')">' + n + '</span>';
+    });
+    crumbs.push('<span class="ex-crumb-current">' + name + '</span>');
+    breadcrumbHtml = '<div class="ex-breadcrumb">'
+      + crumbs.join('<span class="ex-crumb-sep"> › </span>')
+      + '</div>';
+  }
 
-  // Video column — show if we have a URL
+  // Video thumbnail
   var videoHtml = '';
   if (url) {
     var thumbInner = thumbUrl
@@ -511,17 +544,46 @@ function openExerciseModal(el) {
     videoHtml = '<div class="ex-media-video-col">'
       + '<div class="ex-media-thumb" id="exMediaThumb" onclick="playExerciseVideo()" style="cursor:pointer;">'
       + thumbInner
-
       + '</div></div>';
   }
 
+  // Parse description — [Exercise Name] becomes clickable if media exists
+  var descHtml = '';
+  if (media.description) {
+    var descParsed = media.description;
+    var wikiRegex = /\[([^\]]+)\]/g;
+    var wikiMatch;
+    var descResult = '';
+    var lastIndex = 0;
+    wikiRegex.lastIndex = 0;
+    while ((wikiMatch = wikiRegex.exec(descParsed)) !== null) {
+      var exName = wikiMatch[1];
+      var exists = State.sheetData && State.sheetData.exerciseMedia && State.sheetData.exerciseMedia[exName];
+      descResult += descParsed.slice(lastIndex, wikiMatch.index);
+      if (exists) {
+        var linkIdx = window._exWikiLinks ? window._exWikiLinks.length : 0;
+        if (!window._exWikiLinks) window._exWikiLinks = [];
+        window._exWikiLinks.push(exName);
+        descResult += '<span class="ex-wiki-link" onclick="openLinkedExercise(window._exWikiLinks[' + linkIdx + '])">' + exName + '</span>';
+      } else {
+        descResult += exName;
+      }
+      lastIndex = wikiMatch.index + wikiMatch[0].length;
+    }
+    descResult += descParsed.slice(lastIndex);
+    descHtml = '<div class="ex-modal-desc">' + descResult + '</div>';
+  }
+
   var textHtml = '<div class="ex-media-text-col">'
-    + '<div class="ex-modal-name">' + name + '</div>'
-    + (media.description ? '<div class="ex-modal-desc">' + media.description + '</div>' : '')
+    + '<div class="ex-modal-name" data-name="' + name + '">' + name + '</div>'
+    + descHtml
     + '</div>';
 
-  content.innerHTML = '<div class="ex-media-layout">' + videoHtml + textHtml + '</div>';
-  modal.classList.add('open');
+  var contentEl = document.getElementById('exerciseModalContent');
+  contentEl.innerHTML = breadcrumbHtml
+    + '<div class="ex-media-layout">' + videoHtml + textHtml + '</div>';
+
+  document.getElementById('exerciseModal').classList.add('open');
 }
 
 function playExerciseVideo() {
@@ -529,14 +591,12 @@ function playExerciseVideo() {
   if (!thumb) return;
   var playerHtml = '';
   if (window._exMediaIsMP4) {
-    // Native video player for MP4/R2
     playerHtml = '<video id="exMediaVideo" src="' + window._exMediaUrl + '" '
       + 'autoplay playsinline loop '
       + 'style="width:100%;height:100%;object-fit:cover;background:#000;border-radius:var(--radius);cursor:pointer;" '
       + 'onclick="var v=this;v.paused?v.play():v.pause();">'
       + '</video>';
   } else if (window._exMediaYtId) {
-    // YouTube embed
     playerHtml = '<iframe src="https://www.youtube.com/embed/' + window._exMediaYtId
       + '?rel=0&modestbranding=1&autoplay=1" '
       + 'frameborder="0" allowfullscreen allow="autoplay; picture-in-picture" '
@@ -547,6 +607,7 @@ function playExerciseVideo() {
     thumb.style.cursor = 'default';
   }
 }
+
 
 function handleExModalClick(e) {
   if (e.target === document.getElementById('exerciseModal')) closeExerciseModal();
