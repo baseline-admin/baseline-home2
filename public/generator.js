@@ -511,7 +511,7 @@ function openExerciseModal(el) {
     videoHtml = '<div class="ex-media-video-col">'
       + '<div class="ex-media-thumb" id="exMediaThumb" onclick="playExerciseVideo()" style="cursor:pointer;">'
       + thumbInner
-      + '<div class="ex-media-play-btn">&#9654;</div>'
+
       + '</div></div>';
   }
 
@@ -530,9 +530,10 @@ function playExerciseVideo() {
   var playerHtml = '';
   if (window._exMediaIsMP4) {
     // Native video player for MP4/R2
-    playerHtml = '<video src="' + window._exMediaUrl + '" '
-      + 'controls autoplay playsinline '
-      + 'style="width:100%;height:100%;object-fit:contain;background:#000;border-radius:var(--radius);">'
+    playerHtml = '<video id="exMediaVideo" src="' + window._exMediaUrl + '" '
+      + 'autoplay playsinline loop '
+      + 'style="width:100%;height:100%;object-fit:cover;background:#000;border-radius:var(--radius);cursor:pointer;" '
+      + 'onclick="var v=this;v.paused?v.play():v.pause();">'
       + '</video>';
   } else if (window._exMediaYtId) {
     // YouTube embed
