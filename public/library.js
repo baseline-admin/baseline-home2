@@ -181,8 +181,12 @@ function renderExerciseGrid(exercises, noFilters) {
     + exercises.map(function(ex) {
         var tags = splitVals(ex.type).concat(splitVals(ex.mode)).concat(splitVals(ex.ulc))
           .filter(function(t){ return t; });
+        var hasMedia = State.sheetData && State.sheetData.exerciseMedia && State.sheetData.exerciseMedia[ex.name];
+        var nameHtml = hasMedia
+          ? '<div class="library-card-name card-exercise-link" data-exname="' + ex.name + '" onclick="openExerciseModal(this)"><span class="ex-link-dot">&#9654;</span> ' + ex.name + '</div>'
+          : '<div class="library-card-name">' + ex.name + '</div>';
         return '<div class="library-card ' + ex.css + '">'
-          + '<div class="library-card-name">' + ex.name + '</div>'
+          + nameHtml
           + '<div class="library-tags">'
           + tags.map(function(t){ return '<span class="library-tag">' + t + '</span>'; }).join('')
           + '</div></div>';
