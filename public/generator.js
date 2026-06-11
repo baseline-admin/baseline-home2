@@ -479,29 +479,44 @@ function openExerciseModal(el) {
   var media = State.sheetData && State.sheetData.exerciseMedia && State.sheetData.exerciseMedia[name];
   if (!media) return;
 
-  // Extract YouTube video ID from URL
   var ytId = '';
   var url = media.url || '';
-  var match = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  var match = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/) || url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
   if (match) ytId = match[1];
 
   var modal = document.getElementById('exerciseModal');
   var content = document.getElementById('exerciseModalContent');
 
-  var html = '';
+  // Two-column layout: video left, text right
+  window._currentExYtId = ytId;
+  var videoHtml = '';
   if (ytId) {
-    html += '<div class="ex-modal-video">'
-      + '<iframe src="https://www.youtube.com/embed/' + ytId + '?rel=0&modestbranding=1" '
-      + 'title="' + name + '" frameborder="0" allowfullscreen allow="picture-in-picture"></iframe>'
+    var thumbUrl = 'https://img.youtube.com/vi/' + ytId + '/hqdefault.jpg';
+    videoHtml = '<div class="ex-media-video-col">'
+      + '<div class="ex-media-thumb" id="exMediaThumb" onclick="playExerciseVideo()" style="cursor:pointer;">'
+      + '<img src="' + thumbUrl + '" alt="Play" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius);" />'
+      + '<div class="ex-media-play-btn">&#9654;</div>'
+      + '</div>'
       + '</div>';
   }
-  html += '<div class="ex-modal-name">' + name + '</div>';
-  if (media.description) {
-    html += '<div class="ex-modal-desc">' + media.description + '</div>';
-  }
 
-  content.innerHTML = html;
+  var textHtml = '<div class="ex-media-text-col">'
+    + '<div class="ex-modal-name">' + name + '</div>'
+    + (media.description ? '<div class="ex-modal-desc">' + media.description + '</div>' : '')
+    + '</div>';
+
+  content.innerHTML = '<div class="ex-media-layout">' + videoHtml + textHtml + '</div>';
   modal.classList.add('open');
+}
+
+function playExerciseVideo() {
+  var ytId = window._currentExYtId;
+  var thumb = document.getElementById('exMediaThumb');
+  if (!thumb || !ytId) return;
+  thumb.innerHTML = '<iframe src="https://www.youtube.com/embed/' + ytId + '?rel=0&modestbranding=1&autoplay=1" '
+    + 'frameborder="0" allowfullscreen allow="autoplay; picture-in-picture" '
+    + 'style="width:100%;height:100%;border-radius:var(--radius);"></iframe>';
+  thumb.style.cursor = 'default';
 }
 
 function handleExModalClick(e) {
