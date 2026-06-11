@@ -348,14 +348,6 @@ select option { background:var(--surface); color:var(--text); }
   background:#000; position:relative;
 }
 .ex-media-thumb img { display:block; width:100%; height:100%; object-fit:cover; }
-.ex-media-play-btn {
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  font-size:40px; color:rgba(255,255,255,0.9);
-  text-shadow:0 2px 8px rgba(0,0,0,0.5);
-  transition:opacity 0.2s;
-}
-.ex-media-thumb:hover .ex-media-play-btn { opacity:0.7; }
 .ex-media-thumb iframe { width:100%; height:100%; border:none; display:block; }
 
 @media(max-width:560px) {
@@ -586,3 +578,9 @@ button.greeting:hover .greeting-chevron { color:var(--text); }
   object-fit:contain; background:#000;
   border-radius:var(--radius); display:block;
 }
+
+/* Hide all native video UI */
+video::-webkit-media-controls { display:none !important; }
+video::-webkit-media-controls-enclosure { display:none !important; }
+video::-webkit-media-controls-panel { display:none !important; }
+video { -webkit-appearance:none; }
