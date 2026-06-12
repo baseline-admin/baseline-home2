@@ -106,15 +106,30 @@ function renderPromptPills(prompts) {
   pills.innerHTML = prompts.map(function(p) {
     return '<button class="prompt-pill" data-prompt="' + p + '" onclick="selectPromptPill(this.dataset.prompt)">' + p + '</button>';
   }).join('');
+  // Fade out gen loader, show pills
+  var loader = document.getElementById('genLoader');
+  if (loader) {
+    loader.style.transition = 'opacity 0.4s ease';
+    loader.style.opacity = '0';
+    setTimeout(function(){ loader.style.display = 'none'; }, 400);
+  }
+  pills.style.display = 'flex';
+  pills.style.opacity = '0';
+  pills.style.transition = 'opacity 0.4s ease';
+  setTimeout(function(){ pills.style.opacity = '1'; }, 50);
 }
 
 function selectPromptPill(prompt) {
+  // Fade pills out
+  var pills = document.getElementById('promptPills');
+  if (pills) {
+    pills.style.transition = 'opacity 0.35s ease';
+    pills.style.opacity = '0';
+    setTimeout(function(){ pills.style.display = 'none'; }, 350);
+  }
   var sel = document.getElementById('promptSelect');
   if (sel) sel.value = prompt;
-  openGeneratorPanel();
-  // Scroll to panel
-  var panel = document.getElementById('generatorPanel');
-  if (panel) panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  setTimeout(function() { openGeneratorPanel(); }, 200);
 }
 
 function generate(){
@@ -639,4 +654,3 @@ function handleExModalClick() {}
 function openLinkedExercise() {}
 
 function makeTitle(r){var p=[r.t1.row];if(r.t2)p.push(r.t2.row);p.push(r.fmt);return p.join(' - ');}
-
