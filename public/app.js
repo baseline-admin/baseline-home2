@@ -211,8 +211,17 @@ window.addEventListener('load', function() {
   sb.auth.onAuthStateChange(function(event, session) {
     if (session && session.user) {
       startApp(session.user);
-    } else if (event === 'SIGNED_OUT') {
+    } else if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
       showAuthOverlay();
     }
   });
+
+  // Safety fallback — dismiss splash after 6s no matter what
+  setTimeout(function() {
+    var splash = document.getElementById('splash');
+    if (splash && splash.style.display !== 'none') {
+      dismissSplash();
+      if (!State.currentUser) showAuthOverlay();
+    }
+  }, 6000);
 });
