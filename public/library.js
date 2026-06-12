@@ -124,13 +124,19 @@ function renderLibrary() {
     gridHtml = renderExerciseGrid(visible, noFilters);
   }
 
+  // Hide container until loader fades out
+  container.style.visibility = 'hidden';
   container.innerHTML = filterHtml + cwHtml + gridHtml;
-  // Fade out library loader
   var loader = document.getElementById('libLoader');
   if (loader && loader.style.display !== 'none') {
-    loader.style.transition = 'opacity 0.4s ease';
+    loader.style.transition = 'opacity 0.5s ease';
     loader.style.opacity = '0';
-    setTimeout(function(){ loader.style.display = 'none'; }, 400);
+    setTimeout(function(){
+      loader.style.display = 'none';
+      container.style.visibility = 'visible';
+    }, 500);
+  } else {
+    container.style.visibility = 'visible';
   }
 }
 
