@@ -106,17 +106,23 @@ function renderPromptPills(prompts) {
   pills.innerHTML = prompts.map(function(p) {
     return '<button class="prompt-pill" data-prompt="' + p + '" onclick="selectPromptPill(this.dataset.prompt)">' + p + '</button>';
   }).join('');
-  // Fade out gen loader, show pills
+  // Keep pills hidden until loader fully fades
+  pills.style.visibility = 'hidden';
+  pills.style.display = 'flex';
   var loader = document.getElementById('genLoader');
   if (loader) {
-    loader.style.transition = 'opacity 0.4s ease';
+    loader.style.transition = 'opacity 0.5s ease';
     loader.style.opacity = '0';
-    setTimeout(function(){ loader.style.display = 'none'; }, 400);
+    setTimeout(function(){
+      loader.style.display = 'none';
+      pills.style.visibility = 'visible';
+      pills.style.opacity = '0';
+      pills.style.transition = 'opacity 0.3s ease';
+      setTimeout(function(){ pills.style.opacity = '1'; }, 20);
+    }, 500);
+  } else {
+    pills.style.visibility = 'visible';
   }
-  pills.style.display = 'flex';
-  pills.style.opacity = '0';
-  pills.style.transition = 'opacity 0.4s ease';
-  setTimeout(function(){ pills.style.opacity = '1'; }, 50);
 }
 
 function selectPromptPill(prompt) {
