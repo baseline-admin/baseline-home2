@@ -100,11 +100,9 @@
 
   <!-- Generator -->
   <div class="page active" id="pageGenerator">
-    <button class="greeting" id="greeting" onclick="toggleGeneratorPanel()">
-      Hello<span> - what would you like to work on today?</span>
-      <span class="greeting-chevron" id="greetingChevron">&#x25BE;</span>
-    </button>
-    <div class="prompt-pills" id="promptPills" style="display:flex;"></div>
+    <div class="greeting" id="greeting">Hello<span> - what would you like to work on today?</span></div>
+    <div class="content-loader" id="genLoader"><span class="loader-dot"></span>PREPARING</div>
+    <div class="prompt-pills" id="promptPills" style="display:none;"></div>
     <div class="generator-panel" id="generatorPanel" style="display:none;">
       <div class="controls">
         <div class="control-group"><span class="control-label">Workout</span><select id="promptSelect" disabled><option value="" disabled selected>Choose</option></select></div>
@@ -126,6 +124,7 @@
   <!-- Library -->
   <div class="page" id="pageLibrary">
     <div class="page-title">Exercise Library</div>
+    <div class="content-loader" id="libLoader"><span class="loader-dot"></span>PREPARING</div>
     <div id="libraryContainer"></div>
   </div>
 
@@ -200,3 +199,4 @@
 </script>
 </body>
 </html>
+
