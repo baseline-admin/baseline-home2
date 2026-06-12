@@ -607,3 +607,38 @@ video { -webkit-appearance:none; }
   font-style:normal;
 }
 .ex-wiki-link:hover { opacity:0.8; }
+
+/* ── Inline exercise panels ──────────────────────────── */
+.ex-inline-panel {
+  grid-column: 1 / -1; /* spans full grid width in library */
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:20px 24px;
+  margin:8px 0 4px; animation:panelSlide 0.2s ease;
+}
+.ex-panel-header {
+  display:flex; align-items:flex-start; justify-content:space-between;
+  margin-bottom:16px;
+}
+.ex-panel-header .ex-breadcrumb { margin-bottom:0; padding-bottom:0; border-bottom:none; flex:1; }
+.ex-panel-close {
+  background:none; border:none; color:var(--muted); font-size:16px;
+  cursor:pointer; padding:0 0 0 12px; flex-shrink:0; line-height:1;
+}
+.ex-panel-close:hover { color:var(--text); }
+
+/* ── Prompt pills ────────────────────────────────────── */
+.prompt-pills {
+  display:flex; flex-wrap:wrap; gap:8px;
+  margin-bottom:24px;
+}
+.prompt-pill {
+  font-family:var(--mono); font-size:11px; padding:6px 16px;
+  border:1px solid var(--border); border-radius:20px;
+  background:var(--surface); color:var(--text);
+  cursor:pointer; letter-spacing:0.05em;
+  transition:border-color 0.15s, color 0.15s;
+}
+.prompt-pill:hover { border-color:var(--accent); color:var(--accent); }
+
+/* ── Install button underline ────────────────────────── */
+.install-btn { text-decoration:underline; text-underline-offset:3px; }
