@@ -533,11 +533,7 @@ select option { background:var(--surface); color:var(--text); }
 }
 
 /* ── Collapsible generator panel ─────────────────────── */
-.greeting-chevron {
-  font-size:12px; color:var(--muted);
-  margin-left:8px; vertical-align:middle;
-  transition:transform 0.2s ease;
-}
+/* chevron removed */
 .generator-panel {
   animation:panelSlide 0.2s ease;
 }
@@ -546,16 +542,7 @@ select option { background:var(--surface); color:var(--text); }
   to   { opacity:1; transform:translateY(0); }
 }
 
-/* Greeting as button - preserve original text appearance exactly */
-button.greeting {
-  background:none; border:none; padding:0;
-  text-align:left; width:100%; cursor:pointer;
-  font-size:18px; font-weight:500; color:var(--text);
-  font-family:var(--sans); line-height:1.4;
-  display:block; margin-bottom:32px;
-}
-button.greeting span { color:var(--muted); font-weight:300; }
-button.greeting:hover .greeting-chevron { color:var(--text); }
+/* greeting is now a plain div - no button styles needed */
 
 /* Generator panel — styled like refine/create workout */
 .generator-panel {
@@ -642,3 +629,15 @@ video { -webkit-appearance:none; }
 
 /* ── Install button underline ────────────────────────── */
 .install-btn { text-decoration:underline; text-underline-offset:3px; }
+
+/* ── Content loader (generator + library) ───────────── */
+.content-loader {
+  min-height:65vh; display:flex; align-items:center; justify-content:center;
+  gap:8px; background:var(--bg); font-family:var(--mono);
+  font-size:12px; letter-spacing:0.14em; color:var(--text);
+  text-transform:uppercase;
+}
+.loader-dot {
+  display:inline-block; width:6px; height:6px;
+  background:var(--accent); border-radius:50%; flex-shrink:0;
+}
