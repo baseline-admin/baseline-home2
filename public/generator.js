@@ -78,6 +78,7 @@ async function loadSheetData(){
     sel.disabled=false;
     document.getElementById('timeSelect').disabled=false;
     document.getElementById('genBtn').disabled=false;
+    renderPromptPills(prompts);
     // Re-render library if it's the active page
     var libPage = document.getElementById('pageLibrary');
     if (libPage && libPage.classList.contains('active') && typeof renderLibrary === 'function') {
@@ -97,6 +98,23 @@ function showGenerating(){
     +'<span class="gen-dot"></span>'
     +'<span class="gen-dot"></span>'
     +'</div>';
+}
+
+function renderPromptPills(prompts) {
+  var pills = document.getElementById('promptPills');
+  if (!pills) return;
+  pills.innerHTML = prompts.map(function(p) {
+    return '<button class="prompt-pill" data-prompt="' + p + '" onclick="selectPromptPill(this.dataset.prompt)">' + p + '</button>';
+  }).join('');
+}
+
+function selectPromptPill(prompt) {
+  var sel = document.getElementById('promptSelect');
+  if (sel) sel.value = prompt;
+  openGeneratorPanel();
+  // Scroll to panel
+  var panel = document.getElementById('generatorPanel');
+  if (panel) panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
 
 function generate(){
@@ -474,153 +492,150 @@ function applyFilterRemovals(){
   });
 }
 
-// ── Exercise wiki — history stack ────────────────────────
-var _exHistory = [];
+// ── Exercise inline panels ───────────────────────────────
 
 function openExerciseModal(el) {
-  _exHistory = [];
   var name = el.getAttribute('data-exname');
-  _renderExerciseModal(name);
+  if (!name) return;
+
+  // Toggle: if panel already open for this exercise, close it
+  var panelId = 'expanel-' + name.replace(/[^a-zA-Z0-9]/g, '-');
+  var existing = document.getElementById(panelId);
+  if (existing) { existing.remove(); return; }
+
+  // Find insertion point
+  var insertAfter = el.closest('.library-card')
+    || el.closest('.exercise-pair')
+    || el.closest('.acc-card')
+    || el.closest('.acc-grid')
+    || el.parentElement;
+
+  var panel = document.createElement('div');
+  panel.id = panelId;
+  panel.className = 'ex-inline-panel';
+
+  _renderPanelContent(panel, name, []);
+  insertAfter.parentNode.insertBefore(panel, insertAfter.nextSibling);
 }
 
-function openLinkedExercise(name) {
-  if (window._currentExName) _exHistory.push(window._currentExName);
-  _renderExerciseModal(name);
-}
+function _renderPanelContent(panel, name, history) {
+  panel.setAttribute('data-current', name);
+  panel.setAttribute('data-history', JSON.stringify(history));
+  window._exWikiLinks = [];
 
-function exModalBack() {
-  if (!_exHistory.length) return;
-  var prev = _exHistory.pop();
-  _renderExerciseModal(prev);
-}
-
-function exModalGoTo(index) {
-  var targetName = _exHistory[index];
-  _exHistory = _exHistory.slice(0, index);
-  _renderExerciseModal(targetName);
-}
-
-function _renderExerciseModal(name) {
   var media = State.sheetData && State.sheetData.exerciseMedia && State.sheetData.exerciseMedia[name];
   if (!media) return;
 
   var url = media.url || '';
   var isMP4 = url.toLowerCase().indexOf('.mp4') !== -1 || url.indexOf('r2.dev') !== -1;
   var isYT  = url.indexOf('youtube.com') !== -1 || url.indexOf('youtu.be') !== -1;
-
-  var ytId = '';
+  var ytId  = '';
   if (isYT) {
     var m = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/) || url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
     if (m) ytId = m[1];
   }
-
   var thumbUrl = media.thumbnail || '';
   if (!thumbUrl && ytId) thumbUrl = 'https://img.youtube.com/vi/' + ytId + '/hqdefault.jpg';
 
-  window._exWikiLinks = [];
-  window._currentExName = name;
-  window._exMediaUrl   = url;
-  window._exMediaIsMP4 = isMP4;
-  window._exMediaYtId  = ytId;
+  // Store for playback — scoped to this panel
+  panel._ytId   = ytId;
+  panel._isMP4  = isMP4;
+  panel._vidUrl = url;
 
   // Breadcrumb
   var breadcrumbHtml = '';
-  if (_exHistory.length > 0) {
-    var crumbs = _exHistory.map(function(n, i) {
-      return '<span class="ex-crumb-link" onclick="exModalGoTo(' + i + ')">' + n + '</span>';
+  if (history.length > 0) {
+    var crumbs = history.map(function(n, i) {
+      return '<span class="ex-crumb-link" data-panel="' + panel.id + '" data-idx="' + i + '" onclick="var p=document.getElementById(this.dataset.panel);_panelGoTo(p,+this.dataset.idx)">' + n + '</span>';
     });
     crumbs.push('<span class="ex-crumb-current">' + name + '</span>');
-    breadcrumbHtml = '<div class="ex-breadcrumb">'
-      + crumbs.join('<span class="ex-crumb-sep"> › </span>')
-      + '</div>';
+    breadcrumbHtml = '<div class="ex-breadcrumb">' + crumbs.join('<span class="ex-crumb-sep"> › </span>') + '</div>';
   }
 
-  // Video thumbnail
+  // Video
   var videoHtml = '';
   if (url) {
     var thumbInner = thumbUrl
       ? '<img src="' + thumbUrl + '" alt="Play" style="width:100%;height:100%;object-fit:cover;" />'
       : '<div style="width:100%;height:100%;background:#1E2C35;"></div>';
+    var thumbId = panel.id + '-thumb';
     videoHtml = '<div class="ex-media-video-col">'
-      + '<div class="ex-media-thumb" id="exMediaThumb" onclick="playExerciseVideo()" style="cursor:pointer;">'
-      + thumbInner
-      + '</div></div>';
+      + '<div class="ex-media-thumb" id="' + thumbId + '" onclick="_playPanelVideo(this)" style="cursor:pointer;">'
+      + thumbInner + '</div></div>';
   }
 
-  // Parse description — [Exercise Name] becomes clickable if media exists
+  // Description with wiki links
   var descHtml = '';
   if (media.description) {
-    var descParsed = media.description;
-    var wikiRegex = /\[([^\]]+)\]/g;
-    var wikiMatch;
     var descResult = '';
-    var lastIndex = 0;
-    wikiRegex.lastIndex = 0;
-    while ((wikiMatch = wikiRegex.exec(descParsed)) !== null) {
-      var exName = wikiMatch[1];
+    var descStr = media.description;
+    var wikiRx = /\[([^\]]+)\]/g;
+    var wm; var lastIdx = 0;
+    while ((wm = wikiRx.exec(descStr)) !== null) {
+      var exName = wm[1];
       var exists = State.sheetData && State.sheetData.exerciseMedia && State.sheetData.exerciseMedia[exName];
-      descResult += descParsed.slice(lastIndex, wikiMatch.index);
+      descResult += descStr.slice(lastIdx, wm.index);
       if (exists) {
-        var linkIdx = window._exWikiLinks ? window._exWikiLinks.length : 0;
-        if (!window._exWikiLinks) window._exWikiLinks = [];
-        window._exWikiLinks.push(exName);
-        descResult += '<span class="ex-wiki-link" onclick="openLinkedExercise(window._exWikiLinks[' + linkIdx + '])">' + exName + '</span>';
+        var li = window._exWikiLinks.length;
+        window._exWikiLinks.push({panelId: panel.id, name: exName});
+        descResult += '<span class="ex-wiki-link" onclick="_openLinkedInPanel(' + li + ')">' + exName + '</span>';
       } else {
         descResult += exName;
       }
-      lastIndex = wikiMatch.index + wikiMatch[0].length;
+      lastIdx = wm.index + wm[0].length;
     }
-    descResult += descParsed.slice(lastIndex);
+    descResult += descStr.slice(lastIdx);
     descHtml = '<div class="ex-modal-desc">' + descResult + '</div>';
   }
 
   var textHtml = '<div class="ex-media-text-col">'
-    + '<div class="ex-modal-name" data-name="' + name + '">' + name + '</div>'
-    + descHtml
-    + '</div>';
+    + '<div class="ex-modal-name">' + name + '</div>'
+    + descHtml + '</div>';
 
-  var contentEl = document.getElementById('exerciseModalContent');
-  contentEl.innerHTML = breadcrumbHtml
+  panel.innerHTML = '<div class="ex-panel-header">'
+    + breadcrumbHtml
+    + '<button class="ex-panel-close" onclick="this.closest(\'.ex-inline-panel\').remove()">&#x2715;</button>'
+    + '</div>'
     + '<div class="ex-media-layout">' + videoHtml + textHtml + '</div>';
-
-  document.getElementById('exerciseModal').classList.add('open');
 }
 
-function playExerciseVideo() {
-  var thumb = document.getElementById('exMediaThumb');
-  if (!thumb) return;
-  var playerHtml = '';
-  if (window._exMediaIsMP4) {
-    playerHtml = '<video id="exMediaVideo" src="' + window._exMediaUrl + '" '
-      + 'autoplay playsinline loop '
-      + 'style="width:100%;height:100%;object-fit:cover;background:#000;border-radius:var(--radius);cursor:pointer;" '
-      + 'onclick="var v=this;v.paused?v.play():v.pause();">'
-      + '</video>';
-  } else if (window._exMediaYtId) {
-    playerHtml = '<iframe src="https://www.youtube.com/embed/' + window._exMediaYtId
-      + '?rel=0&modestbranding=1&autoplay=1" '
-      + 'frameborder="0" allowfullscreen allow="autoplay; picture-in-picture" '
-      + 'style="width:100%;height:100%;border-radius:var(--radius);border:none;"></iframe>';
+function _playPanelVideo(thumbEl) {
+  var panel = thumbEl.closest('.ex-inline-panel');
+  if (!panel) return;
+  var html = '';
+  if (panel._isMP4) {
+    html = '<video src="' + panel._vidUrl + '" autoplay playsinline loop '
+      + 'style="width:100%;height:100%;object-fit:cover;background:#000;cursor:pointer;" '
+      + 'onclick="var v=this;v.paused?v.play():v.pause();"></video>';
+  } else if (panel._ytId) {
+    html = '<iframe src="https://www.youtube.com/embed/' + panel._ytId
+      + '?rel=0&modestbranding=1&autoplay=1" frameborder="0" allowfullscreen allow="autoplay;picture-in-picture" '
+      + 'style="width:100%;height:100%;border:none;"></iframe>';
   }
-  if (playerHtml) {
-    thumb.innerHTML = playerHtml;
-    thumb.style.cursor = 'default';
-  }
+  if (html) { thumbEl.innerHTML = html; thumbEl.style.cursor = 'default'; }
 }
 
-
-function handleExModalClick(e) {
-  if (e.target === document.getElementById('exerciseModal')) closeExerciseModal();
+function _openLinkedInPanel(linkIdx) {
+  var link = window._exWikiLinks && window._exWikiLinks[linkIdx];
+  if (!link) return;
+  var panel = document.getElementById(link.panelId);
+  if (!panel) return;
+  var history = JSON.parse(panel.getAttribute('data-history') || '[]');
+  var current = panel.getAttribute('data-current');
+  history.push(current);
+  _renderPanelContent(panel, link.name, history);
 }
 
-function closeExerciseModal() {
-  var modal = document.getElementById('exerciseModal');
-  modal.classList.remove('open');
-  window._currentExName = null;
-  _exHistory = [];
-  // Stop video playing
-  var iframe = modal.querySelector('iframe');
-  if (iframe) iframe.src = iframe.src;
+function _panelGoTo(panel, index) {
+  var history = JSON.parse(panel.getAttribute('data-history') || '[]');
+  var targetName = history[index];
+  var newHistory = history.slice(0, index);
+  _renderPanelContent(panel, targetName, newHistory);
 }
+
+// Keep closeExerciseModal for any legacy references
+function closeExerciseModal() {}
+function handleExModalClick() {}
+function openLinkedExercise() {}
 
 function makeTitle(r){var p=[r.t1.row];if(r.t2)p.push(r.t2.row);p.push(r.fmt);return p.join(' - ');}
