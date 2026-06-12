@@ -639,3 +639,4 @@ function handleExModalClick() {}
 function openLinkedExercise() {}
 
 function makeTitle(r){var p=[r.t1.row];if(r.t2)p.push(r.t2.row);p.push(r.fmt);return p.join(' - ');}
+
