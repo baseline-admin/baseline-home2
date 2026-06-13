@@ -126,17 +126,25 @@ function renderPromptPills(prompts) {
 }
 
 function selectPromptPill(prompt) {
-  // Fade pills out but keep space so panel doesn't jump
   var pills = document.getElementById('promptPills');
-  if (pills) {
-    pills.style.transition = 'opacity 0.35s ease';
-    pills.style.opacity = '0';
-    // visibility:hidden keeps the space, preventing panel from jumping
-    setTimeout(function(){ pills.style.visibility = 'hidden'; }, 350);
-  }
-  var sel = document.getElementById('promptSelect');
+  var panel = document.getElementById('generatorPanel');
+  var sel   = document.getElementById('promptSelect');
   if (sel) sel.value = prompt;
-  setTimeout(function() { openGeneratorPanel(); }, 200);
+
+  if (pills && panel) {
+    // Crossfade: fade pills out, panel in simultaneously
+    panel.style.opacity = '0';
+    panel.style.display = 'block';
+    pills.style.transition  = 'opacity 0.35s ease';
+    panel.style.transition  = 'opacity 0.35s ease';
+    pills.style.opacity = '0';
+    setTimeout(function(){
+      panel.style.opacity = '1';
+      pills.style.visibility = 'hidden';
+    }, 200);
+  } else {
+    openGeneratorPanel();
+  }
 }
 
 function generate(){
