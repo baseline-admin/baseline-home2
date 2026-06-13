@@ -132,16 +132,26 @@ function selectPromptPill(prompt) {
   if (sel) sel.value = prompt;
 
   if (pills && panel) {
-    // Crossfade: fade pills out, panel in simultaneously
+    // Step 1: make panel visible but transparent, same grid cell as pills
     panel.style.opacity = '0';
     panel.style.display = 'block';
-    pills.style.transition  = 'opacity 0.35s ease';
-    panel.style.transition  = 'opacity 0.35s ease';
-    pills.style.opacity = '0';
-    setTimeout(function(){
-      panel.style.opacity = '1';
-      pills.style.visibility = 'hidden';
-    }, 200);
+
+    // Step 2: crossfade — pills out, panel in
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        pills.style.transition = 'opacity 0.35s ease';
+        panel.style.transition = 'opacity 0.35s ease';
+        pills.style.opacity = '0';
+        panel.style.opacity = '1';
+
+        // Step 3: after fade, collapse pills so they don't take up space
+        setTimeout(function() {
+          pills.style.display = 'none';
+          // Reset panel to normal flow now pills are gone
+          panel.style.position = '';
+        }, 400);
+      });
+    });
   } else {
     openGeneratorPanel();
   }
