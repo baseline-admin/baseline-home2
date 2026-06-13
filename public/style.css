@@ -646,3 +646,11 @@ video { -webkit-appearance:none; }
   from { opacity:0; }
   to   { opacity:1; }
 }
+
+/* ── Generator crossfade wrap ────────────────────────── */
+.gen-crossfade-wrap {
+  display: grid;
+}
+.gen-crossfade-wrap > * {
+  grid-area: 1 / 1; /* both children occupy same cell */
+}
