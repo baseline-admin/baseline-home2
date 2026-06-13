@@ -126,12 +126,13 @@ function renderPromptPills(prompts) {
 }
 
 function selectPromptPill(prompt) {
-  // Fade pills out
+  // Fade pills out but keep space so panel doesn't jump
   var pills = document.getElementById('promptPills');
   if (pills) {
     pills.style.transition = 'opacity 0.35s ease';
     pills.style.opacity = '0';
-    setTimeout(function(){ pills.style.display = 'none'; }, 350);
+    // visibility:hidden keeps the space, preventing panel from jumping
+    setTimeout(function(){ pills.style.visibility = 'hidden'; }, 350);
   }
   var sel = document.getElementById('promptSelect');
   if (sel) sel.value = prompt;
