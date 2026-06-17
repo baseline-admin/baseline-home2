@@ -483,17 +483,19 @@ function buildRefinePanel(r,startOpen){
     +'<div class="refine-footer">'
     +'<button class="refine-regen-btn" onclick="regenerate()">Regenerate</button>'
     +prevFilters
-    +'</div></div>';
+    +'</div>'
+    +'<div class="pro-link-wrap"><span class="pro-link">Need something more personalised? Try '
+    +'<span onclick="showPage(\'pro\',null)" style="text-decoration:underline;cursor:pointer;color:#1E2C35;">Baseline Pro</span>'
+    +'</span></div>'
+    +'</div>';
 }
 
 function toggleRefine(){
   var panel=document.getElementById('refinePanel');
   var btn=document.getElementById('refineBtn');
-  var proWrap=document.getElementById('proLinkWrap');
   var open=panel.style.display==='block';
   panel.style.display=open?'none':'block';
   btn.classList.toggle('refine-btn-active',!open);
-  if(proWrap) proWrap.style.display=open?'none':'block';
 }
 
 function selectRefineOpt(opt){
