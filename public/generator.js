@@ -325,7 +325,7 @@ function renderOutput(isRegen){
   h+='<button class="save-btn" id="saveBtn" onclick="saveWorkout()">Save workout</button>';
   h+='<button class="refine-btn" id="refineBtn" onclick="toggleRefine()">Refine workout</button>';
   h+='<span class="save-msg" id="saveMsg">'+(isRegen?'Refined':'')+'</span>';
-  h+='<span class="pro-link" id="proLink" style="display:none;">Need something more personalised? Try <span onclick="showPage(\'pro\',null)" style="text-decoration:underline;cursor:pointer;color:#1E2C35;">Baseline Pro</span></span>';
+  h+='<span class="pro-link" id="proLink" style="display:none;">Need something more personalised? Try <span onclick="showPage(\'pro\',null)" style="text-decoration:underline;cursor:pointer;color:var(--text);">Baseline Pro</span></span>';
   h+='</div>';
   h+=buildRefinePanel(r,isRegen);
   document.getElementById('output').innerHTML=h;
@@ -485,7 +485,7 @@ function buildRefinePanel(r,startOpen){
     +prevFilters
     +'</div>'
     +'<div class="pro-link-wrap"><span class="pro-link">Need something more personalised? Try '
-    +'<span onclick="showPage(\'pro\',null)" style="text-decoration:underline;cursor:pointer;color:#1E2C35;">Baseline Pro</span>'
+    +'<span onclick="showPage(\'pro\',null)" style="text-decoration:underline;cursor:pointer;color:var(--text);">Baseline Pro</span>'
     +'</span></div>'
     +'</div>';
 }
@@ -493,9 +493,11 @@ function buildRefinePanel(r,startOpen){
 function toggleRefine(){
   var panel=document.getElementById('refinePanel');
   var btn=document.getElementById('refineBtn');
+  var proWrap=document.getElementById('proLinkWrap');
   var open=panel.style.display==='block';
   panel.style.display=open?'none':'block';
   btn.classList.toggle('refine-btn-active',!open);
+  if(proWrap) proWrap.style.display=open?'none':'block';
 }
 
 function selectRefineOpt(opt){
