@@ -58,8 +58,12 @@ function cwActivateSegment(key) {
 // ── Add exercise from library ─────────────────────────────
 
 function cwAddExercise(name) {
-  var seg = CWState.activeSegment;
-  if (!seg) return;
+  // Auto-determine segment from active library filter
+  var af = (typeof LibraryState !== 'undefined') ? LibraryState.activeFilters : {};
+  var seg = af.prep && af.prep.length ? 'prep'
+          : af.mobility && af.mobility.length ? 'mobility'
+          : 'main';
+  CWState.activeSegment = seg;
   var d = State.sheetData || {};
   var exercises = CWState.segments[seg].exercises;
 
@@ -141,6 +145,7 @@ function cwToggleRounds(segKey) {
 
 function cwSetRounds(segKey, val) {
   CWState.segments[segKey].rounds = val;
+  if (val && val.trim()) CWState.segments[segKey].roundsTicked = true;
 }
 
 // ── Validate ──────────────────────────────────────────────
@@ -313,14 +318,23 @@ function renderCWExerciseGrid(exercises, noFilters) {
           .filter(function(t){ return t; });
 
         var inSeg = false, isTicked = false;
-        if (activeSeg) {
-          var found = CWState.segments[activeSeg].exercises.filter(function(e){ return e.name===ex.name&&!e.isRest; })[0];
+        var af = (typeof LibraryState !== 'undefined') ? LibraryState.activeFilters : {};
+        var checkSegForTick = activeSeg || (CWState.open
+          ? ((af.prep && af.prep.length) ? 'prep' : (af.mobility && af.mobility.length) ? 'mobility' : 'main')
+          : null);
+        if (checkSegForTick) {
+          var found = CWState.segments[checkSegForTick].exercises.filter(function(e){ return e.name===ex.name&&!e.isRest; })[0];
           if (found) { inSeg = true; isTicked = found.ticked; }
         }
 
-        var tickedInSeg = activeSeg ? CWState.segments[activeSeg].exercises.filter(function(e){ return e.ticked; }).length : 0;
+        // Segment is auto-determined from filter, always allow clicking when CW open
+        var autoSeg = (af && af.prep && af.prep.length) ? 'prep'
+                    : (af && af.mobility && af.mobility.length) ? 'mobility'
+                    : 'main';
+        var checkSeg = activeSeg || (CWState.open ? autoSeg : null);
+        var tickedInSeg = checkSeg ? CWState.segments[checkSeg].exercises.filter(function(e){ return e.ticked; }).length : 0;
         var atMax = tickedInSeg >= MAX_TICKED && !isTicked;
-        var clickable = activeSeg && (!atMax || inSeg);
+        var clickable = CWState.open && (!atMax || inSeg);
 
         var checkHtml = activeSeg
           ? '<div class="cw-card-check'
