@@ -489,11 +489,11 @@ function buildRefinePanel(r,startOpen){
 function toggleRefine(){
   var panel=document.getElementById('refinePanel');
   var btn=document.getElementById('refineBtn');
-  var proLink=document.getElementById('proLink');
+  var proWrap=document.getElementById('proLinkWrap');
   var open=panel.style.display==='block';
   panel.style.display=open?'none':'block';
   btn.classList.toggle('refine-btn-active',!open);
-  if(proLink) proLink.style.display=open?'none':'inline';
+  if(proWrap) proWrap.style.display=open?'none':'block';
 }
 
 function selectRefineOpt(opt){
