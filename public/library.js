@@ -9,7 +9,7 @@
 var LibraryState = {
   exercises: [],
   viewAll: false,
-  activeFilters: { tennis: [], training: [], equipment: [], focus: [] }
+  activeFilters: { tennis: [], training: [], equipment: [], focus: [], prep: [], mobility: [] }
 };
 
 function buildLibrary() {
@@ -17,7 +17,7 @@ function buildLibrary() {
   var d = State.sheetData;
   var exercises = [];
 
-  function addExercises(rows, typeData, modeData, ulcData, source, cssClass) {
+  function addExercises(rows, typeData, modeData, ulcData, source, cssClass, table) {
     (rows || []).forEach(function(name) {
       var type = (typeData || {})[name] || '';
       if (type.toLowerCase() === 'recovery') return;
@@ -26,16 +26,17 @@ function buildLibrary() {
         type:   (type || '').toLowerCase().trim(),
         mode:   ((modeData || {})[name] || '').toLowerCase().trim(),
         ulc:    ((ulcData  || {})[name] || '').toLowerCase().trim(),
-        css:    cssClass
+        css:    cssClass,
+        table:  table
       });
     });
   }
 
-  addExercises(d.t1Rows, d.t1TypeData, d.t1ModeData, d.t1ULCData, 'Table 1', 'lc-t1');
-  addExercises(d.t2Rows, d.t2TypeData, d.t2ModeData, d.t2ULCData, 'Table 2', 'lc-t2');
-  addExercises(d.t3Rows, d.t3TypeData, d.t3ModeData, d.t3ULCData, 'Table 3', 'lc-t3');
-  addExercises(d.taRows, d.taTypeData, d.taModeData, d.taULCData, 'Prep',     'lc-ta');
-  addExercises(d.tzRows, d.tzTypeData, d.tzModeData, d.tzULCData, 'Mobility', 'lc-tz');
+  addExercises(d.t1Rows, d.t1TypeData, d.t1ModeData, d.t1ULCData, 'Table 1', 'lc-t1', 'main');
+  addExercises(d.t2Rows, d.t2TypeData, d.t2ModeData, d.t2ULCData, 'Table 2', 'lc-t2', 'main');
+  addExercises(d.t3Rows, d.t3TypeData, d.t3ModeData, d.t3ULCData, 'Table 3', 'lc-t3', 'main');
+  addExercises(d.taRows, d.taTypeData, d.taModeData, d.taULCData, 'Prep',     'lc-ta', 'prep');
+  addExercises(d.tzRows, d.tzTypeData, d.tzModeData, d.tzULCData, 'Mobility', 'lc-tz', 'mobility');
 
   LibraryState.exercises = exercises;
 }
@@ -43,11 +44,20 @@ function buildLibrary() {
 function getLibraryMeta() {
   var d = State.sheetData;
   var modes = [], types = [], ulcs = [], prompts = [];
+  var prepModes = [], mobilityUlcs = [];
 
   LibraryState.exercises.forEach(function(ex) {
-    splitVals(ex.mode).forEach(function(v){ if(modes.indexOf(v)===-1) modes.push(v); });
-    splitVals(ex.type).forEach(function(v){ if(types.indexOf(v)===-1) types.push(v); });
-    splitVals(ex.ulc).forEach(function(v){  if(ulcs.indexOf(v)===-1)  ulcs.push(v);  });
+    if (ex.table === 'main') {
+      splitVals(ex.mode).forEach(function(v){ if(modes.indexOf(v)===-1) modes.push(v); });
+      splitVals(ex.type).forEach(function(v){ if(types.indexOf(v)===-1) types.push(v); });
+      splitVals(ex.ulc).forEach(function(v){  if(ulcs.indexOf(v)===-1)  ulcs.push(v);  });
+    }
+    if (ex.table === 'prep') {
+      splitVals(ex.mode).forEach(function(v){ if(v && prepModes.indexOf(v)===-1) prepModes.push(v); });
+    }
+    if (ex.table === 'mobility') {
+      splitVals(ex.ulc).forEach(function(v){ if(v && mobilityUlcs.indexOf(v)===-1) mobilityUlcs.push(v); });
+    }
   });
 
   (d.prompts || []).forEach(function(p) {
@@ -56,8 +66,8 @@ function getLibraryMeta() {
     }
   });
 
-  modes.sort(); types.sort(); ulcs.sort();
-  return { modes: modes, types: types, ulcs: ulcs, prompts: prompts };
+  modes.sort(); types.sort(); ulcs.sort(); prepModes.sort(); mobilityUlcs.sort();
+  return { modes: modes, types: types, ulcs: ulcs, prompts: prompts, prepModes: prepModes, mobilityUlcs: mobilityUlcs };
 }
 
 function splitVals(str) {
@@ -84,13 +94,28 @@ function renderLibrary() {
   buildLibrary();
   var meta = getLibraryMeta();
   var af = LibraryState.activeFilters;
-  var noFilters = !af.tennis.length && !af.training.length && !af.equipment.length && !af.focus.length;
+  var hasMainFilter = af.tennis.length || af.training.length || af.equipment.length || af.focus.length;
+  var hasPrepFilter = af.prep.length;
+  var hasMobFilter  = af.mobility.length;
+  var noFilters = !hasMainFilter && !hasPrepFilter && !hasMobFilter;
 
   var visible = [];
   if (LibraryState.viewAll && noFilters) {
-    visible = LibraryState.exercises.slice();
+    visible = LibraryState.exercises.filter(function(ex){ return ex.table === 'main'; });
   } else if (!noFilters) {
     visible = LibraryState.exercises.filter(function(ex) {
+      // Prep filter
+      if (hasPrepFilter) {
+        if (ex.table !== 'prep') return false;
+        return af.prep.some(function(m){ return splitVals(ex.mode).indexOf(m) !== -1; });
+      }
+      // Mobility filter
+      if (hasMobFilter) {
+        if (ex.table !== 'mobility') return false;
+        return af.mobility.some(function(u){ return splitVals(ex.ulc).indexOf(u) !== -1; });
+      }
+      // Main filters — exclude prep/mobility
+      if (ex.table !== 'main') return false;
       if (af.tennis.length > 0) {
         if (!af.tennis.some(function(p){ return exerciseMatchesPrompt(ex, p); })) return false;
       }
@@ -142,10 +167,12 @@ function renderLibrary() {
 
 function renderFilterPanels(meta) {
   var panels = [
-    { key:'tennis',    label:'Tennis',    items: meta.prompts },
-    { key:'training',  label:'Training',  items: meta.modes   },
-    { key:'equipment', label:'Equipment', items: meta.types   },
-    { key:'focus',     label:'Focus',     items: meta.ulcs    },
+    { key:'tennis',    label:'Tennis',    items: meta.prompts      },
+    { key:'training',  label:'Training',  items: meta.modes        },
+    { key:'equipment', label:'Equipment', items: meta.types        },
+    { key:'focus',     label:'Focus',     items: meta.ulcs         },
+    { key:'prep',      label:'Prep',      items: meta.prepModes    },
+    { key:'mobility',  label:'Mobility',  items: meta.mobilityUlcs },
   ];
 
   var html = '<div class="lib-filters">';
@@ -242,7 +269,7 @@ function viewAllLibrary() {
 }
 
 function clearLibFilters() {
-  LibraryState.activeFilters = { tennis: [], training: [], equipment: [], focus: [] };
+  LibraryState.activeFilters = { tennis: [], training: [], equipment: [], focus: [], prep: [], mobility: [] };
   LibraryState.viewAll = false;
   renderLibrary();
 }
