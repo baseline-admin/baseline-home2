@@ -44,7 +44,12 @@ function cwRepLabel(ex, segmentKey) {
 
 function toggleCreateWorkout() {
   CWState.open = !CWState.open;
-  if (!CWState.open) CWState.activeSegment = null;
+  if (CWState.open) {
+    // Auto-activate main segment so exercises are immediately selectable
+    if (!CWState.activeSegment) CWState.activeSegment = 'main';
+  } else {
+    CWState.activeSegment = null;
+  }
   renderLibrary();
 }
 
@@ -355,3 +360,4 @@ function renderCWExerciseGrid(exercises, noFilters) {
       }).join('')
     + '</div>';
 }
+
