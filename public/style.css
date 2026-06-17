@@ -654,3 +654,9 @@ video { -webkit-appearance:none; }
 .gen-crossfade-wrap > * {
   grid-area: 1 / 1; /* both children occupy same cell */
 }
+
+/* Pro link below buttons */
+.pro-link-wrap {
+  padding:12px 0 4px;
+  font-size:12px;
+}
