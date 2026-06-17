@@ -94,8 +94,8 @@ function renderCustomWorkoutResults(data) {
     html += '<div class="results-section"><div class="section-label">Main Workout</div>';
     if (segs.main.formatTicked && segs.main.format) {
       html += '<div class="format-badge">' + segs.main.format + '</div>';
-    } else if (segs.main.roundsTicked && segs.main.rounds) {
-      html += '<div class="format-badge">' + segs.main.rounds + ' Rounds</div>';
+    } else if (segs.main.rounds && segs.main.rounds.toString().trim()) {
+      html += '<div class="format-badge">x' + segs.main.rounds + ' rounds</div>';
     }
     html += '<div class="exercise-pair">';
     segs.main.exercises.forEach(function(ex, i) {
