@@ -79,28 +79,25 @@ async function verifyOTP() {
 
 // ── Register ──────────────────────────────────────────────
 async function register() {
-  var name  = document.getElementById('regName').value.trim();
   var email = document.getElementById('regEmail').value.trim();
   var pass  = document.getElementById('regPassword').value;
-  if (!name || !email || !pass) { document.getElementById('err3').textContent = 'Please fill in all fields.'; return; }
+  if (!email || !pass) { document.getElementById('err3').textContent = 'Please fill in all fields.'; return; }
+  if (!email.includes('@')) { document.getElementById('err3').textContent = 'Please enter a valid email.'; return; }
   if (pass.length < 6) { document.getElementById('err3').textContent = 'Password must be at least 6 characters.'; return; }
 
-  setBusy('btnRegister', true, 'Create account');
-  var { data, error } = await sb.auth.signUp({
-    email: email,
-    password: pass,
-    options: { data: { first_name: name } }
-  });
-  setBusy('btnRegister', false, 'Create account');
+  var btn = document.getElementById('btnRegister');
+  btn.disabled = true; btn.textContent = 'Creating...';
+
+  var { data, error } = await sb.auth.signUp({ email: email, password: pass });
+
+  btn.disabled = false; btn.textContent = 'Create account';
 
   if (error) { document.getElementById('err3').textContent = error.message || 'Registration failed.'; return; }
 
   if (data.user && data.session) {
-    // Immediately signed in - save profile and go
-    await dbUpsertProfile(name);
-    // onAuthStateChange handles startApp
+    // Signed in immediately — onAuthStateChange fires and calls startApp
   } else {
-    // Email confirmation required
+    document.getElementById('err3').style.color = 'var(--accent)';
     document.getElementById('err3').textContent = 'Account created! Check your email to confirm, then sign in.';
   }
 }
@@ -111,5 +108,4 @@ async function signOut() {
   await sb.auth.signOut();
   showStep1();
   document.getElementById('authEmail').value = '';
-  document.getElementById('otpCode').value = '';
 }
