@@ -646,17 +646,47 @@ function _renderPanelContent(panel, name, history) {
 function _playPanelVideo(thumbEl) {
   var panel = thumbEl.closest('.ex-inline-panel');
   if (!panel) return;
-  var html = '';
+
   if (panel._isMP4) {
-    html = '<video src="' + panel._vidUrl + '" autoplay playsinline loop '
-      + 'style="width:100%;height:100%;object-fit:cover;background:#000;cursor:pointer;" '
-      + 'onclick="var v=this;v.paused?v.play():v.pause();"></video>';
+    // Keep thumbnail visible, insert video behind it
+    var video = document.createElement('video');
+    video.src        = panel._vidUrl;
+    video.autoplay   = true;
+    video.loop       = true;
+    video.setAttribute('playsinline', '');
+    video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:pointer;';
+    video.onclick = function(){ this.paused ? this.play() : this.pause(); };
+
+    // Overlay: thumbnail stays on top, fades out when video is ready
+    var img = thumbEl.querySelector('img');
+    if (img) {
+      img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 0.3s ease;z-index:2;pointer-events:none;';
+      video.addEventListener('canplay', function() {
+        img.style.opacity = '0';
+        setTimeout(function(){ if (img.parentNode) img.remove(); }, 350);
+      });
+    }
+
+    thumbEl.style.position = 'relative';
+    thumbEl.insertBefore(video, thumbEl.firstChild);
+    thumbEl.style.cursor = 'default';
+    thumbEl.onclick = null;
+
   } else if (panel._ytId) {
-    html = '<iframe src="https://www.youtube.com/embed/' + panel._ytId
-      + '?rel=0&modestbranding=1&autoplay=1" frameborder="0" allowfullscreen allow="autoplay;picture-in-picture" '
-      + 'style="width:100%;height:100%;border:none;"></iframe>';
+    // YouTube — keep thumbnail, fade in iframe on top
+    var iframe = document.createElement('iframe');
+    iframe.src = 'https://www.youtube.com/embed/' + panel._ytId + '?rel=0&modestbranding=1&autoplay=1';
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.setAttribute('allow', 'autoplay;picture-in-picture');
+    iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;opacity:0;transition:opacity 0.4s ease;';
+    iframe.onload = function(){ this.style.opacity = '1'; };
+
+    thumbEl.style.position = 'relative';
+    thumbEl.appendChild(iframe);
+    thumbEl.style.cursor = 'default';
+    thumbEl.onclick = null;
   }
-  if (html) { thumbEl.innerHTML = html; thumbEl.style.cursor = 'default'; }
 }
 
 function _openLinkedInPanel(linkIdx) {
