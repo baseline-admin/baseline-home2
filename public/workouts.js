@@ -200,7 +200,7 @@ function buildCustomScoreInputsHTML(data) {
 
 function cwRepLabelForDisplay(ex, segKey) {
   if (segKey === 'mobility') return 'seconds';
-  if (ex.isRest || (ex.type||'').toLowerCase() === 'recovery') return 'seconds';
+  if (ex.isRest || ['recovery','hold'].indexOf((ex.type||'').toLowerCase()) !== -1) return 'seconds';
   if ((ex.type||'').toLowerCase() === 'machine') return 'metres';
   if ((ex.ub||'').toUpperCase() === 'U') return 'reps each side';
   return 'reps';
