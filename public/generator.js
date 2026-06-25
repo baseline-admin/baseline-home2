@@ -11,7 +11,7 @@ var FORMAT_MAP = {
   'EM1':['EMOM 10m','EMOM 12m'],'EM2':['E2MOM 16m','E2MOM 20m'],
   'EM3':['E3MOM 15m','E3MOM 17m'],'EM4':['E4MOM 16m','E4MOM 20m'],'EM5':['E5MOM 15m','E5MOM 20m']
 };
-var REFINE_EXCLUDE_TYPES = ['recovery'];
+var REFINE_EXCLUDE_TYPES = ['recovery','hold'];
 var PersistentExclusions = { exercises: [], types: [] };
 
 function rnd(a){return a[Math.floor(Math.random()*a.length)];}
@@ -37,12 +37,13 @@ function matchesFilter(value, allowedList){
 }
 function getFormat(col){var o=FORMAT_MAP[col];return o?rnd(o):col;}
 function isUni(ubVal){return(ubVal||'').toString().trim().toUpperCase()==='U';}
-function isRecovery(typeStr){
+function isSeconds(typeStr){
   var types=parseList(typeStr||'');
-  return types.indexOf('recovery')!==-1;
+  return types.indexOf('recovery')!==-1||types.indexOf('hold')!==-1;
 }
+function isRecovery(typeStr){ return isSeconds(typeStr); } // alias kept for compatibility
 function repLabel(typeStr,ub){
-  if(isRecovery(typeStr))return'seconds';
+  if(isSeconds(typeStr))return'seconds';
   var types=parseList(typeStr||'');
   if(types.indexOf('machine')!==-1)return'meters';
   return isUni(ub)?'reps each side':'reps';
@@ -287,11 +288,11 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
     if(keep&&!slotsToReplace['t3']){
       t3=keep.t3; t3n=keep.t3n;
     }else{
-      var t2IsRecovery=t2&&isRecovery(t2.type);
+      var t2IsRecovery=t2&&isSeconds(t2.type);
       var t3e=[];
       (d.t3Rows||[]).forEach(function(row){
         if(isExcluded(row,(d.t3TypeData||{})[row],excl))return;
-        if(t2IsRecovery&&isRecovery((d.t3TypeData||{})[row]))return;
+        if(t2IsRecovery&&isSeconds((d.t3TypeData||{})[row]))return;
         var v=(d.t3Data[row]||{})[selectedCol];if(!v||!v.trim())return;
         t3e.push({row:row,col:selectedCol,val:v,type:(d.t3TypeData||{})[row]||'',ub:(d.t3UBData||{})[row]||'B'});
       });
@@ -393,9 +394,9 @@ function buildResults(r){
 function buildRefinePanel(r,startOpen){
   var d=State.sheetData;
   var exercises=[];
-  if(r.t1&&!isRecovery(r.t1.type))exercises.push({slot:'t1',name:r.t1.row,type:r.t1.type});
-  if(r.t2&&!isRecovery(r.t2.type))exercises.push({slot:'t2',name:r.t2.row,type:r.t2.type});
-  if(r.t3&&!isRecovery(r.t3.type))exercises.push({slot:'t3',name:r.t3.row,type:r.t3.type});
+  if(r.t1&&!isSeconds(r.t1.type))exercises.push({slot:'t1',name:r.t1.row,type:r.t1.type});
+  if(r.t2&&!isSeconds(r.t2.type))exercises.push({slot:'t2',name:r.t2.row,type:r.t2.type});
+  if(r.t3&&!isSeconds(r.t3.type))exercises.push({slot:'t3',name:r.t3.row,type:r.t3.type});
   if(!exercises.length)return'<div id="refinePanel" style="display:none"></div>';
 
   var pRule=d.promptRules[r.prompt]||{};
@@ -713,4 +714,3 @@ function handleExModalClick() {}
 function openLinkedExercise() {}
 
 function makeTitle(r){var p=[r.t1.row];if(r.t2)p.push(r.t2.row);p.push(r.fmt);return p.join(' - ');}
-
