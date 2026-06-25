@@ -203,7 +203,7 @@ function regenerate(){
 
 function _buildWorkout(prompt,ts,slotsToReplace,excl){
   var keep=slotsToReplace&&State.lastResult?State.lastResult:null;
-  var nAZ=ts==='60mins'?3:ts==='45mins'?2:1;
+  var nAZ=ts==='45mins'?3:ts==='35mins'?2:1;
   var d=State.sheetData;
   var pRule=d.promptRules[prompt];
   if(!pRule){alert('No rule for: '+prompt);return null;}
@@ -713,3 +713,4 @@ function handleExModalClick() {}
 function openLinkedExercise() {}
 
 function makeTitle(r){var p=[r.t1.row];if(r.t2)p.push(r.t2.row);p.push(r.fmt);return p.join(' - ');}
+
