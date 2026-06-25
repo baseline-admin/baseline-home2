@@ -35,7 +35,7 @@ function cwRepLabel(ex, segmentKey) {
   if (ex.isRest) return 'seconds rest';
   var type = (ex.type||'').toLowerCase();
   if (type === 'machine') return 'metres';
-  if (type === 'recovery') return 'seconds';
+  if (type === 'recovery' || type === 'hold') return 'seconds';
   if ((ex.ub||'').toUpperCase() === 'U') return 'reps each side';
   return 'reps';
 }
@@ -360,4 +360,3 @@ function renderCWExerciseGrid(exercises, noFilters) {
       }).join('')
     + '</div>';
 }
-
