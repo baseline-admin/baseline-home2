@@ -107,7 +107,23 @@
       <div class="generator-panel" id="generatorPanel" style="display:none;opacity:0;">
         <div class="controls">
           <div class="control-group"><span class="control-label">Workout</span><select id="promptSelect" disabled><option value="" disabled selected>Choose</option></select></div>
-          <div class="control-group"><span class="control-label">Time</span><select id="timeSelect" disabled><option value="" disabled selected>Choose Duration</option><option value="25mins">25 mins</option><option value="35mins">35 mins</option><option value="45mins">45 mins</option></select></div>
+          <select id="timeSelect" style="display:none;" disabled>
+          <option value="" disabled selected></option>
+          <option value="25mins">25 mins</option>
+          <option value="35mins">35 mins</option>
+          <option value="45mins">45 mins</option>
+        </select>
+        <div class="gen-filter-panel">
+          <button class="gen-filter-header" onclick="toggleDurationPanel()">
+            <span class="gen-filter-label">DURATION</span>
+            <span class="gen-filter-chevron" id="durationChevron">&#x25B4;</span>
+          </button>
+          <div class="gen-filter-body" id="durationBody">
+            <button class="gen-duration-pill" data-value="25mins" onclick="selectDuration(this)">25 mins</button>
+            <button class="gen-duration-pill" data-value="35mins" onclick="selectDuration(this)">35 mins</button>
+            <button class="gen-duration-pill" data-value="45mins" onclick="selectDuration(this)">45 mins</button>
+          </div>
+        </div>
           <button class="gen-btn" id="genBtn" disabled onclick="generate()">Generate</button>
         </div>
         <div class="gen-instructions">Select a workout and duration, then click Generate.</div>
@@ -201,3 +217,4 @@
 </script>
 </body>
 </html>
+
