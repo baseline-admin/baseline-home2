@@ -158,6 +158,25 @@ function selectPromptPill(prompt) {
   }
 }
 
+function toggleDurationPanel() {
+  var body  = document.getElementById('durationBody');
+  var chev  = document.getElementById('durationChevron');
+  var open  = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'flex';
+  chev.innerHTML     = open ? '&#x25BE;' : '&#x25B4;';
+}
+
+function selectDuration(pill) {
+  // Update hidden select
+  var sel = document.getElementById('timeSelect');
+  if (sel) sel.value = pill.getAttribute('data-value');
+  // Toggle active pill
+  document.querySelectorAll('.gen-duration-pill').forEach(function(p) {
+    p.classList.remove('gen-duration-pill-active');
+  });
+  pill.classList.add('gen-duration-pill-active');
+}
+
 function generate(){
   PersistentExclusions={exercises:[],types:[]};
   var prompt=document.getElementById('promptSelect').value;
@@ -379,7 +398,7 @@ function buildResults(r){
   if(r.t2){
     h+=ec('t2','Exercise 2',r.t2.row,r.t2.col,r.t2n,r.t2.ub,r.t2.type);
   }else{
-    h+='<div class="exercise-card t2"><div class="card-label t2">Exercise 2</div><div class="card-empty">No pair for this selection</div></div>';
+    h+='<div class="exercise-card t2"><div class="card-label t2">Exercise 2</div><div class="card-empty" style="color:var(--muted);font-size:12px;">Error — tap GENERATE to try again</div></div>';
   }
   h+='</div>';
   if(r.t3)h+='<div class="exercise-pair" style="margin-top:12px">'+ec('t3','Exercise 3',r.t3.row,r.t3.col,r.t3n,r.t3.ub,r.t3.type)+'<div></div></div>';
