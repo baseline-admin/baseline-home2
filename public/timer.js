@@ -222,35 +222,32 @@ function triggerTimeResponse(isFinal) {
 }
 
 function timerLog() {
-  var isGenerator = !!document.getElementById('output');
-  var isSaved     = !!_timer.workoutId;
-  var ftTime      = _timer.ftFinalTime;
+  var isSaved = !!_timer.workoutId;
+  var ftTime  = _timer.ftFinalTime;
+
+  function fillAndScroll() {
+    // Give DOM time to render score inputs before filling
+    setTimeout(function() {
+      var si = document.getElementById('scoreInputs');
+      if (si) si.scrollIntoView({ behavior: 'smooth' });
+      if (ftTime) {
+        var ftInput = document.getElementById('sc_workout');
+        if (ftInput) ftInput.value = ftTime;
+      }
+    }, 200);
+  }
 
   if (isSaved) {
-    // From workouts tab — just scroll to score section
-    var scoreSection = document.querySelector('.score-section');
-    if (scoreSection) scoreSection.scrollIntoView({ behavior: 'smooth' });
-    // Auto-fill FT time
-    if (ftTime) {
-      var ftInput = document.getElementById('sc_workout');
-      if (ftInput) ftInput.value = ftTime;
-    }
+    // Already in workout modal — scroll and fill immediately
+    fillAndScroll();
   } else {
-    // From generator tab — save workout first then open it
+    // Generator tab — save workout, switch tab, open modal, fill
     saveWorkout(function(savedId) {
-      // Switch to workouts tab
-      var tab = document.querySelector('[onclick*="myWorkouts"]');
-      if (tab) tab.click();
+      showPage('myWorkouts', document.querySelector('[onclick*="myWorkouts"]'));
       setTimeout(function() {
-        openWorkoutModal(savedId, function() {
-          var scoreSection = document.querySelector('.score-section');
-          if (scoreSection) scoreSection.scrollIntoView({ behavior: 'smooth' });
-          if (ftTime) {
-            var ftInput = document.getElementById('sc_workout');
-            if (ftInput) ftInput.value = ftTime;
-          }
-        });
-      }, 400);
+        openWorkoutModal(savedId);
+        setTimeout(fillAndScroll, 500);
+      }, 300);
     });
   }
 }
