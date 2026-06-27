@@ -2,18 +2,19 @@
 // Shared timer logic used by both generator tab and workouts tab.
 
 var _timer = {
-  mode:       null,   // 'ft' | 'amrap' | 'emom'
-  running:    false,
-  startMs:    0,      // when current interval started (Date.now())
-  elapsed:    0,      // ms elapsed in current interval before last pause
-  totalMs:    0,      // countdown start in ms (AMRAP/EMOM)
-  interval:   0,      // EMOM interval length in ms
-  rounds:     0,      // EMOM total rounds
-  roundsDone: 0,      // EMOM rounds completed
-  raf:        null,   // requestAnimationFrame handle
-  finished:   false,
-  workoutId:  null,   // set when opened from workouts tab
-  ftFinalTime: null,  // stores final FT time string for auto-log
+  mode:        null,   // 'ft' | 'amrap' | 'emom'
+  running:     false,
+  startMs:     0,      // Date.now() at last resume
+  elapsed:     0,      // total ms elapsed (display value, updated each frame)
+  elapsedBase: 0,      // ms elapsed before last resume (for pause/resume accuracy)
+  totalMs:     0,      // countdown start in ms (AMRAP/EMOM)
+  interval:    0,      // EMOM interval length in ms
+  rounds:      0,      // EMOM total rounds
+  roundsDone:  0,      // EMOM rounds completed
+  raf:         null,   // requestAnimationFrame handle
+  finished:    false,
+  workoutId:   null,   // set when opened from workouts tab
+  ftFinalTime: null,   // stores final FT time string for auto-log
 };
 
 var EMOM_CONFIG = {
@@ -47,11 +48,13 @@ function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
 function initTimer(fmt, workoutId) {
   // Reset
-  _timer.running    = false;
-  _timer.elapsed    = 0;
-  _timer.roundsDone = 0;
-  _timer.finished   = false;
-  _timer.workoutId  = workoutId || null;
+  _timer.running     = false;
+  _timer.elapsed     = 0;
+  _timer.elapsedBase = 0;
+  _timer.startMs     = 0;
+  _timer.roundsDone  = 0;
+  _timer.finished    = false;
+  _timer.workoutId   = workoutId || null;
   _timer.ftFinalTime = null;
   if (_timer.raf) cancelAnimationFrame(_timer.raf);
 
@@ -91,8 +94,9 @@ function renderTimerDisplay() {
 
 function timerTick() {
   if (!_timer.running) return;
+  // elapsed = base offset (from before last pause) + time since last resume
   var now     = Date.now();
-  var elapsed = _timer.elapsed + (now - _timer.startMs);
+  var elapsed = _timer.elapsedBase + (now - _timer.startMs);
 
   if (_timer.mode === 'ft') {
     _timer.elapsed = elapsed;
@@ -102,9 +106,10 @@ function timerTick() {
   } else if (_timer.mode === 'amrap') {
     var remaining = _timer.totalMs - elapsed;
     if (remaining <= 0) {
-      _timer.elapsed = _timer.totalMs;
-      _timer.running = false;
-      _timer.finished = true;
+      _timer.elapsedBase = _timer.totalMs;
+      _timer.elapsed     = _timer.totalMs;
+      _timer.running     = false;
+      _timer.finished    = true;
       renderTimerDisplay();
       triggerTimeResponse(true);
       return;
@@ -114,12 +119,12 @@ function timerTick() {
     _timer.raf = requestAnimationFrame(timerTick);
 
   } else if (_timer.mode === 'emom') {
-    var intervalElapsed = elapsed;
-    if (intervalElapsed >= _timer.interval) {
-      // Round complete
+    if (elapsed >= _timer.interval) {
+      // Round complete — reset base for next interval
       _timer.roundsDone++;
-      _timer.elapsed = 0;
-      _timer.startMs = now;
+      _timer.elapsedBase = 0;
+      _timer.startMs     = now;
+      _timer.elapsed     = 0;
       var isLast = (_timer.roundsDone >= _timer.rounds);
       if (isLast) {
         _timer.running  = false;
@@ -132,7 +137,7 @@ function timerTick() {
       triggerTimeResponse(false);
       _timer.raf = requestAnimationFrame(timerTick);
     } else {
-      _timer.elapsed = intervalElapsed;
+      _timer.elapsed = elapsed;
       renderTimerDisplay();
       _timer.raf = requestAnimationFrame(timerTick);
     }
@@ -156,8 +161,9 @@ function timerStart() {
         btn.textContent = _timer.mode === 'ft' ? 'FINISH' : 'PAUSE';
         btn.onclick = _timer.mode === 'ft' ? timerFinish : timerPause;
       }
-      _timer.running  = true;
-      _timer.startMs  = Date.now();
+      _timer.running     = true;
+      _timer.startMs     = Date.now();
+      _timer.elapsedBase = _timer.elapsed; // carry forward any paused time
       _timer.raf = requestAnimationFrame(timerTick);
     }
   }, 1000);
@@ -165,8 +171,9 @@ function timerStart() {
 
 function timerPause() {
   if (!_timer.running) return;
-  _timer.elapsed += Date.now() - _timer.startMs;
-  _timer.running  = false;
+  _timer.elapsed     = _timer.elapsedBase + (Date.now() - _timer.startMs);
+  _timer.elapsedBase = _timer.elapsed;  // so next resume starts from here
+  _timer.running     = false;
   if (_timer.raf) cancelAnimationFrame(_timer.raf);
   var btn = document.getElementById('timerStartBtn');
   if (btn) { btn.textContent = 'START'; btn.onclick = timerStart; }
@@ -174,9 +181,10 @@ function timerPause() {
 
 function timerFinish() {
   // FT only
-  _timer.elapsed += Date.now() - _timer.startMs;
-  _timer.running  = false;
-  _timer.finished = true;
+  _timer.elapsed     = _timer.elapsedBase + (Date.now() - _timer.startMs);
+  _timer.elapsedBase = _timer.elapsed;
+  _timer.running     = false;
+  _timer.finished    = true;
   if (_timer.raf) cancelAnimationFrame(_timer.raf);
   _timer.ftFinalTime = timerFmtMs(_timer.elapsed);
   renderTimerDisplay();
