@@ -4,19 +4,25 @@
    Uses Supabase JS directly via db helpers in app.js.
    Depends on: app.js, generator.js, scores.js
    ============================================================ */
-async function saveWorkout() {
+async function saveWorkout(callback) {
   if (!State.lastResult) return;
   var btn = document.getElementById('saveBtn');
-  btn.disabled = true; btn.textContent = 'Saving...';
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
   try {
-    await dbInsertWorkout(makeTitle(State.lastResult), State.lastResult.prompt, State.lastResult.timeStr, State.lastResult);
-    btn.textContent = 'Saved';
-    btn.classList.add('saved');
-    document.getElementById('saveMsg').textContent = 'Added to My Workouts';
-    loadWorkouts();
+    var saved = await dbInsertWorkout(makeTitle(State.lastResult), State.lastResult.prompt, State.lastResult.timeStr, State.lastResult);
+    if (btn) { btn.textContent = 'Saved'; btn.classList.add('saved'); }
+    var msg = document.getElementById('saveMsg');
+    if (msg) msg.textContent = 'Added to My Workouts';
+    await loadWorkouts();
+    if (typeof callback === 'function') {
+      // Find the saved workout id — get latest
+      var ws = await dbGetWorkouts();
+      if (ws && ws.length) callback(ws[0].id);
+    }
   } catch(e) {
-    btn.disabled = false; btn.textContent = 'Save workout';
-    document.getElementById('saveMsg').textContent = 'Could not save. Please try again.';
+    if (btn) { btn.disabled = false; btn.textContent = 'Save workout'; }
+    var msg = document.getElementById('saveMsg');
+    if (msg) msg.textContent = 'Could not save. Please try again.';
   }
 }
 
@@ -52,7 +58,7 @@ async function openWorkoutModal(id) {
     document.getElementById('modalResults').innerHTML = renderCustomWorkoutResults(w.workout_data);
     document.getElementById('scoreInputs').innerHTML  = buildCustomScoreInputsHTML(w.workout_data);
   } else {
-    document.getElementById('modalResults').innerHTML = buildResults(w.workout_data);
+    document.getElementById('modalResults').innerHTML = buildResultsForModal(w.workout_data, w.id);
     document.getElementById('scoreInputs').innerHTML  = buildScoreInputsHTML(w.workout_data);
   }
 
@@ -66,6 +72,16 @@ async function openWorkoutModal(id) {
     histSection.style.display = 'none';
   }
   document.getElementById('workoutModal').classList.add('open');
+}
+
+// Re-render results in workout modal context (passes workoutId to timer)
+function buildResultsForModal(data, workoutId) {
+  var html = buildResults(data);
+  // Inject workoutId into timer toggle calls
+  html = html.replace(/toggleTimer\(this,'([^']+)',null\)/g, function(m, fmt) {
+    return "toggleTimer(this,'" + fmt + "','" + workoutId + "')";
+  });
+  return html;
 }
 
 function closeModal() {
@@ -92,8 +108,11 @@ function renderCustomWorkoutResults(data) {
 
   if (segs.main && segs.main.exercises && segs.main.exercises.length) {
     html += '<div class="results-section"><div class="section-label">Main Workout</div>';
-    if (segs.main.formatTicked && segs.main.format) {
-      html += '<div class="format-badge">' + segs.main.format + '</div>';
+    var mainFmt = (segs.main.formatTicked && segs.main.format) ? segs.main.format : null;
+    var wid = (State.openWorkout ? State.openWorkout.id : '');
+    if (mainFmt) {
+      html += '<div class="timer-btn-row"><div class="format-badge">' + mainFmt + '</div>'
+            + '<button class="format-badge timer-toggle-btn" onclick="toggleTimer(this,&quot;' + mainFmt + '&quot;,&quot;' + wid + '&quot;)">TIMER</button></div>';
     } else if (segs.main.rounds && segs.main.rounds.toString().trim()) {
       html += '<div class="format-badge">x' + segs.main.rounds + ' rounds</div>';
     }
