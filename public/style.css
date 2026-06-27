@@ -730,7 +730,7 @@ video { -webkit-appearance:none; }
   display: flex; flex-direction: column;
 }
 .timer-display {
-  font-family: var(--mono); font-size: 26px; letter-spacing: 0.05em;
+  font-family: var(--mono); font-size: 20px; letter-spacing: 0.05em;
   color: var(--text); line-height: 1;
 }
 #timerRound {
