@@ -23,7 +23,7 @@ var CW_FORMATS = [
   '3 Rounds For Time','4 Rounds For Time','6 Rounds For Time','8 Rounds For Time',
   'EMOM 10m','EMOM 12m',
   'E2MOM 16m','E2MOM 20m',
-  'E3MOM 15m','E3MOM 17m',
+  'E3MOM 15m','E3MOM 18m',
   'E4MOM 16m','E4MOM 20m',
   'E5MOM 15m','E5MOM 20m'
 ];
