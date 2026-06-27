@@ -693,3 +693,58 @@ video { -webkit-appearance:none; }
   border-color: var(--accent); color: var(--bg-dark);
   background: var(--accent);
 }
+
+/* ── Workout Timer ─────────────────────────────────────── */
+.timer-btn-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.timer-toggle-btn {
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.timer-toggle-btn.format-badge-active {
+  background: var(--accent); color: var(--bg-dark); border-color: var(--accent);
+}
+.timer-panel {
+  margin: 12px 0 8px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.timer-row {
+  display: flex; align-items: center; gap: 16px;
+}
+.timer-start-btn {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+  padding: 8px 20px; border-radius: 20px;
+  border: 1.5px solid #fff; background: transparent; color: #fff;
+  cursor: pointer; white-space: nowrap;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.timer-start-btn:hover { opacity: 0.8; }
+.timer-start-btn:disabled { opacity: 0.4; cursor: default; }
+.timer-display-wrap {
+  display: flex; flex-direction: column;
+}
+.timer-display {
+  font-family: var(--mono); font-size: 26px; letter-spacing: 0.05em;
+  color: var(--text); line-height: 1;
+}
+#timerRound {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--muted); margin-bottom: 4px; letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+#timerLogBtn {
+  display: block; width: 100%; margin-top: 14px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 10px;
+  border: 1.5px solid var(--accent); border-radius: 8px;
+  background: transparent; color: var(--accent);
+  cursor: pointer; text-align: center;
+  transition: background 0.15s, color 0.15s;
+}
+#timerLogBtn:hover { background: var(--accent); color: var(--bg-dark); }
