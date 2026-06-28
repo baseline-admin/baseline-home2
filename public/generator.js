@@ -9,7 +9,7 @@ var FORMAT_MAP = {
   'AM':['AMRAP 16','AMRAP 18','AMRAP 20'],'FT1':['For Time'],'FT3':['3 Rounds For Time'],
   'FT4':['4 Rounds For Time'],'FT6':['6 Rounds For Time'],'FT8':['8 Rounds For Time'],
   'EM1':['EMOM 10m','EMOM 12m'],'EM2':['E2MOM 16m','E2MOM 20m'],
-  'EM3':['E3MOM 15m','E3MOM 18m'],'EM4':['E4MOM 16m','E4MOM 20m'],'EM5':['E5MOM 15m','E5MOM 20m']
+  'EM3':['E3MOM 15m','E3MOM 17m'],'EM4':['E4MOM 16m','E4MOM 20m'],'EM5':['E5MOM 15m','E5MOM 20m']
 };
 var REFINE_EXCLUDE_TYPES = ['recovery','hold'];
 var PersistentExclusions = { exercises: [], types: [] };
@@ -776,7 +776,7 @@ function toggleFormatInfo(btn, fmt) {
   var paras = text.split('\n\n').map(function(p) {
     return '<p style="margin:0 0 10px 0;line-height:1.6;">' + p + '</p>';
   }).join('');
-  panel.innerHTML = '<div style="font-family:var(--font);font-size:13px;color:var(--text);">' + paras + '</div>';
+  panel.innerHTML = '<div style="font-family:var(--mono);font-size:12px;color:var(--text);line-height:1.7;">' + paras + '</div>';
   // Insert after the timer-btn-row, same pattern as timer panel
   var row = btn.closest('.timer-btn-row');
   row.parentNode.insertBefore(panel, row.nextSibling);
