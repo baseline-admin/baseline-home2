@@ -766,5 +766,10 @@ video { -webkit-appearance:none; }
 
 /* ── Format info panel ──────────────────────────────────── */
 .fmt-info-panel {
-  margin-bottom: 0;
+  margin-bottom: 16px;
+  font-family: var(--mono) !important;
+}
+.fmt-info-panel p {
+  font-family: var(--mono) !important;
+  font-size: 12px !important;
 }
