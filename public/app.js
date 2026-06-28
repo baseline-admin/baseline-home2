@@ -166,6 +166,7 @@ async function startApp(user) {
   State.currentUser = user;
 
   var profile = await dbGetProfile();
+  State.cachedProfile = profile;
   // Only use manually entered name — never use OAuth metadata, never show 'friend'
   var name = (profile && profile.first_name) ? profile.first_name : '';
   if (name.toLowerCase() === 'friend' || name.toLowerCase() === 'there') name = '';
@@ -219,3 +220,68 @@ window.addEventListener('load', function() {
     }
   }, 6000);
 });
+
+function generateUserId(name, uuid) {
+  var clean = name.replace(/\s+/g, '');
+  var short = (uuid || '').replace(/-/g, '').substring(0, 4).toUpperCase();
+  return clean + '_' + short;
+}
+
+function showAccountMenu() {
+  var user  = State.currentUser;
+  var profile = State.cachedProfile || {};
+  var name  = profile.first_name || '';
+  var uuid  = user ? user.id : '';
+  var userId = generateUserId(name, uuid);
+
+  // Format created_at
+  var createdAt = '';
+  if (user && user.created_at) {
+    var d = new Date(user.created_at);
+    createdAt = d.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+  }
+
+  var body = document.getElementById('accountModalBody');
+  body.innerHTML =
+    '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">'
+    + '<div><span style="color:var(--text);font-size:13px;">' + name + '</span></div>'
+    + '<button onclick="startEditName()" style="background:none;border:none;cursor:pointer;font-size:15px;padding:0 4px;" title="Edit name">✏️</button>'
+    + '</div>'
+    + '<div id="editNameWrap" style="display:none;margin-bottom:16px;">'
+    + '<input id="editNameInput" type="text" value="' + name + '" maxlength="30" '
+    + 'style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 10px;border-radius:6px;width:100%;box-sizing:border-box;margin-bottom:8px;" />'
+    + '<button onclick="saveEditName()" style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:6px 16px;border:1px solid var(--accent);border-radius:20px;background:none;color:var(--accent);cursor:pointer;">Save</button>'
+    + '</div>'
+    + '<div style="padding:12px 0;border-top:1px solid var(--border);">'
+    + '<div style="margin-bottom:6px;">Member since <span style="color:var(--text);">' + createdAt + '</span></div>'
+    + '<div>User ID <span style="color:var(--text);">' + userId + '</span></div>'
+    + '</div>';
+
+  document.getElementById('accountModal').classList.add('open');
+}
+
+function startEditName() {
+  document.getElementById('editNameWrap').style.display = 'block';
+  document.getElementById('editNameInput').focus();
+}
+
+async function saveEditName() {
+  var input = document.getElementById('editNameInput');
+  if (!input) return;
+  var name = input.value.trim();
+  if (!name) return;
+  await dbUpsertProfile(name);
+  State.cachedProfile = State.cachedProfile || {};
+  State.cachedProfile.first_name = name;
+  setHeaderName(name);
+  updateGreeting(name);
+  closeAccountModal();
+}
+
+function closeAccountModal() {
+  document.getElementById('accountModal').classList.remove('open');
+}
+
+function handleAccountModalClick(e) {
+  if (e.target === document.getElementById('accountModal')) closeAccountModal();
+}
