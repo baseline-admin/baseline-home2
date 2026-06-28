@@ -49,7 +49,15 @@ async function sendOTP() {
     document.getElementById('err1').textContent = 'No account found. Please create one below.';
     return;
   }
-  if (error) { document.getElementById('err1').textContent = error.message || 'Could not send link.'; return; }
+  if (error) {
+    var msg = (error.message || '').toLowerCase();
+    if (msg.includes('not allowed') || msg.includes('signup') || msg.includes('otp')) {
+      document.getElementById('err1').textContent = 'Please create an account first.';
+    } else {
+      document.getElementById('err1').textContent = error.message || 'Could not send link.';
+    }
+    return;
+  }
 
   document.getElementById('err1').textContent = '';
   document.getElementById('err1').style.color = 'var(--accent)';
