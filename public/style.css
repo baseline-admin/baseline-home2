@@ -748,3 +748,23 @@ video { -webkit-appearance:none; }
   transition: background 0.15s, color 0.15s;
 }
 #timerLogBtn:hover { background: var(--accent); color: var(--bg-dark); }
+
+/* ── Gen instruction line ───────────────────────────────── */
+.gen-instruction {
+  font-family: var(--mono); font-size: 12px; color: var(--muted);
+  text-align: center; padding: 0 0 18px 0; letter-spacing: 0.02em;
+}
+
+/* ── Format badge as button ─────────────────────────────── */
+.fmt-info-btn {
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.fmt-info-btn.format-badge-active {
+  background: var(--accent); color: var(--bg-dark); border-color: var(--accent);
+}
+
+/* ── Format info panel ──────────────────────────────────── */
+.fmt-info-panel {
+  margin-bottom: 0;
+}
