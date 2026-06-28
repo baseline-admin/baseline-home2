@@ -391,8 +391,9 @@ function buildResults(r){
   var tzC=r.tzP.map(function(p,i){return ac('tz','Mobility '+(i+1),p.name,parseRange(p.val),p.ub,p.rounds,p.type);}).join('');
 
   var h='<div class="results">';
+  h+='<div class="gen-instruction">Tap an exercise to view instructions &mdash; tap image to play video</div>';
   if(r.taP.length)h+='<div class="results-section"><div class="section-label">Prep</div><div class="acc-grid">'+taC+'</div></div><div class="divider"></div>';
-  h+='<div class="results-section"><div class="section-label">Main Work</div><div class="timer-btn-row"><div class="format-badge">'+r.fmt+'</div><button class="format-badge timer-toggle-btn" onclick="toggleTimer(this,\''+r.fmt+'\',null)">Timer</button></div>';
+  h+='<div class="results-section"><div class="section-label">Main Work</div><div class="timer-btn-row"><button class="format-badge fmt-info-btn" onclick="toggleFormatInfo(this,\''+r.fmt+'\')">' +r.fmt+'</button><button class="format-badge timer-toggle-btn" onclick="toggleTimer(this,\''+r.fmt+'\',null)">Timer</button></div>';
   h+='<div class="exercise-pair">';
   h+=ec('t1','Exercise 1',r.t1.row,r.t1.col,r.t1n,r.t1.ub,r.t1.type);
   if(r.t2){
@@ -737,3 +738,46 @@ function makeTitle(r){var p=[r.t1.row];if(r.t2)p.push(r.t2.row);p.push(r.fmt);re
 
 // ── Workout Timer ─────────────────────────────────────────────────────────────
 // Shared timer logic used by both generator tab and workouts tab.
+
+var FORMAT_INFO = {
+  'AMRAP 16':           'In 16 minutes, complete as many rounds as possible of the exercises below\n\nUse the Timer to track your workout',
+  'AMRAP 18':           'In 18 minutes, complete as many rounds as possible of the exercises below\n\nUse the Timer to track your workout',
+  'AMRAP 20':           'In 20 minutes, complete as many rounds as possible of the exercises below\n\nUse the Timer to track your workout',
+  'For Time':           'Complete the exercises below as fast as possible\n\nUse the Timer to track your workout',
+  '3 Rounds For Time':  'Complete 3 rounds of the exercises below as fast as possible\n\nUse the Timer to track your workout',
+  '4 Rounds For Time':  'Complete 4 rounds of the exercises below as fast as possible\n\nUse the Timer to track your workout',
+  '6 Rounds For Time':  'Complete 6 rounds of the exercises below as fast as possible\n\nUse the Timer to track your workout',
+  '8 Rounds For Time':  'Complete 8 rounds of the exercises below as fast as possible\n\nUse the Timer to track your workout',
+  'EMOM 10m':  'Every minute, complete 1 round of the exercises below until 10 rounds have been completed (10 minutes)\n\nUse the Timer to track your workout',
+  'EMOM 12m':  'Every minute, complete 1 round of the exercises below until 12 rounds have been completed (12 minutes)\n\nUse the Timer to track your workout',
+  'E2MOM 16m': 'Every 2 minutes, complete 1 round of the exercises below until 8 rounds have been completed (16 minutes)\n\nUse the Timer to track your workout',
+  'E2MOM 20m': 'Every 2 minutes, complete 1 round of the exercises below until 10 rounds have been completed (20 minutes)\n\nUse the Timer to track your workout',
+  'E3MOM 15m': 'Every 3 minutes, complete 1 round of the exercises below until 5 rounds have been completed (15 minutes)\n\nUse the Timer to track your workout',
+  'E3MOM 18m': 'Every 3 minutes, complete 1 round of the exercises below until 6 rounds have been completed (18 minutes)\n\nUse the Timer to track your workout',
+  'E4MOM 16m': 'Every 4 minutes, complete 1 round of the exercises below until 4 rounds have been completed (16 minutes)\n\nUse the Timer to track your workout',
+  'E4MOM 20m': 'Every 4 minutes, complete 1 round of the exercises below until 5 rounds have been completed (20 minutes)\n\nUse the Timer to track your workout',
+  'E5MOM 15m': 'Every 5 minutes, complete 1 round of the exercises below until 3 rounds have been completed (15 minutes)\n\nUse the Timer to track your workout',
+  'E5MOM 20m': 'Every 5 minutes, complete 1 round of the exercises below until 5 rounds have been completed (20 minutes)\n\nUse the Timer to track your workout',
+};
+
+function toggleFormatInfo(btn, fmt) {
+  var existing = document.getElementById('fmtInfoPanel');
+  if (existing) {
+    existing.remove();
+    btn.classList.remove('format-badge-active');
+    return;
+  }
+  btn.classList.add('format-badge-active');
+  var text = FORMAT_INFO[fmt] || '';
+  var panel = document.createElement('div');
+  panel.id = 'fmtInfoPanel';
+  panel.className = 'timer-panel fmt-info-panel';
+  // Split on \n\n for paragraphs
+  var paras = text.split('\n\n').map(function(p) {
+    return '<p style="margin:0 0 10px 0;line-height:1.6;">' + p + '</p>';
+  }).join('');
+  panel.innerHTML = '<div style="font-family:var(--font);font-size:13px;color:var(--text);">' + paras + '</div>';
+  // Insert after the timer-btn-row, same pattern as timer panel
+  var row = btn.closest('.timer-btn-row');
+  row.parentNode.insertBefore(panel, row.nextSibling);
+}
