@@ -137,7 +137,7 @@ async function saveName() {
 
 function setHeaderName(name) {
   var wrap = document.getElementById('headerRight');
-  wrap.innerHTML = '<span class="user-name">'+name+'</span>'
+  wrap.innerHTML = '<button class="install-btn" onclick="showAccountMenu()">Account</button>'
     + (!isInstalledPWA() ? '<button class="install-btn" onclick="showInstallTip()">Install</button>' : '')
     + '<button class="sign-out-btn" onclick="signOut()">Sign out</button>';
 }
