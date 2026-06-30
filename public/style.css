@@ -792,7 +792,7 @@ video { -webkit-appearance:none; }
 /* ── Notification dot ───────────────────────────────────── */
 .notif-dot {
   display: inline-block; width: 6px; height: 6px; border-radius: 50%;
-  background: #fff; margin-left: 5px; vertical-align: super;
+  background: var(--muted); margin-left: 5px; vertical-align: super;
 }
 .notif-dot-card {
   position: absolute; top: 10px; right: 10px; margin-left: 0;
