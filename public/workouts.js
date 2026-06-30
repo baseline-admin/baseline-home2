@@ -225,8 +225,8 @@ function handleShareModalClick(e) {
 
 var shareRowCount = 1;
 function shareInputRowHTML(i) {
-  return '<input type="text" class="share-input" id="shareInput_' + i + '" placeholder="Share with... (User ID)" '
-    + 'style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 10px;border-radius:6px;width:100%;box-sizing:border-box;margin-bottom:8px;" />';
+  return '<input type="text" class="share-input" id="shareInput_' + i + '" placeholder="User ID" '
+    + 'style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:16px;padding:8px 10px;border-radius:6px;width:100%;box-sizing:border-box;margin-bottom:8px;" />';
 }
 
 function addShareInputRow() {
