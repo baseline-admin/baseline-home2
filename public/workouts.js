@@ -208,8 +208,8 @@ function openShareMenu() {
     + '<div id="shareInputsWrap">'
     + shareInputRowHTML(0)
     + '</div>'
-    + '<button onclick="addShareInputRow()" class="icon-btn-text" style="margin:4px 0 16px 0;" title="Add another">+ Add another</button>'
-    + '<button class="save-btn" id="shareSubmitBtn" onclick="submitShareWorkout()">Share workout</button>'
+    + '<button onclick="addShareInputRow()" class="icon-btn-text" style="display:block;margin:4px 0 20px 0;" title="Add another">+ Add another</button>'
+    + '<button class="save-btn" id="shareSubmitBtn" onclick="submitShareWorkout()" style="display:block;width:100%;box-sizing:border-box;">Share workout</button>'
     + '<div id="shareMsg" style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:10px;"></div>';
 
   document.getElementById('shareModal').classList.add('open');
