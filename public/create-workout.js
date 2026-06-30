@@ -23,7 +23,7 @@ var CW_FORMATS = [
   '3 Rounds For Time','4 Rounds For Time','6 Rounds For Time','8 Rounds For Time',
   'EMOM 10m','EMOM 12m',
   'E2MOM 16m','E2MOM 20m',
-  'E3MOM 15m','E3MOM 18m',
+  'E3MOM 15m','E3MOM 17m',
   'E4MOM 16m','E4MOM 20m',
   'E5MOM 15m','E5MOM 20m'
 ];
@@ -196,7 +196,7 @@ async function saveCustomWorkout() {
     };
     renderLibrary();
     var msg = document.getElementById('cwSaveMsg');
-    if (msg) { msg.textContent = 'Saved to My Workouts'; setTimeout(function(){ if(msg) msg.textContent=''; }, 3000); }
+    if (msg) { msg.textContent = 'Saved to Custom Workouts'; setTimeout(function(){ if(msg) msg.textContent=''; }, 3000); }
   } catch(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Save workout'; }
     var msg = document.getElementById('cwSaveMsg');
