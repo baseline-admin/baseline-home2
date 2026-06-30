@@ -10,11 +10,20 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { autoRefreshToken:true, persistSession:true, detectSessionInUrl:true }
 });
 
+
+// ── Shared icon SVGs (monochrome, stroke-based) ──────────────────────────
+var ICON_EDIT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+var ICON_REFRESH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>';
+var ICON_SHARE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+var ICON_CHEVRON_CLOSED = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+var ICON_CHEVRON_OPEN = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+
 var State = {
   currentUser: null,
   sheetData:   null,
   lastResult:  null,
-  openWorkout: null
+  openWorkout: null,
+  workoutsNotif: false   // true if there are unseen shared workouts
 };
 
 // ── DB helpers ────────────────────────────────────────────
@@ -24,11 +33,76 @@ async function dbGetProfile() {
   return data;
 }
 
-async function dbUpsertProfile(firstName) {
-  var { data } = await sb.from('profiles')
-    .upsert({ id: State.currentUser.id, first_name: firstName, email: State.currentUser.email })
-    .select().single();
+async function dbUpsertProfile(firstName, displayId) {
+  var payload = { id: State.currentUser.id, first_name: firstName, email: State.currentUser.email };
+  if (displayId) payload.display_id = displayId;
+  var { data } = await sb.from('profiles').upsert(payload).select().single();
   return data;
+}
+
+function randomSuffix() {
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  var s = '';
+  for (var i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+function buildDisplayId(name) {
+  var clean = (name || '').replace(/\s+/g, '');
+  return clean + '_' + randomSuffix();
+}
+
+async function dbLookupUserByDisplayId(displayId) {
+  var { data } = await sb.from('profiles').select('id, first_name, display_id').eq('display_id', displayId).maybeSingle();
+  return data;
+}
+
+async function dbShareWorkout(workout, recipientDisplayIds) {
+  var senderDisplayId = (State.cachedProfile && State.cachedProfile.display_id) || '';
+  var results = [];
+  for (var i = 0; i < recipientDisplayIds.length; i++) {
+    var rid = recipientDisplayIds[i].trim();
+    if (!rid) continue;
+    var recipient = await dbLookupUserByDisplayId(rid);
+    if (!recipient) { results.push({ id: rid, ok: false, reason: 'not found' }); continue; }
+    if (recipient.id === State.currentUser.id) { results.push({ id: rid, ok: false, reason: 'cannot share with yourself' }); continue; }
+    var workoutDataCopy = JSON.parse(JSON.stringify(workout.workout_data || {}));
+    workoutDataCopy.sharedBy = senderDisplayId;
+    try {
+      await sb.from('workouts').insert({
+        user_id: recipient.id,
+        title: workout.title,
+        prompt: workout.prompt,
+        time_selection: workout.time_selection,
+        workout_data: workoutDataCopy,
+        shared_by_display_id: senderDisplayId,
+        is_shared: true,
+        seen: false
+      });
+      results.push({ id: rid, ok: true });
+    } catch(e) {
+      results.push({ id: rid, ok: false, reason: 'error' });
+    }
+  }
+  return results;
+}
+
+async function dbHasUnseenSharedWorkouts() {
+  var { data } = await sb.from('workouts')
+    .select('id')
+    .eq('user_id', State.currentUser.id)
+    .eq('is_shared', true)
+    .eq('seen', false)
+    .limit(1);
+  return !!(data && data.length);
+}
+
+async function dbMarkSharedWorkoutsSeen() {
+  await sb.from('workouts')
+    .update({ seen: true })
+    .eq('user_id', State.currentUser.id)
+    .eq('is_shared', true)
+    .eq('seen', false);
 }
 
 async function dbGetWorkouts() {
@@ -101,7 +175,17 @@ function showPage(name, btn) {
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
   document.getElementById('page' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (name === 'myWorkouts') loadWorkouts();
+  if (name === 'myWorkouts') {
+    loadWorkouts(State.workoutsNotif); // pass notif state so Shared section opens by default
+    if (State.workoutsNotif) {
+      dbMarkSharedWorkoutsSeen().then(function() {
+        State.workoutsNotif = false;
+        var tab = document.querySelector('.nav-tab[onclick*="myWorkouts"]');
+        var existing = tab && tab.querySelector('.notif-dot');
+        if (existing) existing.remove();
+      });
+    }
+  }
   if (name === 'library' && typeof renderLibrary === 'function') renderLibrary();
 }
 
@@ -191,6 +275,22 @@ async function startApp(user) {
 
   loadSheetData();
   loadWorkouts();
+  refreshWorkoutsNotifDot();
+}
+
+async function refreshWorkoutsNotifDot() {
+  var has = await dbHasUnseenSharedWorkouts();
+  State.workoutsNotif = has;
+  var tab = document.querySelector('.nav-tab[onclick*="myWorkouts"]');
+  if (!tab) return;
+  var existing = tab.querySelector('.notif-dot');
+  if (has && !existing) {
+    var dot = document.createElement('span');
+    dot.className = 'notif-dot';
+    tab.appendChild(dot);
+  } else if (!has && existing) {
+    existing.remove();
+  }
 }
 
 function showAuthOverlay() {
@@ -221,20 +321,21 @@ window.addEventListener('load', function() {
   }, 6000);
 });
 
-function generateUserId(name, uuid) {
-  var clean = name.replace(/\s+/g, '');
-  var short = (uuid || '').replace(/-/g, '').substring(0, 4).toUpperCase();
-  return clean + '_' + short;
-}
-
-function showAccountMenu() {
-  var user  = State.currentUser;
+async function showAccountMenu() {
+  var user    = State.currentUser;
   var profile = State.cachedProfile || {};
-  var name  = profile.first_name || '';
-  var uuid  = user ? user.id : '';
-  var userId = generateUserId(name, uuid);
+  var name    = profile.first_name || '';
 
-  // Format created_at
+  // Ensure a display_id exists (first-time users who signed up before this feature)
+  if (!profile.display_id) {
+    var newId = buildDisplayId(name);
+    var updated = await dbUpsertProfile(name, newId);
+    State.cachedProfile = updated;
+    profile = updated;
+  }
+
+  var displayId = profile.display_id;
+
   var createdAt = '';
   if (user && user.created_at) {
     var d = new Date(user.created_at);
@@ -245,7 +346,7 @@ function showAccountMenu() {
   body.innerHTML =
     '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">'
     + '<div><span style="color:var(--text);font-size:13px;">' + name + '</span></div>'
-    + '<button onclick="startEditName()" style="background:none;border:none;cursor:pointer;font-size:15px;padding:0 4px;" title="Edit name">✏️</button>'
+    + '<button onclick="startEditName()" class="icon-btn" title="Edit name">' + ICON_EDIT + '</button>'
     + '</div>'
     + '<div id="editNameWrap" style="display:none;margin-bottom:16px;">'
     + '<input id="editNameInput" type="text" value="' + name + '" maxlength="30" '
@@ -254,7 +355,10 @@ function showAccountMenu() {
     + '</div>'
     + '<div style="padding:12px 0;border-top:1px solid var(--border);">'
     + '<div style="margin-bottom:6px;">Member since <span style="color:var(--text);">' + createdAt + '</span></div>'
-    + '<div>User ID <span style="color:var(--text);">' + userId + '</span></div>'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;">'
+    + '<span>User ID <span style="color:var(--text);" id="accountDisplayId">' + displayId + '</span></span>'
+    + '<button onclick="refreshDisplayId()" class="icon-btn" title="Refresh ID">' + ICON_REFRESH + '</button>'
+    + '</div>'
     + '</div>';
 
   document.getElementById('accountModal').classList.add('open');
@@ -270,12 +374,22 @@ async function saveEditName() {
   if (!input) return;
   var name = input.value.trim();
   if (!name) return;
-  await dbUpsertProfile(name);
-  State.cachedProfile = State.cachedProfile || {};
-  State.cachedProfile.first_name = name;
+  var newDisplayId = buildDisplayId(name);
+  var updated = await dbUpsertProfile(name, newDisplayId);
+  State.cachedProfile = updated;
   setHeaderName(name);
   updateGreeting(name);
   closeAccountModal();
+}
+
+async function refreshDisplayId() {
+  var profile = State.cachedProfile || {};
+  var name = profile.first_name || '';
+  var newDisplayId = buildDisplayId(name);
+  var updated = await dbUpsertProfile(name, newDisplayId);
+  State.cachedProfile = updated;
+  var el = document.getElementById('accountDisplayId');
+  if (el) el.textContent = newDisplayId;
 }
 
 function closeAccountModal() {
