@@ -773,3 +773,68 @@ video { -webkit-appearance:none; }
   font-family: var(--mono) !important;
   font-size: 12px !important;
 }
+
+/* ── Icon buttons (Edit / Refresh / Share) ──────────────── */
+.icon-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text); padding: 4px; line-height: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  opacity: 0.85; transition: opacity 0.15s;
+}
+.icon-btn:hover { opacity: 1; }
+.icon-btn-text {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.04em; padding: 4px 0; transition: color 0.15s;
+}
+.icon-btn-text:hover { color: var(--accent); }
+
+/* ── Notification dot ───────────────────────────────────── */
+.notif-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: #fff; margin-left: 5px; vertical-align: super;
+}
+.notif-dot-card {
+  position: absolute; top: 10px; right: 10px; margin-left: 0;
+}
+.workout-card { position: relative; }
+
+/* ── Workouts tab — collapsible sections ────────────────── */
+.ws-section {
+  margin-bottom: 12px;
+}
+.ws-section-header {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface); border: 1px solid #fff; border-radius: 10px;
+  padding: 14px 16px; cursor: pointer;
+  font-family: var(--font); font-size: 15px; font-weight: 600; color: var(--text);
+  text-align: left; transition: background 0.15s;
+}
+.ws-section-header:hover { background: var(--surface-hover, var(--surface)); }
+.ws-count {
+  font-family: var(--mono); font-size: 11px; font-weight: 400; color: var(--muted);
+}
+.ws-chevron { display: inline-flex; align-items: center; color: var(--text); }
+.ws-section-body { padding: 14px 4px 4px 4px; }
+
+/* ── Shared info panels (Shared By / Shared With) ───────── */
+#sharedInfoSection { margin-top: 20px; }
+.shared-info-row {
+  border-top: 1px solid var(--border);
+}
+.shared-info-header {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  background: none; border: none; cursor: pointer;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted);
+  padding: 10px 0;
+}
+.shared-info-body { padding-bottom: 10px; }
+.shared-id {
+  font-family: var(--mono); font-size: 12px; padding: 4px 0;
+}
+.shared-id-by { color: var(--text); }
+.shared-id-with {
+  color: var(--accent); display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0;
+}
