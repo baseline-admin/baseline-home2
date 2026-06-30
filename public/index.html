@@ -170,6 +170,7 @@
       <div class="score-history-title">Previous Results</div>
       <div id="scoreHistoryList"></div>
     </div>
+    <div id="sharedInfoSection"></div>
     <div style="margin-top:24px"><button class="delete-btn" onclick="deleteWorkout()">Delete workout</button></div>
   </div>
 </div>
@@ -223,6 +224,15 @@
     <button class="ex-modal-close" onclick="closeAccountModal()">&#x2715;</button>
     <div class="ex-modal-name" style="margin-bottom:20px;">Account</div>
     <div id="accountModalBody" style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:2;">
+    </div>
+  </div>
+</div>
+<!-- Share Modal -->
+<div id="shareModal" class="ex-modal-overlay" onclick="handleShareModalClick(event)">
+  <div class="ex-modal-box" style="max-width:400px;">
+    <button class="ex-modal-close" onclick="closeShareModal()">&#x2715;</button>
+    <div class="ex-modal-name" style="margin-bottom:20px;">Share Workout</div>
+    <div id="shareModalBody" style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:2;">
     </div>
   </div>
 </div>
