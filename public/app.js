@@ -25,7 +25,8 @@ var State = {
   sheetData:   null,
   lastResult:  null,
   openWorkout: null,
-  workoutsNotif: false   // true if there are unseen shared workouts
+  workoutsNotif: false,  // true if there are unseen shared workouts
+  cachedWorkouts: []     // local cache updated immediately on title edits
 };
 
 // ── DB helpers ────────────────────────────────────────────
@@ -112,7 +113,8 @@ async function dbGetWorkouts() {
     .select('*, scores(*)')
     .eq('user_id', State.currentUser.id)
     .order('generated_at', { ascending: false });
-  return data || [];
+  State.cachedWorkouts = data || [];
+  return State.cachedWorkouts;
 }
 
 async function dbInsertWorkout(title, prompt, timeSelection, workoutData) {
