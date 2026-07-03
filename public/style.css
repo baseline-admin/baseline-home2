@@ -1,454 +1,840 @@
 /* ============================================================
-   BASELINE - app.js
-   Shared state, db helpers, page navigation, boot.
+   BASELINE — Stylesheet
+   All visual styling. No logic lives here.
    ============================================================ */
 
-var SUPABASE_URL = 'https://zugyathhuiliaszixnlm.supabase.co';
-var SUPABASE_KEY = 'sb_publishable_eTwm5JbLf6nW9zu3roUt6Q_D9JiacF4';
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { autoRefreshToken:true, persistSession:true, detectSessionInUrl:true }
-});
-
-
-// ── Shared icon SVGs (monochrome, stroke-based) ──────────────────────────
-var ICON_EDIT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
-var ICON_COPY = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-var ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-var ICON_REFRESH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>';
-var ICON_SHARE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
-var ICON_CHEVRON_CLOSED = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
-var ICON_CHEVRON_OPEN = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
-
-var State = {
-  currentUser: null,
-  sheetData:   null,
-  lastResult:  null,
-  openWorkout: null,
-  workoutsNotif: false   // true if there are unseen shared workouts
-};
-
-// ── DB helpers ────────────────────────────────────────────
-
-async function dbGetProfile() {
-  var { data } = await sb.from('profiles').select('*').eq('id', State.currentUser.id).single();
-  return data;
+:root {
+  --bg:        #7A9BAD;
+  --bg-dark:   #2C3A42;
+  --surface:   #1E2C35;
+  --surface-2: #263540;
+  --border:    #3D5563;
+  --text:      #FFFFFF;
+  --muted:     #C8DDE8;
+  --accent:    #FFFFFF;
+  --tag-bg:    #2C3A42;
+  --mono:      'DM Mono', monospace;
+  --sans:      'DM Sans', sans-serif;
+  --radius:    4px;
+  --t1:#F0F4F6; --t2:#7AAFC4; --t3:#5A8FA8; --ta:#A8C4D4; --tz:#C4D8E4;
 }
 
-async function dbUpsertProfile(firstName, displayId) {
-  var payload = { id: State.currentUser.id, first_name: firstName, email: State.currentUser.email };
-  if (displayId) payload.display_id = displayId;
-  var { data } = await sb.from('profiles').upsert(payload).select().single();
-  return data;
+html,body { min-height:100%; background:var(--bg); color:var(--text); font-family:var(--sans); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+
+/* AUTH */
+#authOverlay { position:fixed; inset:0; background:var(--bg-dark); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px; }
+.auth-box { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:40px 40px 24px; width:100%; max-width:400px; }
+.auth-logo { font-family:var(--mono); font-size:12px; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:32px; color:var(--text); }
+.auth-logo-dot { display:inline-block; width:6px; height:6px; background:var(--accent); border-radius:50%; margin-right:8px; vertical-align:middle; position:relative; top:-1px; }
+.auth-tabs { display:flex; margin-bottom:28px; border-bottom:1px solid var(--border); }
+.auth-tab { font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; padding:8px 16px 10px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; color:var(--muted); background:none; border-top:none; border-left:none; border-right:none; }
+.auth-tab.active { color:var(--accent); border-bottom:2px solid var(--accent); }
+.auth-divider { display:flex; align-items:center; gap:12px; margin:20px 0; color:var(--muted); font-family:var(--mono); font-size:11px; }
+.auth-divider::before, .auth-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+.google-btn { width:100%; padding:11px; background:var(--surface-2); color:var(--text); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--sans); font-size:14px; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:4px; }
+.google-btn:hover { border-color:var(--accent); }
+.form-group { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+.form-label { font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); }
+.form-input { padding:10px 14px; border:1px solid var(--border); border-radius:var(--radius); font-family:var(--sans); font-size:14px; background:var(--surface-2); color:var(--text); width:100%; }
+.form-input:focus { outline:none; border-color:var(--accent); }
+.form-input::placeholder { color:var(--muted); }
+.auth-btn { width:100%; padding:11px; background:var(--accent); color:var(--bg-dark); border:none; border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; margin-top:8px; font-weight:600; }
+.auth-btn:hover:not(:disabled) { opacity:0.9; }
+.auth-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.auth-error { font-size:12px; color:#E08080; margin-top:12px; min-height:16px; }
+
+/* APP SHELL */
+#app { display:none; min-height:100vh; }
+header { padding:24px 40px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--bg-dark); }
+.logo { font-family:var(--mono); font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text); }
+.logo-dot { display:inline-block; width:6px; height:6px; background:var(--accent); border-radius:50%; margin-right:8px; vertical-align:middle; position:relative; top:-1px; }
+.nav-tabs { display:flex; }
+.nav-tab { font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; padding:6px 16px; cursor:pointer; border-radius:20px; color:var(--muted); background:none; border:none; white-space:nowrap; }
+.nav-tab.active { background:var(--accent); color:var(--bg-dark); font-weight:600; }
+.header-right { display:flex; align-items:center; gap:16px; }
+.user-name { font-family:var(--mono); font-size:11px; color:var(--muted); }
+.sign-out-btn { font-family:var(--mono); font-size:11px; color:var(--muted); background:none; border:none; cursor:pointer; text-decoration:underline; }
+.sign-out-btn:hover { color:var(--text); }
+
+/* PAGES */
+.page { display:none; padding:40px; max-width:960px; margin:0 auto; }
+.page.active { display:block; }
+.page-title { font-size:22px; font-weight:600; margin-bottom:8px; }
+.page-sub { font-size:13px; color:var(--muted); margin-bottom:32px; }
+
+/* GENERATOR */
+.greeting { font-size:18px; font-weight:500; margin-bottom:32px; }
+.greeting span { color:var(--muted); font-weight:300; }
+.controls { display:grid; grid-template-columns:1fr 1fr auto; gap:12px; margin-bottom:40px; align-items:end; }
+.control-group { display:flex; flex-direction:column; gap:6px; }
+.control-label { font-family:var(--mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
+select { appearance:none; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:10px 36px 10px 14px; font-family:var(--sans); font-size:14px; font-weight:500; color:var(--text); cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23C8DDE8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; }
+select:focus { outline:none; border-color:var(--accent); }
+select:disabled { opacity:0.4; cursor:not-allowed; }
+select option { background:var(--surface); color:var(--text); }
+.gen-btn { padding:10px 28px; background:var(--accent); color:var(--bg-dark); border:none; border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; white-space:nowrap; font-weight:600; }
+.gen-btn:hover:not(:disabled) { opacity:0.9; }
+.gen-btn:disabled { opacity:0.3; cursor:not-allowed; }
+.state-msg { text-align:center; padding:60px 0; color:var(--muted); font-family:var(--mono); font-size:13px; }
+
+/* RESULTS */
+.results { animation:fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.section-label { font-family:var(--mono); font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+.format-badge { display:inline-flex; padding:5px 14px; border-radius:20px; background:var(--bg-dark); border:1px solid var(--border); font-family:var(--mono); font-size:12px; font-weight:500; margin-bottom:16px; color:var(--accent); }
+.exercise-pair { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+.exercise-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px 24px; position:relative; overflow:hidden; }
+.exercise-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
+.exercise-card.t1::before { background:var(--t1); }
+.exercise-card.t2::before { background:var(--t2); }
+.exercise-card.t3::before { background:var(--t3); }
+.card-label { font-family:var(--mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:8px; }
+.card-label.t1{color:var(--t1);} .card-label.t2{color:var(--t2);} .card-label.t3{color:var(--t3);} .card-label.ta{color:var(--ta);} .card-label.tz{color:var(--tz);}
+.card-exercise { font-size:17px; font-weight:600; margin-bottom:4px; color:var(--text); }
+.card-col { font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:14px; }
+.card-reps { font-family:var(--mono); font-size:22px; font-weight:500; color:var(--accent); }
+.card-each-side { font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:4px; }
+.card-empty { opacity:0.4; font-style:italic; font-size:13px; color:var(--muted); }
+.acc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+.acc-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; position:relative; overflow:hidden; }
+.acc-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
+.acc-card.ta::before { background:var(--ta); } .acc-card.tz::before { background:var(--tz); }
+.acc-name { font-size:14px; font-weight:600; margin-bottom:8px; color:var(--text); }
+.acc-reps { font-family:var(--mono); font-size:18px; font-weight:500; color:var(--accent); }
+.acc-each-side { font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:4px; }
+.acc-rounds { font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:4px; }
+.divider { height:1px; background:var(--border); margin:28px 0; }
+.results-section { margin-bottom:28px; }
+.save-area { margin-top:32px; display:flex; align-items:center; gap:16px; }
+.save-btn { padding:10px 28px; background:transparent; color:var(--text); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; }
+.save-btn:hover { border-color:var(--accent); color:var(--accent); }
+.save-btn.saved { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); font-weight:600; }
+.save-msg { font-family:var(--mono); font-size:11px; color:var(--muted); }
+
+/* MY WORKOUTS */
+.workouts-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
+.workout-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; cursor:pointer; transition:border-color 0.15s; }
+.workout-card:hover { border-color:var(--accent); }
+.wc-date { font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:10px; }
+.wc-title { font-size:15px; font-weight:600; margin-bottom:8px; line-height:1.3; }
+.wc-meta { font-family:var(--mono); font-size:11px; color:var(--muted); }
+.wc-score-badge { display:inline-block; margin-top:10px; padding:3px 10px; background:var(--bg-dark); border:1px solid var(--border); border-radius:20px; font-family:var(--mono); font-size:10px; color:var(--muted); }
+.empty-state { text-align:center; padding:80px 20px; color:var(--muted); font-family:var(--mono); font-size:13px; }
+
+/* MODAL */
+#workoutModal { display:none; position:fixed; inset:0; background:rgba(28,40,50,0.85); z-index:200; align-items:flex-start; justify-content:center; padding:40px 20px; overflow-y:auto; }
+#workoutModal.open { display:flex; }
+.modal-box { background:var(--surface); border:1px solid var(--border); border-radius:8px; width:100%; max-width:700px; padding:40px; position:relative; }
+.modal-close { position:absolute; top:20px; right:20px; background:none; border:none; cursor:pointer; font-size:20px; color:var(--muted); }
+.modal-close:hover { color:var(--text); }
+.modal-title { font-size:20px; font-weight:600; margin-bottom:4px; }
+.modal-date { font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:28px; }
+
+/* SCORES */
+.score-section { margin-top:28px; padding-top:28px; border-top:1px solid var(--border); }
+.score-section-title { font-family:var(--mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:16px; }
+.score-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.score-label { font-size:13px; font-weight:500; flex:1; color:var(--text); }
+.score-input { padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); font-family:var(--mono); font-size:13px; width:160px; background:var(--surface-2); color:var(--text); }
+.score-input:focus { outline:none; border-color:var(--accent); }
+.score-input::placeholder { color:var(--muted); }
+.score-divider { height:1px; background:var(--border); margin:16px 0; }
+.save-scores-btn { margin-top:20px; padding:10px 24px; background:var(--accent); color:var(--bg-dark); border:none; border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; font-weight:600; }
+.save-scores-btn:hover { opacity:0.9; }
+.scores-saved-msg { font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:12px; }
+.score-history { margin-top:28px; padding-top:28px; border-top:1px solid var(--border); }
+.score-history-title { font-family:var(--mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+.score-entry { border:1px solid var(--border); border-radius:var(--radius); margin-bottom:8px; overflow:hidden; }
+.score-entry-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer; background:var(--surface-2); }
+.score-entry-header:hover { background:var(--bg-dark); }
+.score-entry-date { font-family:var(--mono); font-size:11px; color:var(--muted); }
+.score-entry-chevron { font-size:12px; color:var(--muted); transition:transform 0.2s; }
+.score-entry-chevron.open { transform:rotate(180deg); }
+.score-entry-body { display:none; padding:16px; background:var(--surface); border-top:1px solid var(--border); }
+.score-entry-body.open { display:block; }
+.score-history-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); }
+.score-history-row:last-child { border-bottom:none; }
+.score-history-label { font-size:13px; color:var(--muted); }
+.score-history-value { font-family:var(--mono); font-size:13px; font-weight:500; color:var(--accent); }
+.score-history-empty { font-family:var(--mono); font-size:11px; color:var(--muted); font-style:italic; }
+.delete-score-btn { font-family:var(--mono); font-size:10px; color:#E08080; background:none; border:none; cursor:pointer; margin-top:12px; text-decoration:underline; }
+.delete-btn { margin-top:12px; padding:8px 20px; background:none; color:#E08080; border:1px solid #E08080; border-radius:var(--radius); font-family:var(--mono); font-size:11px; text-transform:uppercase; cursor:pointer; }
+.delete-btn:hover { background:#E08080; color:var(--surface); }
+
+/* RESPONSIVE */
+@media(max-width:640px) {
+  header { padding:16px 20px; flex-wrap:wrap; gap:10px; }
+  .page { padding:24px 20px; }
+  .controls { grid-template-columns:1fr; }
+  .gen-btn { grid-column:1/-1; }
+  .exercise-pair { grid-template-columns:1fr; }
+  .nav-tabs { display:flex; order:3; width:100%; border-top:1px solid var(--border); padding-top:10px; }
+  .nav-tab { flex:1; text-align:center; white-space:nowrap; }
+  .header-right { margin-left:auto; }
 }
 
-function randomSuffix() {
-  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  var s = '';
-  for (var i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return s;
+/* ── Additional auth styles ── */
+.auth-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.auth-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+.auth-btn-outline { width: 100%; padding: 11px; background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; margin-top: 4px; }
+.auth-btn-outline:hover { border-color: var(--accent); }
+.auth-back { background: none; border: none; font-family: var(--mono); font-size: 11px; color: var(--muted); cursor: pointer; text-decoration: underline; margin-top: 20px; display: block; }
+.auth-back:hover { color: var(--text); }
+
+
+.card-each-side { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.acc-each-side  { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+/* Reps row - number and 'each side' sit on same baseline */
+.card-reps-row { display:flex; align-items:baseline; gap:0; }
+
+/* Name prompt */
+.name-prompt-wrap { display:flex; align-items:center; gap:8px; }
+.name-prompt-input {
+  padding:4px 10px; border:1px solid var(--border); border-radius:var(--radius);
+  font-family:var(--mono); font-size:11px; background:var(--surface-2);
+  color:var(--text); width:120px;
+}
+.name-prompt-input:focus { outline:none; border-color:var(--accent); }
+.name-prompt-input::placeholder { color:var(--muted); }
+.name-prompt-btn {
+  padding:4px 10px; background:var(--accent); color:var(--bg-dark);
+  border:none; border-radius:var(--radius); font-family:var(--mono);
+  font-size:11px; cursor:pointer; font-weight:600; white-space:nowrap;
+}
+.name-prompt-btn:hover { opacity:0.9; }
+
+/* Refine button */
+
+
+
+
+
+/* Pro link */
+.pro-link { font-family:var(--mono); font-size:11px; color:var(--muted); margin-left:auto; }
+
+/* Refine panel */
+#refinePanel { border:1px solid var(--border); border-radius:var(--radius); padding:20px; background:var(--surface); margin-top:12px; }
+.refine-cols { display:flex; gap:0; }
+.refine-group { flex:1; padding:0 20px; }
+.refine-group:first-child { padding-left:0; }
+.refine-group:last-child { padding-right:0; }
+.refine-divider { width:1px; background:var(--border); flex-shrink:0; }
+.refine-group-label { font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:12px; }
+.refine-opt { display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:10px; padding:2px 0; }
+.refine-opt:last-child { margin-bottom:0; }
+.refine-opt-text { font-family:var(--mono); font-size:11px; color:var(--text); text-decoration:underline; text-underline-offset:3px; }
+.refine-opt-muted { color:var(--muted); }
+.refine-tick { font-family:var(--mono); font-size:11px; color:var(--text); opacity:0; }
+.refine-tick-muted { color:var(--muted); }
+
+.refine-regen-btn { padding:10px 28px; background:var(--accent); color:var(--bg-dark); border:none; border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; font-weight:600; }
+.refine-regen-btn:hover { opacity:0.9; }
+.card-reps-row { display:flex; align-items:baseline; }
+
+/* Refine panel - previously applied filters */
+.refine-prev-filters { margin-bottom:12px; }
+.refine-prev-item { display:flex; align-items:center; justify-content:space-between; padding:2px 0; margin-bottom:6px; }
+
+/* Disabled refine options - greyed, not clickable */
+.refine-opt-disabled { opacity:0.3; cursor:not-allowed; }
+.refine-opt-disabled .refine-opt-text { text-decoration:none; }
+
+/* Refine button - identical to save button before and after click */
+.refine-btn { padding:10px 28px; background:transparent; color:var(--text); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; }
+.refine-btn:hover { border-color:var(--accent); color:var(--accent); }
+.refine-btn-active { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); font-weight:600; }
+.refine-btn-active:hover { opacity:0.9; color:var(--bg-dark); }
+
+/* Refine footer - regenerate left, filters right */
+.refine-footer { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
+.refine-prev-filters { text-align:right; }
+.refine-prev-item { display:flex; align-items:center; justify-content:flex-end; gap:10px; padding:2px 0; margin-bottom:6px; }
+
+/* Previous filters - clickable, removable */
+.refine-prev-item { cursor:pointer; }
+.refine-prev-item:hover .refine-prev-text { opacity:0.7; }
+.refine-prev-tick { font-family:var(--mono); font-size:11px; color:var(--muted); margin-left:10px; }
+.refine-prev-removing .refine-prev-text { opacity:0.3; }
+
+/* Library */
+.library-search {
+  width:100%; padding:10px 14px; border:1px solid var(--border);
+  border-radius:var(--radius); font-family:var(--sans); font-size:14px;
+  background:var(--surface); color:var(--text); margin-bottom:24px;
+}
+.library-search:focus { outline:none; border-color:var(--accent); }
+.library-search::placeholder { color:var(--muted); }
+.library-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px;
+}
+.library-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:16px 20px;
+  position:relative; overflow:hidden;
+}
+.library-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
+.library-card.lc-t1::before { background:var(--t1); }
+.library-card.lc-t2::before { background:var(--t2); }
+.library-card.lc-t3::before { background:var(--t3); }
+.library-card.lc-ta::before { background:var(--ta); }
+.library-card.lc-tz::before { background:var(--tz); }
+.library-card-source { font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.library-card-name { font-size:15px; font-weight:600; color:var(--text); margin-bottom:10px; line-height:1.3; }
+.library-tags { display:flex; flex-wrap:wrap; gap:6px; }
+.library-tag {
+  font-family:var(--mono); font-size:10px; padding:2px 8px;
+  border-radius:20px; background:var(--bg-dark); border:1px solid var(--border);
+  color:var(--muted); text-transform:lowercase;
+}
+.library-card-hidden { display:none; }
+
+/* Library filter panels - vertical stack */
+.lib-filters { display:flex; flex-direction:column; gap:4px; margin-bottom:28px; }
+.lib-panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.lib-panel-header { display:flex; align-items:center; gap:8px; padding:12px 16px; background:none; border:none; cursor:pointer; width:100%; font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text); }
+.lib-panel-header:hover { background:var(--surface-2); }
+.lib-panel-label { flex:1; text-align:left; }
+.lib-panel-count { background:var(--accent); color:var(--bg-dark); border-radius:20px; padding:1px 7px; font-size:10px; font-weight:600; }
+.lib-panel-chevron { color:var(--muted); font-size:10px; }
+.lib-panel-body { display:none; padding:10px 16px 14px; border-top:1px solid var(--border); }
+.lib-panel-body.lib-panel-open { display:block; }
+.lib-tag-row { display:flex; flex-wrap:wrap; gap:6px; }
+.lib-tag { font-family:var(--mono); font-size:11px; padding:4px 12px; border-radius:20px; background:var(--bg-dark); border:1px solid var(--border); color:var(--muted); cursor:pointer; text-transform:lowercase; }
+.lib-tag:hover { border-color:var(--accent); color:var(--accent); }
+.lib-tag-active { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); font-weight:600; }
+.lib-clear-btn { font-family:var(--mono); font-size:11px; color:var(--muted); background:none; border:none; cursor:pointer; text-decoration:underline; padding:8px 0; }
+.lib-clear-btn:hover { color:var(--text); }
+.lib-view-all-btn { font-family:var(--mono); font-size:11px; color:var(--text); background:none; border:none; cursor:pointer; text-decoration:underline; padding:0; }
+.lib-view-all-btn:hover { color:var(--accent); }
+
+/* Clickable exercise names */
+.card-exercise-link { cursor:pointer; }
+.card-exercise-link:hover { color:var(--accent); }
+.ex-link-dot { font-size:9px; opacity:0.5; margin-right:2px; vertical-align:middle; }
+
+/* Exercise media modal */
+.ex-modal-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7);
+  z-index:1000; align-items:center; justify-content:center; padding:20px;
+}
+.ex-modal-overlay.open { display:flex; }
+.ex-modal-box {
+  background:var(--surface); border-radius:var(--radius); width:100%;
+  max-width:560px; max-height:90vh; overflow-y:auto; position:relative; padding:24px;
+}
+.ex-modal-close {
+  position:absolute; top:14px; right:16px; background:none; border:none;
+  font-size:18px; color:var(--muted); cursor:pointer; line-height:1;
+}
+.ex-modal-close:hover { color:var(--text); }
+.ex-modal-video { display:none; } /* replaced by new layout */
+
+/* Two-column exercise media layout */
+.ex-media-layout {
+  display:flex; gap:20px; align-items:flex-start;
+}
+.ex-media-video-col {
+  flex:0 0 45%; max-width:45%;
+}
+.ex-media-text-col {
+  flex:1; min-width:0;
+}
+.ex-media-thumb {
+  width:100%; aspect-ratio:9/16;
+  border-radius:var(--radius); overflow:hidden;
+  background:#000; position:relative;
+}
+.ex-media-thumb img { display:block; width:100%; height:100%; object-fit:cover; }
+.ex-media-thumb iframe { width:100%; height:100%; border:none; display:block; }
+
+@media(max-width:560px) {
+  .ex-media-layout { flex-direction:column; }
+  .ex-media-video-col { flex:none; width:60%; max-width:60%; margin:0 auto; }
+}
+.ex-modal-name {
+  font-size:20px; font-weight:600; color:var(--text);
+  margin-bottom:12px; line-height:1.2;
+}
+.ex-modal-desc {
+  font-family:var(--mono); font-size:12px; color:var(--muted);
+  line-height:1.7; white-space:pre-wrap;
 }
 
-function buildDisplayId(name) {
-  var clean = (name || '').replace(/\s+/g, '');
-  return clean + '_' + randomSuffix();
+/* Generating animation */
+.generating-state {
+  display:flex; align-items:center; justify-content:center;
+  gap:8px; padding:80px 0;
+}
+.gen-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--accent); opacity:0.3;
+  animation:genPulse 1.2s ease-in-out infinite;
+}
+.gen-dot:nth-child(2) { animation-delay:0.2s; }
+.gen-dot:nth-child(3) { animation-delay:0.4s; }
+@keyframes genPulse {
+  0%,80%,100% { opacity:0.15; transform:scale(0.8); }
+  40%          { opacity:1;    transform:scale(1.2); }
 }
 
-async function dbLookupUserByDisplayId(displayId) {
-  var { data } = await sb.from('profiles').select('id, first_name, display_id').eq('display_id', displayId).maybeSingle();
-  return data;
+/* Library cards when CW active */
+.cw-selectable { cursor:default; position:relative; }
+.cw-clickable { cursor:pointer; }
+.cw-clickable:hover { border-color:var(--accent); }
+.cw-card-check {
+  position:absolute; top:10px; right:10px;
+  width:22px; height:22px; border-radius:50%;
+  border:1px solid var(--border); background:var(--bg-dark);
+  font-family:var(--mono); font-size:11px; color:var(--muted);
+  display:flex; align-items:center; justify-content:center;
+}
+.cw-check-ticked { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); }
+.cw-check-crossed { background:transparent; color:var(--muted); border-color:var(--muted); }
+.cw-check-disabled { opacity:0.3; }
+
+/* Custom workout thumbnail — subtle teal left border */
+.custom-results .exercise-card { border-left-color: var(--t2); }
+
+/* Remove spinner arrows from number inputs */
+.cw-reps-input::-webkit-outer-spin-button,
+.cw-reps-input::-webkit-inner-spin-button,
+.cw-rounds-input::-webkit-outer-spin-button,
+.cw-rounds-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.cw-reps-input, .cw-rounds-input { -moz-appearance:textfield; }
+
+/* Custom workout card — subtle teal accent */
+.workout-card-custom { border-left:3px solid var(--t2); }
+
+/* ── Create Workout ──────────────────────────────────── */
+.cw-btn-row { margin-bottom:16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+
+/* Vertical panel — matches Log Scores style */
+.cw-panel-v {
+  border:1px solid var(--border); border-radius:var(--radius);
+  background:var(--surface); margin-bottom:24px; overflow:hidden;
+}
+.cw-segment-v { border-bottom:1px solid var(--border); }
+.cw-segment-v:last-of-type { border-bottom:none; }
+.cw-seg-header-v {
+  width:100%; display:flex; align-items:center; gap:10px;
+  padding:14px 20px; background:none; border:none; cursor:pointer;
+  font-family:var(--mono); font-size:11px; letter-spacing:0.08em;
+  text-transform:uppercase; color:var(--text); text-align:left;
+}
+.cw-seg-header-v:hover { background:var(--surface-2); }
+.cw-segment-v-open .cw-seg-header-v { color:var(--accent); }
+.cw-seg-v-label { flex:1; }
+.cw-seg-chevron { color:var(--muted); font-size:10px; }
+
+.cw-seg-body-v { padding:0 20px 16px; }
+
+/* Score rows — identical to Log Scores panel */
+.cw-score-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 0; border-bottom:1px solid var(--border);
+}
+.cw-score-row:last-of-type { border-bottom:none; }
+.cw-score-row-crossed { opacity:0.35; }
+.cw-score-name {
+  font-size:14px; color:var(--text); cursor:pointer;
+  display:flex; align-items:center; gap:8px; flex:1;
+}
+.cw-score-name:hover { opacity:0.8; }
+.cw-row-tick { font-family:var(--mono); font-size:12px; color:var(--accent); width:14px; }
+.cw-row-cross { color:var(--muted); }
+.cw-score-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.cw-score-input {
+  width:90px; padding:6px 10px; border:1px solid var(--border);
+  border-radius:var(--radius); font-family:var(--mono); font-size:13px;
+  background:var(--bg-dark); color:var(--text); text-align:center;
+}
+.cw-score-input:focus { outline:none; border-color:var(--accent); }
+.cw-score-input:disabled { opacity:0.35; }
+.cw-score-unit { font-family:var(--mono); font-size:11px; color:var(--muted); white-space:nowrap; }
+
+/* Rounds row */
+.cw-rounds-row { margin-top:4px; }
+.cw-rounds-disabled { opacity:0.35; pointer-events:none; }
+.cw-rounds-label { cursor:pointer; }
+.cw-rounds-ticked .cw-row-tick { color:var(--accent); }
+
+/* Extras (Add rest / Workout format) */
+.cw-extras { display:flex; gap:8px; flex-wrap:wrap; padding:12px 0 4px; }
+.cw-extra-btn {
+  font-family:var(--mono); font-size:10px; padding:5px 12px;
+  border:1px solid var(--border); border-radius:20px;
+  background:var(--bg-dark); color:var(--muted); cursor:pointer;
+}
+.cw-extra-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+.cw-extra-btn:disabled { opacity:0.3; cursor:not-allowed; }
+.cw-extra-active { border-color:var(--accent); color:var(--accent); }
+.cw-format-select {
+  width:100%; padding:8px 12px; border:1px solid var(--border);
+  border-radius:var(--radius); font-family:var(--mono); font-size:11px;
+  background:var(--bg-dark); color:var(--text); margin:8px 0 4px;
+}
+.cw-format-select:focus { outline:none; border-color:var(--accent); }
+
+/* Panel footer */
+.cw-panel-footer { padding:16px 20px; border-top:1px solid var(--border); }
+
+/* Library cards when CW active */
+.cw-selectable { position:relative; }
+.cw-clickable { cursor:pointer; }
+.cw-clickable:hover { border-color:var(--accent); }
+.cw-card-check {
+  position:absolute; top:10px; right:10px;
+  width:22px; height:22px; border-radius:50%;
+  border:1px solid var(--border); background:var(--bg-dark);
+  font-family:var(--mono); font-size:11px; color:var(--muted);
+  display:flex; align-items:center; justify-content:center;
+}
+.cw-check-ticked { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); }
+.cw-check-crossed { color:var(--muted); }
+.cw-check-disabled { opacity:0.3; }
+
+/* Custom workout thumbnail */
+.workout-card-custom { border-left:3px solid var(--t2); }
+
+/* Auth footer */
+.auth-footer { text-align:center; margin-top:24px; padding-top:16px; border-top:1px solid var(--border); display:flex; justify-content:center; gap:16px; }
+.auth-footer a { font-family:var(--mono); font-size:10px; color:var(--muted); text-decoration:none; letter-spacing:0.05em; }
+.auth-footer a:hover { color:var(--text); }
+
+/* Install button */
+.install-btn {
+  font-family:var(--mono); font-size:11px; letter-spacing:0.05em;
+  background:none; border:none; color:var(--muted); cursor:pointer; padding:0;
+}
+.install-btn:hover { color:var(--text); }
+
+/* ── Splash screen ───────────────────────────────────── */
+#splash {
+  position:fixed; inset:0; z-index:9999;
+  background:#2C3E50;
+  display:flex; align-items:center; justify-content:center;
+  transition:opacity 0.6s ease;
+}
+#splash.splash-out { opacity:0; pointer-events:none; }
+.splash-inner {
+  display:flex; align-items:center; gap:10px;
+}
+.splash-dot {
+  width:8px; height:8px; background:#7AAFC4;
+  border-radius:50%; flex-shrink:0;
+}
+.splash-wordmark {
+  font-family:var(--mono); font-size:14px;
+  letter-spacing:0.18em; text-transform:uppercase;
+  color:#F0F4F6;
 }
 
-async function dbShareWorkout(workout, recipientDisplayIds) {
-  var senderDisplayId = (State.cachedProfile && State.cachedProfile.display_id) || '';
-  var results = [];
-  for (var i = 0; i < recipientDisplayIds.length; i++) {
-    var rid = recipientDisplayIds[i].trim();
-    if (!rid) continue;
-    var recipient = await dbLookupUserByDisplayId(rid);
-    if (!recipient) { results.push({ id: rid, ok: false, reason: 'not found' }); continue; }
-    if (recipient.id === State.currentUser.id) { results.push({ id: rid, ok: false, reason: 'cannot share with yourself' }); continue; }
-    var workoutDataCopy = JSON.parse(JSON.stringify(workout.workout_data || {}));
-    workoutDataCopy.sharedBy = senderDisplayId;
-    try {
-      await sb.from('workouts').insert({
-        user_id: recipient.id,
-        title: workout.title,
-        prompt: workout.prompt,
-        time_selection: workout.time_selection,
-        workout_data: workoutDataCopy,
-        shared_by_display_id: senderDisplayId,
-        is_shared: true,
-        seen: false
-      });
-      results.push({ id: rid, ok: true });
-    } catch(e) {
-      results.push({ id: rid, ok: false, reason: 'error' });
-    }
-  }
-  return results;
+/* ── Collapsible generator panel ─────────────────────── */
+/* chevron removed */
+.generator-panel {
+  animation:panelSlide 0.2s ease;
+}
+@keyframes panelSlide {
+  from { opacity:0; transform:translateY(-6px); }
+  to   { opacity:1; transform:translateY(0); }
 }
 
-async function dbHasUnseenSharedWorkouts() {
-  var { data } = await sb.from('workouts')
-    .select('id')
-    .eq('user_id', State.currentUser.id)
-    .eq('is_shared', true)
-    .eq('seen', false)
-    .limit(1);
-  return !!(data && data.length);
+/* greeting is now a plain div - no button styles needed */
+
+/* Generator panel — styled like refine/create workout */
+.generator-panel {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:20px 24px;
+  margin-bottom:24px;
+  animation:panelSlide 0.2s ease;
+}
+.generator-panel .controls { margin-bottom:0; }
+
+/* Generator instructions inside panel */
+.gen-instructions {
+  font-family:var(--mono); font-size:12px; color:var(--muted);
+  margin-top:16px; padding-top:16px; border-top:1px solid var(--border);
 }
 
-async function dbMarkSharedWorkoutsSeen() {
-  await sb.from('workouts')
-    .update({ seen: true })
-    .eq('user_id', State.currentUser.id)
-    .eq('is_shared', true)
-    .eq('seen', false);
+/* Native video player */
+.ex-media-thumb video {
+  width:100%; height:100%;
+  object-fit:contain; background:#000;
+  border-radius:var(--radius); display:block;
 }
 
-async function dbGetWorkouts() {
-  var { data } = await sb.from('workouts')
-    .select('*, scores(*)')
-    .eq('user_id', State.currentUser.id)
-    .order('generated_at', { ascending: false });
-  return data || [];
+/* Hide all native video UI */
+video::-webkit-media-controls { display:none !important; }
+video::-webkit-media-controls-enclosure { display:none !important; }
+video::-webkit-media-controls-panel { display:none !important; }
+video { -webkit-appearance:none; }
+
+/* ── Exercise wiki breadcrumb ────────────────────────── */
+.ex-breadcrumb {
+  display:flex; flex-wrap:wrap; align-items:center; gap:2px;
+  padding:0 0 14px; margin-bottom:16px;
+  border-bottom:1px solid var(--border);
+  font-family:var(--mono); font-size:10px;
+}
+.ex-crumb-link {
+  color:var(--accent); cursor:pointer; text-decoration:underline;
+  text-underline-offset:3px; white-space:nowrap;
+}
+.ex-crumb-link:hover { opacity:0.8; }
+.ex-crumb-sep { color:var(--muted); }
+.ex-crumb-current { color:var(--muted); white-space:nowrap; }
+
+/* Wiki links within descriptions */
+.ex-wiki-link {
+  color:var(--accent); cursor:pointer;
+  text-decoration:underline; text-underline-offset:3px;
+  font-style:normal;
+}
+.ex-wiki-link:hover { opacity:0.8; }
+
+/* ── Inline exercise panels ──────────────────────────── */
+.ex-inline-panel {
+  grid-column: 1 / -1; /* spans full grid width in library */
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:20px 24px;
+  margin:8px 0 4px; animation:panelSlide 0.2s ease;
+}
+.ex-panel-header {
+  display:flex; align-items:flex-start; justify-content:space-between;
+  margin-bottom:16px;
+}
+.ex-panel-header .ex-breadcrumb { margin-bottom:0; padding-bottom:0; border-bottom:none; flex:1; }
+.ex-panel-close {
+  background:none; border:none; color:var(--muted); font-size:16px;
+  cursor:pointer; padding:0 0 0 12px; flex-shrink:0; line-height:1;
+}
+.ex-panel-close:hover { color:var(--text); }
+
+/* ── Prompt pills ────────────────────────────────────── */
+.prompt-pills {
+  display:flex; flex-wrap:wrap; gap:8px;
+  margin-bottom:24px;
+}
+.prompt-pill {
+  font-family:var(--mono); font-size:11px; padding:6px 16px;
+  border:1px solid var(--border); border-radius:20px;
+  background:var(--surface); color:var(--text);
+  cursor:pointer; letter-spacing:0.05em;
+  transition:border-color 0.15s, color 0.15s;
+}
+.prompt-pill:hover { border-color:var(--accent); color:var(--accent); }
+
+/* ── Install button underline ────────────────────────── */
+.install-btn { text-decoration:underline; text-underline-offset:3px; }
+
+/* ── Content loader (generator + library) ───────────── */
+.content-loader {
+  min-height:65vh; display:flex; align-items:center; justify-content:center;
+  gap:6px; background:var(--bg); font-family:var(--mono);
+  font-size:10px; letter-spacing:0.12em; color:var(--muted);
+  text-transform:uppercase;
+  opacity:0; animation:loaderFadeIn 0.4s ease 0.5s forwards;
+}
+.loader-dot {
+  display:inline-block; width:5px; height:5px;
+  background:var(--accent); border-radius:50%; flex-shrink:0; opacity:0.6;
+}
+@keyframes loaderFadeIn {
+  from { opacity:0; }
+  to   { opacity:1; }
 }
 
-async function dbInsertWorkout(title, prompt, timeSelection, workoutData) {
-  var { data, error } = await sb.from('workouts')
-    .insert({ user_id: State.currentUser.id, title:title, prompt:prompt, time_selection:timeSelection, workout_data:workoutData })
-    .select().single();
-  if (error) throw error;
-  return data;
+/* ── Generator crossfade wrap ────────────────────────── */
+.gen-crossfade-wrap {
+  display: grid;
+}
+.gen-crossfade-wrap > * {
+  grid-area: 1 / 1; /* both children occupy same cell */
 }
 
-async function dbDeleteWorkout(id) {
-  await sb.from('workouts').delete().eq('id', id).eq('user_id', State.currentUser.id);
+/* Pro link below buttons */
+.pro-link-wrap {
+  padding:12px 0 4px;
+  font-size:12px;
 }
 
-async function dbInsertScore(workoutId, scoresData) {
-  var { data, error } = await sb.from('scores')
-    .insert({ workout_id:workoutId, user_id:State.currentUser.id, scores_data:scoresData, completed_at:new Date().toISOString() })
-    .select().single();
-  if (error) throw error;
-  return data;
+/* ── Generator duration filter panel ────────────────────── */
+.gen-filter-panel {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 4px;
+}
+.gen-filter-header {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  background: none; border: none; cursor: pointer;
+  padding: 10px 0; font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  text-align: left;
+}
+.gen-filter-header:hover { color: var(--text); }
+.gen-filter-label { flex: 1; }
+.gen-filter-chevron { font-size: 10px; color: var(--muted); }
+.gen-filter-body {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding-bottom: 8px;
+}
+.gen-duration-pill {
+  font-family: var(--mono); font-size: 11px; padding: 6px 16px;
+  border: 1px solid var(--border); border-radius: 20px;
+  background: var(--surface); color: var(--muted);
+  cursor: pointer; letter-spacing: 0.05em;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.gen-duration-pill:hover { border-color: var(--accent); color: var(--accent); }
+.gen-duration-pill-active {
+  border-color: var(--accent); color: var(--bg-dark);
+  background: var(--accent);
 }
 
-async function dbDeleteScore(id) {
-  await sb.from('scores').delete().eq('id', id).eq('user_id', State.currentUser.id);
+/* ── Workout Timer ─────────────────────────────────────── */
+.timer-btn-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.timer-toggle-btn {
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.timer-toggle-btn.format-badge-active {
+  background: var(--accent); color: var(--bg-dark); border-color: var(--accent);
+}
+.timer-panel {
+  margin: 12px 0 8px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.timer-row {
+  display: flex; align-items: center; gap: 16px;
+}
+.timer-start-btn {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+  padding: 8px 20px; border-radius: 20px;
+  border: 1.5px solid #fff; background: transparent; color: #fff;
+  cursor: pointer; white-space: nowrap;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.timer-start-btn:hover { opacity: 0.8; }
+.timer-start-btn:disabled { opacity: 0.4; cursor: default; }
+.timer-display-wrap {
+  display: flex; flex-direction: column;
+}
+.timer-display {
+  font-family: var(--mono); font-size: 20px; letter-spacing: 0.05em;
+  color: var(--text); line-height: 1;
+}
+#timerRound {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--muted); margin-bottom: 4px; letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+#timerLogBtn {
+  display: block; width: 100%; margin-top: 14px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 10px;
+  border: 1.5px solid var(--accent); border-radius: 8px;
+  background: transparent; color: var(--accent);
+  cursor: pointer; text-align: center;
+  transition: background 0.15s, color 0.15s;
+}
+#timerLogBtn:hover { background: var(--accent); color: var(--bg-dark); }
+
+/* ── Gen instruction line ───────────────────────────────── */
+.gen-instruction {
+  font-family: var(--mono); font-size: 12px; color: var(--muted);
+  text-align: center; padding: 0 0 18px 0; letter-spacing: 0.02em;
 }
 
-// ── Splash ───────────────────────────────────────────────
-
-function dismissSplash() {
-  var splash = document.getElementById('splash');
-  if (!splash) return;
-  splash.classList.add('splash-out');
-  setTimeout(function(){ splash.style.display='none'; }, 600);
+/* ── Format badge as button ─────────────────────────────── */
+.fmt-info-btn {
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.fmt-info-btn.format-badge-active {
+  background: var(--accent); color: var(--bg-dark); border-color: var(--accent);
 }
 
-// ── Generator panel toggle ────────────────────────────────
-
-function toggleGeneratorPanel() {
-  var panel = document.getElementById('generatorPanel');
-  if (!panel) return;
-  var open = panel.style.display !== 'none';
-  panel.style.display = open ? 'none' : 'block';
+/* ── Format info panel ──────────────────────────────────── */
+.fmt-info-panel {
+  margin-bottom: 16px;
+  font-family: var(--mono) !important;
+}
+.fmt-info-panel p {
+  font-family: var(--mono) !important;
+  font-size: 12px !important;
 }
 
-function openGeneratorPanel() {
-  var panel = document.getElementById('generatorPanel');
-  if (!panel) return;
-  panel.style.display = 'block';
+/* ── Icon buttons (Edit / Refresh / Share) ──────────────── */
+.icon-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text); padding: 4px; line-height: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  opacity: 0.85; transition: opacity 0.15s;
 }
-
-// ── UI helpers ────────────────────────────────────────────
-
-function setBusy(id, busy, label) {
-  var b = document.getElementById(id);
-  if (!b) return;
-  b.disabled = busy;
-  b.textContent = busy ? 'Please wait...' : label;
+.icon-btn:hover { opacity: 1; }
+.icon-btn-text {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.04em; padding: 4px 0; transition: color 0.15s;
 }
+.icon-btn-text:hover { color: var(--accent); }
 
-function showPage(name, btn) {
-  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
-  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
-  document.getElementById('page' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
-  if (btn) btn.classList.add('active');
-  if (name === 'myWorkouts') {
-    loadWorkouts(State.workoutsNotif); // pass notif state so Shared section opens by default
-    if (State.workoutsNotif) {
-      dbMarkSharedWorkoutsSeen().then(function() {
-        State.workoutsNotif = false;
-        var tab = document.querySelector('.nav-tab[onclick*="myWorkouts"]');
-        var existing = tab && tab.querySelector('.notif-dot');
-        if (existing) existing.remove();
-      });
-    }
-  }
-  if (name === 'library' && typeof renderLibrary === 'function') renderLibrary();
+/* ── Notification dot ───────────────────────────────────── */
+.notif-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--muted); margin-left: 5px; vertical-align: super;
 }
-
-// ── Name prompt ───────────────────────────────────────────
-
-function isInstalledPWA() {
-  return window.matchMedia('(display-mode: standalone)').matches
-    || window.navigator.standalone === true;
+.notif-dot-card {
+  position: absolute; top: 10px; right: 10px; margin-left: 0;
 }
+.workout-card { position: relative; }
 
-function showNamePrompt() {
-  var wrap = document.getElementById('headerRight');
-  wrap.innerHTML = '<div class="name-prompt-wrap">'
-    + '<input class="name-prompt-input" id="nameInput" type="text" placeholder="Enter your name" maxlength="30" />'
-    + '<button class="name-prompt-btn" onclick="saveName()">Save</button>'
-    + '</div>'
-    + (!isInstalledPWA() ? '<button class="install-btn" onclick="showInstallTip()">Install</button>' : '');
-  setTimeout(function(){ var el=document.getElementById('nameInput'); if(el) el.focus(); }, 100);
-  document.getElementById('nameInput').addEventListener('keydown', function(e){
-    if (e.key === 'Enter') saveName();
-  });
+/* ── Workouts tab — collapsible sections ────────────────── */
+.ws-section {
+  margin-bottom: 12px;
 }
-
-async function saveName() {
-  var input = document.getElementById('nameInput');
-  if (!input) return;
-  var name = input.value.trim();
-  if (!name) return;
-  await dbUpsertProfile(name);
-  setHeaderName(name);
-  updateGreeting(name);
+.ws-section-header {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface); border: 1px solid #fff; border-radius: 10px;
+  padding: 14px 16px; cursor: pointer;
+  font-family: var(--font); font-size: 15px; font-weight: 600; color: var(--text);
+  text-align: left; transition: background 0.15s;
 }
-
-function setHeaderName(name) {
-  var wrap = document.getElementById('headerRight');
-  wrap.innerHTML = '<button class="install-btn" onclick="showAccountMenu()">Account</button>'
-    + (!isInstalledPWA() ? '<button class="install-btn" onclick="showInstallTip()">Install</button>' : '')
-    + '<button class="sign-out-btn" onclick="signOut()">Sign out</button>';
+.ws-section-header:hover { background: var(--surface-hover, var(--surface)); }
+.ws-count {
+  font-family: var(--mono); font-size: 11px; font-weight: 400; color: var(--muted);
 }
+.ws-chevron { display: inline-flex; align-items: center; color: var(--text); }
+.ws-section-body { padding: 14px 4px 4px 4px; }
 
-function showInstallTip() {
-  document.getElementById('installModal').classList.add('open');
+/* ── Shared info panels (Shared By / Shared With) ───────── */
+#sharedInfoSection { margin-top: 20px; }
+.shared-info-row {
+  border-top: 1px solid var(--border);
 }
-
-function closeInstallModal() {
-  document.getElementById('installModal').classList.remove('open');
+.shared-info-header {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  background: none; border: none; cursor: pointer;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted);
+  padding: 10px 0;
 }
-
-function handleInstallModalClick(e) {
-  if (e.target === document.getElementById('installModal')) closeInstallModal();
+.shared-info-body { padding-bottom: 10px; }
+.shared-id {
+  font-family: var(--mono); font-size: 12px; padding: 4px 0;
 }
-
-function updateGreeting(name) {
-  var el = document.getElementById('greeting');
-  if (el) el.innerHTML = 'Hello <strong>' + name + '</strong><span> - what would you like to work on today?</span>';
-}
-
-// ── Start app ─────────────────────────────────────────────
-
-async function startApp(user) {
-  if (State.currentUser && State.currentUser.id === user.id) return;
-  State.currentUser = user;
-
-  var profile = await dbGetProfile();
-  State.cachedProfile = profile;
-  // Only use manually entered name — never use OAuth metadata, never show 'friend'
-  var name = (profile && profile.first_name) ? profile.first_name : '';
-  if (name.toLowerCase() === 'friend' || name.toLowerCase() === 'there') name = '';
-
-  var greetingEl = document.getElementById('greeting');
-  if (greetingEl) {
-    greetingEl.innerHTML = name
-      ? 'Hello <strong>' + name + '</strong><span> - what would you like to work on today?</span>'
-      : 'Hello<span> - what would you like to work on today?</span>';
-  }
-
-  // Header: show name if known, otherwise show name prompt input
-  if (name) {
-    setHeaderName(name);
-  } else {
-    showNamePrompt();
-  }
-
-  document.getElementById('authOverlay').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  dismissSplash();
-
-  loadSheetData();
-  loadWorkouts();
-  refreshWorkoutsNotifDot();
-}
-
-async function refreshWorkoutsNotifDot() {
-  var has = await dbHasUnseenSharedWorkouts();
-  State.workoutsNotif = has;
-  var tab = document.querySelector('.nav-tab[onclick*="myWorkouts"]');
-  if (!tab) return;
-  var existing = tab.querySelector('.notif-dot');
-  if (has && !existing) {
-    var dot = document.createElement('span');
-    dot.className = 'notif-dot';
-    tab.appendChild(dot);
-  } else if (!has && existing) {
-    existing.remove();
-  }
-}
-
-function showAuthOverlay() {
-  State.currentUser = null;
-  document.getElementById('authOverlay').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-  dismissSplash();
-}
-
-// ── Boot ──────────────────────────────────────────────────
-
-window.addEventListener('load', function() {
-  sb.auth.onAuthStateChange(function(event, session) {
-    if (session && session.user) {
-      startApp(session.user);
-    } else if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
-      showAuthOverlay();
-    }
-  });
-
-  // Safety fallback — dismiss splash after 6s no matter what
-  setTimeout(function() {
-    var splash = document.getElementById('splash');
-    if (splash && splash.style.display !== 'none') {
-      dismissSplash();
-      if (!State.currentUser) showAuthOverlay();
-    }
-  }, 6000);
-});
-
-async function showAccountMenu() {
-  var user    = State.currentUser;
-  var profile = State.cachedProfile || {};
-  var name    = profile.first_name || '';
-
-  // Ensure a display_id exists (first-time users who signed up before this feature)
-  if (!profile.display_id) {
-    var newId = buildDisplayId(name);
-    var updated = await dbUpsertProfile(name, newId);
-    State.cachedProfile = updated;
-    profile = updated;
-  }
-
-  var displayId = profile.display_id;
-
-  var createdAt = '';
-  if (user && user.created_at) {
-    var d = new Date(user.created_at);
-    createdAt = d.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
-  }
-
-  var body = document.getElementById('accountModalBody');
-  body.innerHTML =
-    '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">'
-    + '<div><span style="color:var(--text);font-size:13px;">' + name + '</span></div>'
-    + '<button onclick="startEditName()" class="icon-btn" title="Edit name">' + ICON_EDIT + '</button>'
-    + '</div>'
-    + '<div id="editNameWrap" style="display:none;margin-bottom:16px;">'
-    + '<input id="editNameInput" type="text" value="' + name + '" maxlength="30" '
-    + 'style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 10px;border-radius:6px;width:100%;box-sizing:border-box;margin-bottom:8px;" />'
-    + '<button onclick="saveEditName()" style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:6px 16px;border:1px solid var(--accent);border-radius:20px;background:none;color:var(--accent);cursor:pointer;">Save</button>'
-    + '</div>'
-    + '<div style="padding:12px 0;border-top:1px solid var(--border);">'
-    + '<div style="margin-bottom:6px;">Member since <span style="color:var(--text);">' + createdAt + '</span></div>'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;">'
-    + '<span>User ID <span style="color:var(--text);" id="accountDisplayId">' + displayId + '</span></span>'
-    + '<div style="display:flex;align-items:center;gap:4px;">'
-    + '<button onclick="copyDisplayId()" class="icon-btn" id="copyIdBtn" title="Copy User ID">' + ICON_COPY + '</button>'
-    + '<button onclick="confirmRefreshDisplayId()" class="icon-btn" title="Refresh ID">' + ICON_REFRESH + '</button>'
-    + '</div>'
-    + '</div>'
-    + '</div>';
-
-  document.getElementById('accountModal').classList.add('open');
-}
-
-function startEditName() {
-  document.getElementById('editNameWrap').style.display = 'block';
-  document.getElementById('editNameInput').focus();
-}
-
-async function saveEditName() {
-  var input = document.getElementById('editNameInput');
-  if (!input) return;
-  var name = input.value.trim();
-  if (!name) return;
-  var newDisplayId = buildDisplayId(name);
-  var updated = await dbUpsertProfile(name, newDisplayId);
-  State.cachedProfile = updated;
-  setHeaderName(name);
-  updateGreeting(name);
-  closeAccountModal();
-}
-
-function copyDisplayId() {
-  var el = document.getElementById('accountDisplayId');
-  var btn = document.getElementById('copyIdBtn');
-  if (!el || !btn) return;
-  navigator.clipboard.writeText(el.textContent).then(function() {
-    // Swap to checkmark, fade out, fade back
-    btn.innerHTML = ICON_CHECK;
-    btn.style.opacity = '1';
-    setTimeout(function() {
-      btn.style.transition = 'opacity 0.3s';
-      btn.style.opacity = '0';
-      setTimeout(function() {
-        btn.innerHTML = ICON_COPY;
-        btn.style.opacity = '1';
-        btn.style.transition = '';
-      }, 350);
-    }, 900);
-  });
-}
-
-function cancelRefreshId() {
-  var p = document.getElementById('refreshConfirmPopup');
-  if (p) p.remove();
-}
-
-function confirmRefreshDisplayId() {
-  // Show confirmation popup overlay
-  var existing = document.getElementById('refreshConfirmPopup');
-  if (existing) return;
-
-  var popup = document.createElement('div');
-  popup.id = 'refreshConfirmPopup';
-  popup.style.cssText = 'position:absolute;inset:0;background:rgba(30,44,53,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;border-radius:inherit;z-index:10;';
-  popup.innerHTML =
-    '<div style="font-family:var(--mono);font-size:13px;color:var(--text);letter-spacing:0.04em;">Refresh user ID?</div>'
-    + '<div style="display:flex;gap:10px;">'
-    + '<button onclick="cancelRefreshId()" '
-    + 'style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:7px 20px;border:1px solid var(--border);border-radius:20px;background:none;color:var(--muted);cursor:pointer;">Cancel</button>'
-    + '<button onclick="doRefreshDisplayId()" '
-    + 'style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:7px 20px;border:1px solid var(--text);border-radius:20px;background:none;color:var(--text);cursor:pointer;">Refresh</button>'
-    + '</div>';
-
-  var box = document.querySelector('#accountModal .ex-modal-box');
-  if (box) { box.style.position = 'relative'; box.appendChild(popup); }
-}
-
-async function doRefreshDisplayId() {
-  var p = document.getElementById('refreshConfirmPopup');
-  if (p) p.remove();
-  var profile = State.cachedProfile || {};
-  var name = profile.first_name || '';
-  var newDisplayId = buildDisplayId(name);
-  var updated = await dbUpsertProfile(name, newDisplayId);
-  State.cachedProfile = updated;
-  var el = document.getElementById('accountDisplayId');
-  if (el) el.textContent = newDisplayId;
-}
-
-function closeAccountModal() {
-  document.getElementById('accountModal').classList.remove('open');
-}
-
-function handleAccountModalClick(e) {
-  if (e.target === document.getElementById('accountModal')) closeAccountModal();
+.shared-id-by { color: var(--text); }
+.shared-id-with {
+  color: var(--accent); display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0;
 }
