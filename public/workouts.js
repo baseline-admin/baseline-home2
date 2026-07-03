@@ -117,6 +117,16 @@ async function openWorkoutModal(id) {
   // Shared By / Shared With panels
   document.getElementById('sharedInfoSection').innerHTML = buildSharedInfoHTML(w);
 
+  // Add Edit Workout button for custom workouts
+  var editBtnWrap = document.getElementById('editWorkoutBtnWrap');
+  if (editBtnWrap) {
+    if (w.workout_data && w.workout_data.custom) {
+      editBtnWrap.style.display = 'inline-block';
+    } else {
+      editBtnWrap.style.display = 'none';
+    }
+  }
+
   document.getElementById('workoutModal').classList.add('open');
 }
 
