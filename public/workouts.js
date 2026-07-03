@@ -136,9 +136,21 @@ async function saveWorkoutTitle() {
   if (!input || !State.openWorkout) return;
   var newTitle = input.value.trim();
   if (!newTitle) return;
-  await sb.from('workouts').update({ title: newTitle }).eq('id', State.openWorkout.id).eq('user_id', State.currentUser.id);
+  var { error } = await sb.from('workouts')
+    .update({ title: newTitle })
+    .eq('id', State.openWorkout.id)
+    .eq('user_id', State.currentUser.id);
+  if (error) { console.error('Rename failed:', error); return; }
+  // Update in memory so reload reads the new title
   State.openWorkout.title = newTitle;
-  openWorkoutModal(State.openWorkout.id);
+  // Update the title display in place — don't re-open modal (avoids stale DB read)
+  var titleEl = document.getElementById('modalTitle');
+  if (titleEl) {
+    titleEl.innerHTML =
+      '<span id="modalTitleText">' + newTitle + '</span>'
+      + '<button onclick="startEditWorkoutTitle()" class="icon-btn" style="margin-left:8px;vertical-align:middle;" title="Rename">' + ICON_EDIT + '</button>'
+      + '<button onclick="openShareMenu()" class="icon-btn" style="margin-left:4px;vertical-align:middle;" title="Share">' + ICON_SHARE + '</button>';
+  }
   loadWorkouts();
 }
 
@@ -305,7 +317,7 @@ function renderCustomWorkoutResults(data) {
     var wid = (State.openWorkout ? State.openWorkout.id : '');
     if (mainFmt) {
       html += '<div class="timer-btn-row"><div class="format-badge">' + mainFmt + '</div>'
-            + '<button class="format-badge timer-toggle-btn" onclick="toggleTimer(this,&quot;' + mainFmt + '&quot;,&quot;' + wid + '&quot;)">Timer</button></div>';
+            + '<button class="format-badge timer-toggle-btn" onclick="toggleTimer(this,&quot;' + mainFmt + '&quot;,&quot;' + wid + '&quot;)">TIMER</button></div>';
     } else if (segs.main.rounds && segs.main.rounds.toString().trim()) {
       html += '<div class="format-badge">x' + segs.main.rounds + ' rounds</div>';
     }
