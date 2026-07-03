@@ -305,7 +305,7 @@ function renderCustomWorkoutResults(data) {
     var wid = (State.openWorkout ? State.openWorkout.id : '');
     if (mainFmt) {
       html += '<div class="timer-btn-row"><div class="format-badge">' + mainFmt + '</div>'
-            + '<button class="format-badge timer-toggle-btn" onclick="toggleTimer(this,&quot;' + mainFmt + '&quot;,&quot;' + wid + '&quot;)">TIMER</button></div>';
+            + '<button class="format-badge timer-toggle-btn" onclick="toggleTimer(this,&quot;' + mainFmt + '&quot;,&quot;' + wid + '&quot;)">Timer</button></div>';
     } else if (segs.main.rounds && segs.main.rounds.toString().trim()) {
       html += '<div class="format-badge">x' + segs.main.rounds + ' rounds</div>';
     }
