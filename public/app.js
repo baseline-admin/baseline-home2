@@ -13,6 +13,8 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 // ── Shared icon SVGs (monochrome, stroke-based) ──────────────────────────
 var ICON_EDIT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+var ICON_COPY = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+var ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 var ICON_REFRESH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>';
 var ICON_SHARE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
 var ICON_CHEVRON_CLOSED = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -357,7 +359,10 @@ async function showAccountMenu() {
     + '<div style="margin-bottom:6px;">Member since <span style="color:var(--text);">' + createdAt + '</span></div>'
     + '<div style="display:flex;align-items:center;justify-content:space-between;">'
     + '<span>User ID <span style="color:var(--text);" id="accountDisplayId">' + displayId + '</span></span>'
-    + '<button onclick="refreshDisplayId()" class="icon-btn" title="Refresh ID">' + ICON_REFRESH + '</button>'
+    + '<div style="display:flex;align-items:center;gap:4px;">'
+    + '<button onclick="copyDisplayId()" class="icon-btn" id="copyIdBtn" title="Copy User ID">' + ICON_COPY + '</button>'
+    + '<button onclick="confirmRefreshDisplayId()" class="icon-btn" title="Refresh ID">' + ICON_REFRESH + '</button>'
+    + '</div>'
     + '</div>'
     + '</div>';
 
@@ -382,7 +387,55 @@ async function saveEditName() {
   closeAccountModal();
 }
 
-async function refreshDisplayId() {
+function copyDisplayId() {
+  var el = document.getElementById('accountDisplayId');
+  var btn = document.getElementById('copyIdBtn');
+  if (!el || !btn) return;
+  navigator.clipboard.writeText(el.textContent).then(function() {
+    // Swap to checkmark, fade out, fade back
+    btn.innerHTML = ICON_CHECK;
+    btn.style.opacity = '1';
+    setTimeout(function() {
+      btn.style.transition = 'opacity 0.3s';
+      btn.style.opacity = '0';
+      setTimeout(function() {
+        btn.innerHTML = ICON_COPY;
+        btn.style.opacity = '1';
+        btn.style.transition = '';
+      }, 350);
+    }, 900);
+  });
+}
+
+function cancelRefreshId() {
+  var p = document.getElementById('refreshConfirmPopup');
+  if (p) p.remove();
+}
+
+function confirmRefreshDisplayId() {
+  // Show confirmation popup overlay
+  var existing = document.getElementById('refreshConfirmPopup');
+  if (existing) return;
+
+  var popup = document.createElement('div');
+  popup.id = 'refreshConfirmPopup';
+  popup.style.cssText = 'position:absolute;inset:0;background:rgba(30,44,53,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;border-radius:inherit;z-index:10;';
+  popup.innerHTML =
+    '<div style="font-family:var(--mono);font-size:13px;color:var(--text);letter-spacing:0.04em;">Refresh user ID?</div>'
+    + '<div style="display:flex;gap:10px;">'
+    + '<button onclick="cancelRefreshId()" '
+    + 'style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:7px 20px;border:1px solid var(--border);border-radius:20px;background:none;color:var(--muted);cursor:pointer;">Cancel</button>'
+    + '<button onclick="doRefreshDisplayId()" '
+    + 'style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:7px 20px;border:1px solid var(--text);border-radius:20px;background:none;color:var(--text);cursor:pointer;">Refresh</button>'
+    + '</div>';
+
+  var box = document.querySelector('#accountModal .ex-modal-box');
+  if (box) { box.style.position = 'relative'; box.appendChild(popup); }
+}
+
+async function doRefreshDisplayId() {
+  var p = document.getElementById('refreshConfirmPopup');
+  if (p) p.remove();
   var profile = State.cachedProfile || {};
   var name = profile.first_name || '';
   var newDisplayId = buildDisplayId(name);
