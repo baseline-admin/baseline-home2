@@ -7,6 +7,8 @@
 var CWState = {
   open: false,
   activeSegment: null,
+  editingWorkoutId: null,   // set when editing an existing workout
+  editingWorkoutTitle: null, // preserve title across edits
   segments: {
     main:     { exercises:[], format:null, formatTicked:false, rounds:'', roundsTicked:false },
     prep:     { exercises:[], rounds:'', roundsTicked:false },
@@ -23,7 +25,7 @@ var CW_FORMATS = [
   '3 Rounds For Time','4 Rounds For Time','6 Rounds For Time','8 Rounds For Time',
   'EMOM 10m','EMOM 12m',
   'E2MOM 16m','E2MOM 20m',
-  'E3MOM 15m','E3MOM 17m',
+  'E3MOM 15m','E3MOM 18m',
   'E4MOM 16m','E4MOM 20m',
   'E5MOM 15m','E5MOM 20m'
 ];
@@ -184,10 +186,26 @@ async function saveCustomWorkout() {
   var title = mainNames.slice(0,2).join(' + ') + (fmt ? ' | ' + fmt : '');
   workoutData.title = title;
 
+  // Preserve existing title if editing
+  if (CWState.editingWorkoutId && CWState.editingWorkoutTitle) {
+    title = CWState.editingWorkoutTitle;
+    workoutData.title = title;
+  }
+
   try {
-    await dbInsertWorkout(title, 'Custom', null, workoutData);
+    if (CWState.editingWorkoutId) {
+      // Overwrite existing workout — keep title, scores, name intact
+      await sb.from('workouts')
+        .update({ workout_data: workoutData })
+        .eq('id', CWState.editingWorkoutId)
+        .eq('user_id', State.currentUser.id);
+    } else {
+      await dbInsertWorkout(title, 'Custom', null, workoutData);
+    }
+    var wasEditing = !!CWState.editingWorkoutId;
     CWState = {
       open: false, activeSegment: null,
+      editingWorkoutId: null, editingWorkoutTitle: null,
       segments: {
         main:     { exercises:[], format:null, formatTicked:false, rounds:'', roundsTicked:false },
         prep:     { exercises:[], rounds:'', roundsTicked:false },
@@ -196,7 +214,9 @@ async function saveCustomWorkout() {
     };
     renderLibrary();
     var msg = document.getElementById('cwSaveMsg');
-    if (msg) { msg.textContent = 'Saved to Custom Workouts'; setTimeout(function(){ if(msg) msg.textContent=''; }, 3000); }
+    var msgText = wasEditing ? 'Workout updated' : 'Saved to Custom Workouts';
+    if (msg) { msg.textContent = msgText; setTimeout(function(){ if(msg) msg.textContent=''; }, 3000); }
+    loadWorkouts();
   } catch(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Save workout'; }
     var msg = document.getElementById('cwSaveMsg');
@@ -359,4 +379,53 @@ function renderCWExerciseGrid(exercises, noFilters) {
           + '</div></div>';
       }).join('')
     + '</div>';
+}
+
+// ── Edit existing custom workout ──────────────────────────
+
+function loadWorkoutForEditing(w) {
+  var data = w.workout_data || {};
+  var segs = data.segments || {};
+
+  function mapExercises(arr) {
+    return (arr || []).map(function(e) {
+      return { name:e.name, reps:e.reps, ub:e.ub, type:e.type, isRest:e.isRest||false, ticked:true };
+    });
+  }
+
+  CWState = {
+    open: true,
+    activeSegment: 'main',
+    editingWorkoutId: w.id,
+    editingWorkoutTitle: w.title,
+    segments: {
+      main: {
+        exercises:    mapExercises(segs.main && segs.main.exercises),
+        format:       (segs.main && segs.main.format)       || null,
+        formatTicked: (segs.main && segs.main.formatTicked) || false,
+        rounds:       (segs.main && segs.main.rounds)       || '',
+        roundsTicked: (segs.main && segs.main.roundsTicked) || false
+      },
+      prep: {
+        exercises:    mapExercises(segs.prep && segs.prep.exercises),
+        rounds:       (segs.prep && segs.prep.rounds)       || '',
+        roundsTicked: (segs.prep && segs.prep.roundsTicked) || false
+      },
+      mobility: {
+        exercises:    mapExercises(segs.mobility && segs.mobility.exercises),
+        rounds:       (segs.mobility && segs.mobility.rounds)       || '',
+        roundsTicked: (segs.mobility && segs.mobility.roundsTicked) || false
+      }
+    }
+  };
+
+  // Close workout modal and navigate to Library tab
+  document.getElementById('workoutModal').classList.remove('open');
+  var libTab = document.querySelector('.nav-tab[onclick*="library"]');
+  showPage('library', libTab);
+
+  // Render after library page shows
+  setTimeout(function() {
+    if (typeof renderLibrary === 'function') renderLibrary();
+  }, 50);
 }
