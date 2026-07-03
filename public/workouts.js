@@ -81,6 +81,21 @@ async function loadWorkouts(openSharedByDefault) {
     + sectionHTML('shared', 'Shared Workouts', shared, !!openSharedByDefault);
 }
 
+// Render workouts tab from in-memory cache — no DB fetch, used after instant updates
+function renderWorkoutsFromCache() {
+  var ws = State.cachedWorkouts || [];
+  var c = document.getElementById('workoutsContainer');
+  if (!c) return;
+  if (!ws.length) { c.innerHTML = '<div class="empty-state">No saved workouts yet.</div>'; return; }
+  var mine   = ws.filter(function(w){ return !w.is_shared && !(w.workout_data && w.workout_data.custom); });
+  var custom = ws.filter(function(w){ return !w.is_shared && (w.workout_data && w.workout_data.custom); });
+  var shared = ws.filter(function(w){ return w.is_shared; });
+  c.innerHTML =
+    sectionHTML('mine',   'My Workouts',  mine,   false)
+    + sectionHTML('custom','Custom Workouts', custom, false)
+    + sectionHTML('shared','Shared Workouts', shared, false);
+}
+
 
 
 async function openWorkoutModal(id) {
@@ -151,9 +166,15 @@ async function saveWorkoutTitle() {
     .eq('id', State.openWorkout.id)
     .eq('user_id', State.currentUser.id);
   if (error) { console.error('Rename failed:', error); return; }
-  // Update in memory so reload reads the new title
+
+  // Update in memory immediately — avoids race condition where loadWorkouts()
+  // reads the DB before the write has propagated, reverting the title
   State.openWorkout.title = newTitle;
-  // Update the title display in place — don't re-open modal (avoids stale DB read)
+  var cached = State.cachedWorkouts || [];
+  var idx = cached.findIndex(function(w){ return w.id === State.openWorkout.id; });
+  if (idx !== -1) cached[idx].title = newTitle;
+
+  // Re-render title row in place (no modal re-open needed)
   var titleEl = document.getElementById('modalTitle');
   if (titleEl) {
     titleEl.innerHTML =
@@ -161,7 +182,9 @@ async function saveWorkoutTitle() {
       + '<button onclick="startEditWorkoutTitle()" class="icon-btn" style="margin-left:8px;vertical-align:middle;" title="Rename">' + ICON_EDIT + '</button>'
       + '<button onclick="openShareMenu()" class="icon-btn" style="margin-left:4px;vertical-align:middle;" title="Share">' + ICON_SHARE + '</button>';
   }
-  loadWorkouts();
+
+  // Re-render workouts list from updated cache — no DB round-trip needed
+  renderWorkoutsFromCache();
 }
 
 /* ── Shared By / Shared With panels ─────────────────────── */
