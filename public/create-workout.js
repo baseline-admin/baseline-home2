@@ -186,22 +186,12 @@ async function saveCustomWorkout() {
   var title = mainNames.slice(0,2).join(' + ') + (fmt ? ' | ' + fmt : '');
   workoutData.title = title;
 
-  // Preserve existing title if editing
-  if (CWState.editingWorkoutId && CWState.editingWorkoutTitle) {
-    title = CWState.editingWorkoutTitle;
-    workoutData.title = title;
-  }
+  // When editing, generate a fresh title (not preserving the old one since it's a new entry)
+  // The user can rename the new workout if they want via the Edit button in the modal.
 
   try {
-    if (CWState.editingWorkoutId) {
-      // Overwrite existing workout — keep title, scores, name intact
-      await sb.from('workouts')
-        .update({ workout_data: workoutData })
-        .eq('id', CWState.editingWorkoutId)
-        .eq('user_id', State.currentUser.id);
-    } else {
-      await dbInsertWorkout(title, 'Custom', null, workoutData);
-    }
+    // Always insert as new — editing creates a new workout entry, original stays intact
+    await dbInsertWorkout(title, 'Custom', null, workoutData);
     var wasEditing = !!CWState.editingWorkoutId;
     CWState = {
       open: false, activeSegment: null,
@@ -214,7 +204,7 @@ async function saveCustomWorkout() {
     };
     renderLibrary();
     var msg = document.getElementById('cwSaveMsg');
-    var msgText = wasEditing ? 'Workout updated' : 'Saved to Custom Workouts';
+    var msgText = wasEditing ? 'Saved as new workout' : 'Saved to Custom Workouts';
     if (msg) { msg.textContent = msgText; setTimeout(function(){ if(msg) msg.textContent=''; }, 3000); }
     loadWorkouts();
   } catch(e) {
