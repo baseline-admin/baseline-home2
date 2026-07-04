@@ -38,8 +38,7 @@ function cwRepLabel(ex, segmentKey) {
   var type = (ex.type||'').toLowerCase();
   if (type === 'machine') return 'metres';
   if (type === 'recovery' || type === 'hold') return 'seconds';
-  if ((ex.ub||'').toUpperCase() === 'U') return 'reps each side';
-  return 'reps';
+  return 'reps'; // no 'each side' in the CW panel — cleaner display
 }
 
 // ── Toggle panel ──────────────────────────────────────────
@@ -74,13 +73,7 @@ function cwAddExercise(name) {
   var d = State.sheetData || {};
   var exercises = CWState.segments[seg].exercises;
 
-  var existing = exercises.filter(function(e){ return e.name === name && !e.isRest; })[0];
-  if (existing) {
-    existing.ticked = !existing.ticked;
-    renderLibrary();
-    return;
-  }
-
+  // Always add as a new row — repeated exercises are allowed and intentional
   var tickedCount = exercises.filter(function(e){ return e.ticked; }).length;
   if (tickedCount >= MAX_TICKED) return;
 
