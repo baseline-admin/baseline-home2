@@ -37,7 +37,7 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
 .google-btn:hover { border-color:var(--accent); }
 .form-group { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
 .form-label { font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); }
-.form-input { padding:10px 14px; border:1px solid var(--border); border-radius:var(--radius); font-family:var(--sans); font-size:14px; background:var(--surface-2); color:var(--text); width:100%; }
+.form-input { padding:10px 14px; border:1px solid var(--border); border-radius:var(--radius); font-family:var(--sans); font-size:16px; background:var(--surface-2); color:var(--text); width:100%; }
 .form-input:focus { outline:none; border-color:var(--accent); }
 .form-input::placeholder { color:var(--muted); }
 .auth-btn { width:100%; padding:11px; background:var(--accent); color:var(--bg-dark); border:none; border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; margin-top:8px; font-weight:600; }
@@ -403,7 +403,7 @@ select option { background:var(--surface); color:var(--text); }
 .cw-reps-input::-webkit-inner-spin-button,
 .cw-rounds-input::-webkit-outer-spin-button,
 .cw-rounds-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
-.cw-reps-input, .cw-rounds-input { -moz-appearance:textfield; }
+.cw-reps-input, .cw-rounds-input { -moz-appearance:textfield; font-size:16px; }
 
 /* Custom workout card — subtle teal accent */
 .workout-card-custom { border-left:3px solid var(--t2); }
@@ -837,4 +837,50 @@ video { -webkit-appearance:none; }
 .shared-id-with {
   color: var(--accent); display: flex; align-items: center; justify-content: space-between;
   padding: 6px 0;
+}
+
+/* ── Last Workout Card ───────────────────────────────────── */
+.last-workout-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-top: 20px;
+  cursor: default;
+}
+.lw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.lw-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.lw-repeat-btn {
+  color: var(--muted);
+  transition: color 0.15s;
+}
+.lw-repeat-btn:hover { color: var(--text); }
+.lw-title {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 5px;
+  line-height: 1.35;
+}
+.lw-meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+}
+.lw-score {
+  color: var(--accent);
 }
