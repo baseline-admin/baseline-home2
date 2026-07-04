@@ -248,6 +248,7 @@ function regenerate(){
 function _buildWorkout(prompt,ts,slotsToReplace,excl){
   var keep=slotsToReplace&&State.lastResult?State.lastResult:null;
   var nAZ=ts==='45mins'?3:ts==='35mins'?2:1;
+  var diffLevel=getSelectedDiffLevel();
   var d=State.sheetData;
   var pRule=d.promptRules[prompt];
   if(!pRule){alert('No rule for: '+prompt);return null;}
@@ -922,20 +923,26 @@ function renderLastWorkoutCard() {
   var time   = w.time_selection || '';
   var score  = getLastScoreSummary(w);
 
-  el.setAttribute('onclick', 'openLastWorkoutModal()');
-  el.style.cursor = 'pointer';
+  el.removeAttribute('onclick');
+  el.style.cursor = 'default';
+
+  // Track collapsed state on the element
+  var isCollapsed = el.getAttribute('data-collapsed') === 'true';
+
   el.innerHTML =
-    '<div class="lw-header">'
+    '<div class="lw-header" onclick="toggleLastWorkoutPanel()" style="cursor:pointer;">'
     + '<span class="lw-label">Last session</span>'
     + '<button class="icon-btn lw-repeat-btn" onclick="event.stopPropagation();confirmRepeatWorkout()" title="Repeat workout">'
     + ICON_REFRESH
     + '</button>'
     + '</div>'
+    + '<div class="lw-body" style="display:' + (isCollapsed ? 'none' : 'block') + ';cursor:pointer;" onclick="openLastWorkoutModal()">'
     + '<div class="lw-title">' + w.title + '</div>'
     + '<div class="lw-meta">'
     + (prompt ? prompt : '')
     + (time   ? (prompt ? ' &nbsp;·&nbsp; ' : '') + time   : '')
     + (score  ? ((prompt||time) ? '<br><span class="lw-score">' : '<span class="lw-score">') + score + '</span>' : '')
+    + '</div>'
     + '</div>';
 
   // Fade in smoothly — prevents the card from appearing to teleport
@@ -947,6 +954,15 @@ function renderLastWorkoutCard() {
       el.style.opacity = '1';
     });
   });
+}
+
+function toggleLastWorkoutPanel() {
+  var el = document.getElementById('lastWorkoutCard');
+  if (!el) return;
+  var isCollapsed = el.getAttribute('data-collapsed') === 'true';
+  el.setAttribute('data-collapsed', isCollapsed ? 'false' : 'true');
+  var body = el.querySelector('.lw-body');
+  if (body) body.style.display = isCollapsed ? 'block' : 'none';
 }
 
 function openLastWorkoutModal() {
