@@ -331,21 +331,18 @@ function closeModal() {
 
 async function deleteWorkout() {
   if (!State.openWorkout) return;
-  var box = document.querySelector('#workoutModal .ex-modal-box');
-  if (!box) return;
   var existing = document.getElementById('deleteConfirmPopup');
   if (existing) return;
   var popup = document.createElement('div');
   popup.id = 'deleteConfirmPopup';
-  popup.style.cssText = 'position:absolute;inset:0;background:rgba(30,44,53,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;border-radius:inherit;z-index:10;';
+  popup.style.cssText = 'position:fixed;inset:0;background:rgba(30,44,53,0.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;';
   popup.innerHTML =
     '<div style="font-family:var(--mono);font-size:13px;color:var(--text);letter-spacing:0.04em;">Delete workout?</div>'
     + '<div style="display:flex;gap:10px;">'
     + '<button onclick="cancelDeleteWorkout()" style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:7px 20px;border:1px solid var(--border);border-radius:20px;background:none;color:var(--muted);cursor:pointer;">Cancel</button>'
     + '<button onclick="confirmDeleteWorkout()" style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:7px 20px;border:1px solid var(--text);border-radius:20px;background:none;color:var(--text);cursor:pointer;">Delete</button>'
     + '</div>';
-  box.style.position = 'relative';
-  box.appendChild(popup);
+  document.body.appendChild(popup);
 }
 
 function cancelDeleteWorkout() {
