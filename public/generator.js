@@ -170,14 +170,35 @@ function toggleDurationPanel() {
 }
 
 function selectDuration(pill) {
-  // Update hidden select
   var sel = document.getElementById('timeSelect');
   if (sel) sel.value = pill.getAttribute('data-value');
-  // Toggle active pill
   document.querySelectorAll('.gen-duration-pill').forEach(function(p) {
     p.classList.remove('gen-duration-pill-active');
   });
   pill.classList.add('gen-duration-pill-active');
+}
+
+function toggleDiffPanel() {
+  var body = document.getElementById('diffBody');
+  var chev = document.getElementById('diffChevron');
+  var open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'flex';
+  chev.innerHTML     = open ? '&#x25BE;' : '&#x25B4;';
+}
+
+function selectDiff(pill) {
+  var current = pill.classList.contains('gen-duration-pill-active');
+  document.querySelectorAll('.diff-pill').forEach(function(p) {
+    p.classList.remove('gen-duration-pill-active');
+  });
+  // Toggle off if already selected
+  if (!current) pill.classList.add('gen-duration-pill-active');
+}
+
+function getSelectedDiffLevel() {
+  var active = document.querySelector('.diff-pill.gen-duration-pill-active');
+  if (!active) return 0;
+  return parseInt(active.getAttribute('data-value'), 10) || 0;
 }
 
 function generate(){
@@ -273,6 +294,7 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
       if(!matchesFilter((d.t1TypeData||{})[row],t1TypesAllow))return;
       if(!matchesFilter((d.t1ModeData||{})[row],t1ModesAllow))return;
       if(!matchesFilter((d.t1ULCData||{})[row],t1ULCAllow))return;
+      if(!clientDiffAllowed((d.t1DiffData||{})[row], diffLevel))return;
       var v=(d.t1Data[row]||{})[selectedCol];if(!v||!v.trim())return;
       t1e.push({row:row,col:selectedCol,val:v,type:(d.t1TypeData||{})[row]||'',mode:(d.t1ModeData||{})[row]||'',ulc:(d.t1ULCData||{})[row]||'',ub:(d.t1UBData||{})[row]||'B'});
     });
@@ -297,6 +319,7 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
         if(!matchesFilter((d.t2TypeData||{})[row],t2TypesAllow))return;
         if(!matchesFilter((d.t2ModeData||{})[row],t2ModesAllow))return;
         if(!matchesFilter((d.t2ULCData||{})[row],t2ULCAllow))return;
+        if(!clientDiffAllowed((d.t2DiffData||{})[row], diffLevel))return;
         var v=(d.t2Data[row]||{})[selectedCol];if(!v||!v.trim())return;
         t2e.push({row:row,col:selectedCol,val:v,type:(d.t2TypeData||{})[row]||'',mode:(d.t2ModeData||{})[row]||'',ulc:(d.t2ULCData||{})[row]||'',ub:(d.t2UBData||{})[row]||'B'});
       });
@@ -747,6 +770,16 @@ function makeTitle(r){var p=[r.t1.row];if(r.t2)p.push(r.t2.row);p.push(r.fmt);re
 
 // ── Workout Timer ─────────────────────────────────────────────────────────────
 // Shared timer logic used by both generator tab and workouts tab.
+
+function clientDiffAllowed(diffVal, level) {
+  if (!level || level === 0) return true;
+  var d = parseInt(diffVal || '0', 10);
+  if (!d) return true; // no diff assigned = always allowed
+  if (level === 1) return d === 1;
+  if (level === 2) return d <= 2;
+  if (level === 3) return d >= 2;
+  return true;
+}
 
 var FORMAT_INFO = {
   'AMRAP 16':           'In 16 minutes, complete as many rounds as possible of the exercises below',
