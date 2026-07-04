@@ -120,9 +120,12 @@ function renderPromptPills(prompts) {
       pills.style.opacity = '0';
       pills.style.transition = 'opacity 0.3s ease';
       setTimeout(function(){ pills.style.opacity = '1'; }, 20);
+      // Fade in last session card AFTER pills are visible
+      setTimeout(function() { renderLastWorkoutCard(); }, 400);
     }, 500);
   } else {
     pills.style.visibility = 'visible';
+    setTimeout(function() { renderLastWorkoutCard(); }, 200);
   }
 }
 
@@ -808,11 +811,14 @@ function getFirstScore(w) {
   if (!w.scores || !w.scores.length) return null;
   var latest = w.scores[w.scores.length - 1];
   if (!latest) return null;
-  // Skip metadata fields — only return actual score values
-  var skip = { id:1, workout_id:1, logged_at:1, created_at:1, updated_at:1, user_id:1 };
-  var keys = Object.keys(latest).filter(function(k){ return !skip[k] && latest[k] !== null && latest[k] !== '' && latest[k] !== undefined; });
+  // Scores are stored under scores_data as a JSON object of field:value pairs
+  var data = latest.scores_data;
+  if (!data || typeof data !== 'object') return null;
+  var keys = Object.keys(data).filter(function(k) {
+    return data[k] !== null && data[k] !== '' && data[k] !== undefined;
+  });
   if (!keys.length) return null;
-  var val = latest[keys[0]];
+  var val = data[keys[0]];
   return val ? String(val) : null;
 }
 
@@ -823,7 +829,9 @@ async function loadLastWorkout() {
   } catch(e) {
     State.lastWorkout = null;
   }
-  renderLastWorkoutCard();
+  // Only re-render if card is already visible (e.g. after saving a workout)
+  var el = document.getElementById('lastWorkoutCard');
+  if (el && el.style.display === 'block') renderLastWorkoutCard();
 }
 
 function renderLastWorkoutCard() {
