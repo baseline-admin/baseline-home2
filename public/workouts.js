@@ -443,9 +443,31 @@ function renderCustomAccCard(ex, num, cssClass, segKey) {
 /* and buildScoreInputsHTML all work identically for custom workouts. */
 
 var _origBuildScoreKeys = buildScoreKeys; // captures scores.js version before reassignment
+
+// Refresh last session card whenever scores are saved
+var _origSaveScores = typeof saveScores === 'function' ? saveScores : null;
+if (_origSaveScores) {
+  saveScores = function() {
+    var result = _origSaveScores.apply(this, arguments);
+    // After saving, reload last workout data for generator card
+    if (result && typeof result.then === 'function') {
+      result.then(function() { if (typeof loadLastWorkout === 'function') loadLastWorkout(); });
+    } else {
+      setTimeout(function() { if (typeof loadLastWorkout === 'function') loadLastWorkout(); }, 800);
+    }
+    return result;
+  };
+}
 buildScoreKeys = function(r) {            // expression avoids hoisting issue
-  if (r && r.custom) return buildCustomScoreKeys(r);
-  return _origBuildScoreKeys(r);
+  var keys;
+  if (r && r.custom) {
+    keys = buildCustomScoreKeys(r);
+  } else {
+    keys = _origBuildScoreKeys(r);
+    // Add Difficulty/RPE to every generator workout too
+    keys.push({ key:'difficulty', label:'Difficulty', unit:'RPE (1-10)' });
+  }
+  return keys;
 };
 
 function buildCustomScoreKeys(data) {
@@ -477,6 +499,9 @@ function buildCustomScoreKeys(data) {
     var s = getExerciseScoreField(ex.type);
     if (s) keys.push({ key:'tz'+i, label:ex.name, unit:s });
   });
+
+  // Always add Difficulty (RPE) at the bottom
+  keys.push({ key:'difficulty', label:'Difficulty', unit:'RPE (1-10)' });
 
   return keys;
 }
