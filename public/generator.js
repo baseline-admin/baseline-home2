@@ -807,6 +807,26 @@ function timeAgo(dateStr) {
   return Math.floor(diff/2592000) + ' months ago';
 }
 
+// Metric labels for score display — mirrors scores.js SCORE_FIELD_BY_TYPE
+var SCORE_METRIC_MAP = {
+  'barbell':       'kg',
+  'kettlebell':    'kg',
+  'dumbbell':      'kg',
+  'landmine':      'kg',
+  'medicine ball': 'kg',
+  'plyometric':    'in',
+  'machine':       'avg pace (mm:ss)',
+  'workout':       '',         // FT total time — no unit suffix
+  'difficulty':    'RPE'
+};
+
+function getScoreMetric(key, data) {
+  // key is like 'ex1', 'ex2', 'workout', 'difficulty', 'ta0' etc.
+  if (key === 'workout') return '';
+  if (key === 'difficulty') return 'RPE';
+  return 'kg'; // default — most scores are weight-based
+}
+
 function getLastScoreSummary(w) {
   if (!w.scores || !w.scores.length) return null;
   var latest = w.scores[w.scores.length - 1];
@@ -819,13 +839,17 @@ function getLastScoreSummary(w) {
     ? new Date(latest.completed_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
     : '';
 
-  // Get all non-empty score fields
+  // Get all non-empty score fields with metric labels
   var lines = Object.keys(data)
     .filter(function(k) { return data[k] !== null && data[k] !== '' && data[k] !== undefined; })
-    .map(function(k) { return String(data[k]); });
+    .map(function(k) {
+      var val = String(data[k]);
+      var metric = getScoreMetric(k, data);
+      return metric ? val + ' ' + metric : val;
+    });
 
   if (!lines.length) return null;
-  return (date ? date + ' &nbsp;·&nbsp; ' : '') + lines.join(' &nbsp;·&nbsp; ');
+  return (date ? date + '<br>' : '') + lines.join(' &nbsp;·&nbsp; ');
 }
 
 async function loadLastWorkout() {
@@ -835,9 +859,8 @@ async function loadLastWorkout() {
   } catch(e) {
     State.lastWorkout = null;
   }
-  // Only re-render if card is already visible (e.g. after saving a workout)
-  var el = document.getElementById('lastWorkoutCard');
-  if (el && el.style.display === 'block') renderLastWorkoutCard();
+  // Always re-render — keeps card up to date when workouts are logged
+  renderLastWorkoutCard();
 }
 
 function renderLastWorkoutCard() {
@@ -851,10 +874,12 @@ function renderLastWorkoutCard() {
   var time   = w.time_selection || '';
   var score  = getLastScoreSummary(w);
 
+  el.setAttribute('onclick', 'openLastWorkoutModal()');
+  el.style.cursor = 'pointer';
   el.innerHTML =
     '<div class="lw-header">'
     + '<span class="lw-label">Last session</span>'
-    + '<button class="icon-btn lw-repeat-btn" onclick="confirmRepeatWorkout()" title="Repeat workout">'
+    + '<button class="icon-btn lw-repeat-btn" onclick="event.stopPropagation();confirmRepeatWorkout()" title="Repeat workout">'
     + ICON_REFRESH
     + '</button>'
     + '</div>'
@@ -874,6 +899,14 @@ function renderLastWorkoutCard() {
       el.style.opacity = '1';
     });
   });
+}
+
+function openLastWorkoutModal() {
+  var w = State.lastWorkout;
+  if (!w) return;
+  var tab = document.querySelector('.nav-tab[onclick*="myWorkouts"]');
+  showPage('myWorkouts', tab);
+  setTimeout(function() { openWorkoutModal(w.id); }, 300);
 }
 
 function confirmRepeatWorkout() {
