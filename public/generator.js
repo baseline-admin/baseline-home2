@@ -807,19 +807,25 @@ function timeAgo(dateStr) {
   return Math.floor(diff/2592000) + ' months ago';
 }
 
-function getFirstScore(w) {
+function getLastScoreSummary(w) {
   if (!w.scores || !w.scores.length) return null;
   var latest = w.scores[w.scores.length - 1];
   if (!latest) return null;
-  // Scores are stored under scores_data as a JSON object of field:value pairs
   var data = latest.scores_data;
   if (!data || typeof data !== 'object') return null;
-  var keys = Object.keys(data).filter(function(k) {
-    return data[k] !== null && data[k] !== '' && data[k] !== undefined;
-  });
-  if (!keys.length) return null;
-  var val = data[keys[0]];
-  return val ? String(val) : null;
+
+  // Format date the same way as the score history section
+  var date = latest.completed_at
+    ? new Date(latest.completed_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
+    : '';
+
+  // Get all non-empty score fields
+  var lines = Object.keys(data)
+    .filter(function(k) { return data[k] !== null && data[k] !== '' && data[k] !== undefined; })
+    .map(function(k) { return String(data[k]); });
+
+  if (!lines.length) return null;
+  return (date ? date + ' &nbsp;·&nbsp; ' : '') + lines.join(' &nbsp;·&nbsp; ');
 }
 
 async function loadLastWorkout() {
@@ -843,7 +849,7 @@ function renderLastWorkoutCard() {
   var ago    = timeAgo(w.generated_at);
   var prompt = w.prompt || '';
   var time   = w.time_selection || '';
-  var score  = getFirstScore(w);
+  var score  = getLastScoreSummary(w);
 
   el.innerHTML =
     '<div class="lw-header">'
@@ -854,10 +860,9 @@ function renderLastWorkoutCard() {
     + '</div>'
     + '<div class="lw-title">' + w.title + '</div>'
     + '<div class="lw-meta">'
-    + ago
-    + (prompt ? ' &nbsp;·&nbsp; ' + prompt : '')
-    + (time   ? ' &nbsp;·&nbsp; ' + time   : '')
-    + (score  ? ' &nbsp;·&nbsp; <span class="lw-score">' + score + '</span>' : '')
+    + (prompt ? prompt : '')
+    + (time   ? (prompt ? ' &nbsp;·&nbsp; ' : '') + time   : '')
+    + (score  ? ((prompt||time) ? '<br><span class="lw-score">' : '<span class="lw-score">') + score + '</span>' : '')
     + '</div>';
 
   // Fade in smoothly — prevents the card from appearing to teleport
