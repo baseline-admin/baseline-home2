@@ -349,6 +349,12 @@ function renderOutput(isRegen){
   h+='</div>';
   h+=buildRefinePanel(r,isRegen);
   document.getElementById('output').innerHTML=h;
+  // Move last workout card below all generated content
+  var lwCard = document.getElementById('lastWorkoutCard');
+  var outputEl = document.getElementById('output');
+  if (lwCard && outputEl && outputEl.parentNode) {
+    outputEl.parentNode.insertBefore(lwCard, outputEl.nextSibling);
+  }
 }
 
 function buildResults(r){
@@ -780,4 +786,109 @@ function toggleFormatInfo(btn, fmt) {
   // Insert after the timer-btn-row, same pattern as timer panel
   var row = btn.closest('.timer-btn-row');
   row.parentNode.insertBefore(panel, row.nextSibling);
+}
+
+// ── Last Workout Card ─────────────────────────────────────
+
+function timeAgo(dateStr) {
+  var now = Date.now();
+  var then = new Date(dateStr).getTime();
+  var diff = Math.floor((now - then) / 1000);
+  if (diff < 60)          return 'just now';
+  if (diff < 3600)        return Math.floor(diff/60) + ' min ago';
+  if (diff < 86400)       return Math.floor(diff/3600) + ' hr ago';
+  if (diff < 172800)      return 'yesterday';
+  if (diff < 604800)      return Math.floor(diff/86400) + ' days ago';
+  if (diff < 1209600)     return 'last week';
+  if (diff < 2592000)     return Math.floor(diff/604800) + ' weeks ago';
+  return Math.floor(diff/2592000) + ' months ago';
+}
+
+function getFirstScore(w) {
+  if (!w.scores || !w.scores.length) return null;
+  var latest = w.scores[w.scores.length - 1];
+  if (!latest) return null;
+  var keys = Object.keys(latest).filter(function(k){ return k !== 'id' && k !== 'workout_id' && k !== 'logged_at'; });
+  if (!keys.length) return null;
+  var val = latest[keys[0]];
+  return val ? String(val) : null;
+}
+
+async function loadLastWorkout() {
+  try {
+    var ws = await dbGetWorkouts();
+    State.lastWorkout = (ws && ws.length) ? ws[0] : null;
+  } catch(e) {
+    State.lastWorkout = null;
+  }
+  renderLastWorkoutCard();
+}
+
+function renderLastWorkoutCard() {
+  var el = document.getElementById('lastWorkoutCard');
+  if (!el) return;
+  var w = State.lastWorkout;
+  if (!w) { el.style.display = 'none'; return; }
+
+  var ago    = timeAgo(w.generated_at);
+  var prompt = w.prompt || '';
+  var time   = w.time_selection || '';
+  var score  = getFirstScore(w);
+
+  el.style.display = 'block';
+  el.innerHTML =
+    '<div class="lw-header">'
+    + '<span class="lw-label">Last session</span>'
+    + '<button class="icon-btn lw-repeat-btn" onclick="confirmRepeatWorkout()" title="Repeat workout">'
+    + ICON_REFRESH
+    + '</button>'
+    + '</div>'
+    + '<div class="lw-title">' + w.title + '</div>'
+    + '<div class="lw-meta">'
+    + ago
+    + (prompt ? ' &nbsp;·&nbsp; ' + prompt : '')
+    + (time   ? ' &nbsp;·&nbsp; ' + time   : '')
+    + (score  ? ' &nbsp;·&nbsp; <span class="lw-score">' + score + '</span>' : '')
+    + '</div>';
+}
+
+function confirmRepeatWorkout() {
+  var w = State.lastWorkout;
+  if (!w) return;
+  var el = document.getElementById('lastWorkoutCard');
+  if (!el) return;
+
+  // Are You Sure popup anchored to the card
+  var existing = document.getElementById('repeatConfirmPopup');
+  if (existing) return;
+
+  var popup = document.createElement('div');
+  popup.id = 'repeatConfirmPopup';
+  popup.style.cssText = 'position:absolute;inset:0;background:rgba(30,44,53,0.93);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;border-radius:inherit;z-index:10;';
+  popup.innerHTML =
+    '<div style="font-family:var(--mono);font-size:13px;color:var(--text);letter-spacing:0.04em;">Repeat workout?</div>'
+    + '<div style="display:flex;gap:10px;">'
+    + '<button onclick="cancelRepeatWorkout()" style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:7px 20px;border:1px solid var(--border);border-radius:20px;background:none;color:var(--muted);cursor:pointer;">Cancel</button>'
+    + '<button onclick="doRepeatWorkout()" style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:7px 20px;border:1px solid var(--text);border-radius:20px;background:none;color:var(--text);cursor:pointer;">Repeat</button>'
+    + '</div>';
+
+  el.style.position = 'relative';
+  el.appendChild(popup);
+}
+
+function cancelRepeatWorkout() {
+  var p = document.getElementById('repeatConfirmPopup');
+  if (p) p.remove();
+}
+
+async function doRepeatWorkout() {
+  cancelRepeatWorkout();
+  var w = State.lastWorkout;
+  if (!w) return;
+  // Switch to workouts tab and open the workout modal
+  var tab = document.querySelector('.nav-tab[onclick*="myWorkouts"]');
+  showPage('myWorkouts', tab);
+  setTimeout(function() {
+    openWorkoutModal(w.id);
+  }, 300);
 }
