@@ -808,7 +808,9 @@ function getFirstScore(w) {
   if (!w.scores || !w.scores.length) return null;
   var latest = w.scores[w.scores.length - 1];
   if (!latest) return null;
-  var keys = Object.keys(latest).filter(function(k){ return k !== 'id' && k !== 'workout_id' && k !== 'logged_at'; });
+  // Skip metadata fields — only return actual score values
+  var skip = { id:1, workout_id:1, logged_at:1, created_at:1, updated_at:1, user_id:1 };
+  var keys = Object.keys(latest).filter(function(k){ return !skip[k] && latest[k] !== null && latest[k] !== '' && latest[k] !== undefined; });
   if (!keys.length) return null;
   var val = latest[keys[0]];
   return val ? String(val) : null;
@@ -828,14 +830,13 @@ function renderLastWorkoutCard() {
   var el = document.getElementById('lastWorkoutCard');
   if (!el) return;
   var w = State.lastWorkout;
-  if (!w) { el.style.display = 'none'; return; }
+  if (!w) { el.style.display = 'none'; el.style.opacity = '0'; return; }
 
   var ago    = timeAgo(w.generated_at);
   var prompt = w.prompt || '';
   var time   = w.time_selection || '';
   var score  = getFirstScore(w);
 
-  el.style.display = 'block';
   el.innerHTML =
     '<div class="lw-header">'
     + '<span class="lw-label">Last session</span>'
@@ -850,6 +851,16 @@ function renderLastWorkoutCard() {
     + (time   ? ' &nbsp;·&nbsp; ' + time   : '')
     + (score  ? ' &nbsp;·&nbsp; <span class="lw-score">' + score + '</span>' : '')
     + '</div>';
+
+  // Fade in smoothly — prevents the card from appearing to teleport
+  el.style.display = 'block';
+  el.style.opacity = '0';
+  el.style.transition = 'opacity 0.4s ease';
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      el.style.opacity = '1';
+    });
+  });
 }
 
 function confirmRepeatWorkout() {
