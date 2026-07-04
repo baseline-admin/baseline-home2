@@ -124,6 +124,17 @@
             <button class="gen-duration-pill" data-value="45mins" onclick="selectDuration(this)">45 mins</button>
           </div>
         </div>
+        <div class="gen-filter-panel">
+          <button class="gen-filter-header" onclick="toggleDiffPanel()">
+            <span class="gen-filter-label">DIFFICULTY</span>
+            <span class="gen-filter-chevron" id="diffChevron">&#x25BE;</span>
+          </button>
+          <div class="gen-filter-body" id="diffBody" style="display:none;">
+            <button class="gen-duration-pill diff-pill" data-value="1" onclick="selectDiff(this)">Level 1</button>
+            <button class="gen-duration-pill diff-pill" data-value="2" onclick="selectDiff(this)">Level 2</button>
+            <button class="gen-duration-pill diff-pill" data-value="3" onclick="selectDiff(this)">Level 3</button>
+          </div>
+        </div>
           <button class="gen-btn" id="genBtn" disabled onclick="generate()">Generate</button>
         </div>
         <div class="gen-instructions">Select a workout and duration, then click Generate.</div>
