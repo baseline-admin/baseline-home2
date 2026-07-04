@@ -855,12 +855,27 @@ function getLastScoreSummary(w) {
 async function loadLastWorkout() {
   try {
     var ws = await dbGetWorkouts();
-    State.lastWorkout = (ws && ws.length) ? ws[0] : null;
+    if (ws && ws.length) {
+      // Sort by most recent score completed_at — falls back to generated_at
+      ws.sort(function(a, b) {
+        var aDate = a.scores && a.scores.length
+          ? new Date(a.scores[a.scores.length-1].completed_at || a.generated_at)
+          : new Date(a.generated_at);
+        var bDate = b.scores && b.scores.length
+          ? new Date(b.scores[b.scores.length-1].completed_at || b.generated_at)
+          : new Date(b.generated_at);
+        return bDate - aDate;
+      });
+      State.lastWorkout = ws[0];
+    } else {
+      State.lastWorkout = null;
+    }
   } catch(e) {
     State.lastWorkout = null;
   }
-  // Always re-render — keeps card up to date when workouts are logged
-  renderLastWorkoutCard();
+  // Only re-render if card is already visible — pills sequence owns first appearance
+  var el = document.getElementById('lastWorkoutCard');
+  if (el && el.style.display === 'block') renderLastWorkoutCard();
 }
 
 function renderLastWorkoutCard() {
