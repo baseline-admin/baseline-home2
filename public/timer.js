@@ -12,6 +12,7 @@ var _timer = {
   rounds:      0,      // EMOM total rounds
   roundsDone:  0,      // EMOM rounds completed
   raf:         null,   // requestAnimationFrame handle
+  intervalTimeout: null, // setTimeout for EMOM round completion (fires even when backgrounded)
   finished:    false,
   workoutId:   null,   // set when opened from workouts tab
   ftFinalTime: null,   // stores final FT time string for auto-log
@@ -57,6 +58,7 @@ function initTimer(fmt, workoutId) {
   _timer.workoutId   = workoutId || null;
   _timer.ftFinalTime = null;
   if (_timer.raf) cancelAnimationFrame(_timer.raf);
+  if (_timer.intervalTimeout) clearTimeout(_timer.intervalTimeout);
 
   if (AMRAP_CONFIG[fmt]) {
     _timer.mode    = 'amrap';
@@ -120,28 +122,48 @@ function timerTick() {
 
   } else if (_timer.mode === 'emom') {
     if (elapsed >= _timer.interval) {
-      // Round complete — reset base for next interval
-      _timer.roundsDone++;
-      _timer.elapsedBase = 0;
-      _timer.startMs     = now;
-      _timer.elapsed     = 0;
-      var isLast = (_timer.roundsDone >= _timer.rounds);
-      if (isLast) {
-        _timer.running  = false;
-        _timer.finished = true;
-        renderTimerDisplay();
-        triggerTimeResponse(true);
-        return;
-      }
-      renderTimerDisplay();
-      triggerTimeResponse(false);
-      _timer.raf = requestAnimationFrame(timerTick);
+      emomRoundComplete();
+      return;
     } else {
       _timer.elapsed = elapsed;
       renderTimerDisplay();
       _timer.raf = requestAnimationFrame(timerTick);
     }
   }
+}
+
+function scheduleEmomRound() {
+  // Fire a setTimeout for the exact moment this interval ends
+  // This ensures round advances even when tab is backgrounded / phone locked
+  if (_timer.intervalTimeout) clearTimeout(_timer.intervalTimeout);
+  var elapsed = _timer.elapsedBase + (Date.now() - _timer.startMs);
+  var remaining = Math.max(0, _timer.interval - elapsed);
+  _timer.intervalTimeout = setTimeout(function() {
+    if (!_timer.running || _timer.mode !== 'emom') return;
+    emomRoundComplete();
+  }, remaining + 50); // +50ms buffer to ensure elapsed >= interval
+}
+
+function emomRoundComplete() {
+  if (_timer.intervalTimeout) clearTimeout(_timer.intervalTimeout);
+  if (_timer.raf) cancelAnimationFrame(_timer.raf);
+  _timer.roundsDone++;
+  _timer.elapsedBase = 0;
+  _timer.startMs     = Date.now();
+  _timer.elapsed     = 0;
+  var isLast = (_timer.roundsDone >= _timer.rounds);
+  if (isLast) {
+    _timer.running  = false;
+    _timer.finished = true;
+    renderTimerDisplay();
+    triggerTimeResponse(true);
+    return;
+  }
+  renderTimerDisplay();
+  triggerTimeResponse(false);
+  // Schedule next round and resume RAF for display updates
+  scheduleEmomRound();
+  _timer.raf = requestAnimationFrame(timerTick);
 }
 
 function timerStart() {
@@ -165,6 +187,8 @@ function timerStart() {
       _timer.startMs     = Date.now();
       _timer.elapsedBase = _timer.elapsed; // carry forward any paused time
       _timer.raf = requestAnimationFrame(timerTick);
+      // For EMOM: also set a background-safe setTimeout for round completion
+      if (_timer.mode === 'emom') scheduleEmomRound();
     }
   }, 1000);
 }
@@ -175,6 +199,7 @@ function timerPause() {
   _timer.elapsedBase = _timer.elapsed;  // so next resume starts from here
   _timer.running     = false;
   if (_timer.raf) cancelAnimationFrame(_timer.raf);
+  if (_timer.intervalTimeout) clearTimeout(_timer.intervalTimeout);
   var btn = document.getElementById('timerStartBtn');
   if (btn) { btn.textContent = 'START'; btn.onclick = timerStart; }
 }
