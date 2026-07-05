@@ -118,11 +118,11 @@ function renderPromptPills(prompts) {
       loader.style.display = 'none';
       pills.style.visibility = 'visible';
       pills.style.opacity = '0';
-      pills.style.transition = 'opacity 0.3s ease';
+      pills.style.transition = 'opacity 0.4s ease';
       setTimeout(function(){ pills.style.opacity = '1'; }, 20);
-      // Fade in session cards AFTER pills are visible
+      // After pills fully faded in, unlock and render session cards
       setTimeout(function() {
-        // loadLastWorkout may still be in flight — wait for it then render all three
+        _pillsReady = true;
         var checkAndRender = function(attempts) {
           if (State.lastWorkout || attempts <= 0) {
             renderLastWorkoutCard();
@@ -132,12 +132,13 @@ function renderPromptPills(prompts) {
             setTimeout(function() { checkAndRender(attempts - 1); }, 300);
           }
         };
-        checkAndRender(10); // retry up to 10 × 300ms = 3s
-      }, 400);
+        checkAndRender(10);
+      }, 450);
     }, 500);
   } else {
     pills.style.visibility = 'visible';
     setTimeout(function() {
+      _pillsReady = true;
       var checkAndRender = function(attempts) {
         if (State.lastWorkout || attempts <= 0) {
           renderLastWorkoutCard();
@@ -941,6 +942,7 @@ async function loadLastWorkout() {
 }
 
 function renderLastWorkoutCard() {
+  if (!_pillsReady) return; // don't render before pills have appeared
   var el = document.getElementById('lastWorkoutCard');
   if (!el) return;
   var w = State.lastWorkout;
@@ -998,6 +1000,7 @@ function toggleLastWorkoutPanel() {
 }
 
 function renderPrevWorkoutCard(cardId, w, openByDefault) {
+  if (!_pillsReady) return;
   var el = document.getElementById(cardId);
   if (!el) return;
   if (!w) { el.style.display = 'none'; el.style.opacity = '0'; return; }
