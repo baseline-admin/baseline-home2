@@ -182,7 +182,7 @@ function showPage(name, btn) {
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
   document.getElementById('page' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (name === 'generator' && typeof loadLastWorkout === 'function') loadLastWorkout();
+  if (name === 'generator' && typeof loadLastWorkout === 'function') { if (typeof _pillsReady !== 'undefined') _pillsReady = false; loadLastWorkout(); }
   if (name === 'myWorkouts') {
     loadWorkouts(State.workoutsNotif); // pass notif state so Shared section opens by default
     if (State.workoutsNotif) {
