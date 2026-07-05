@@ -122,21 +122,32 @@ function renderPromptPills(prompts) {
       setTimeout(function(){ pills.style.opacity = '1'; }, 20);
       // Fade in session cards AFTER pills are visible
       setTimeout(function() {
-        renderLastWorkoutCard();
-        setTimeout(function() {
-          renderPrevWorkoutCard('lastWorkoutCard2', State.lastWorkout2, false);
-          renderPrevWorkoutCard('lastWorkoutCard3', State.lastWorkout3, false);
-        }, 200);
+        // loadLastWorkout may still be in flight — wait for it then render all three
+        var checkAndRender = function(attempts) {
+          if (State.lastWorkout || attempts <= 0) {
+            renderLastWorkoutCard();
+            renderPrevWorkoutCard('lastWorkoutCard2', State.lastWorkout2, false);
+            renderPrevWorkoutCard('lastWorkoutCard3', State.lastWorkout3, false);
+          } else {
+            setTimeout(function() { checkAndRender(attempts - 1); }, 300);
+          }
+        };
+        checkAndRender(10); // retry up to 10 × 300ms = 3s
       }, 400);
     }, 500);
   } else {
     pills.style.visibility = 'visible';
     setTimeout(function() {
-      renderLastWorkoutCard();
-      setTimeout(function() {
-        renderPrevWorkoutCard('lastWorkoutCard2', State.lastWorkout2, false);
-        renderPrevWorkoutCard('lastWorkoutCard3', State.lastWorkout3, false);
-      }, 200);
+      var checkAndRender = function(attempts) {
+        if (State.lastWorkout || attempts <= 0) {
+          renderLastWorkoutCard();
+          renderPrevWorkoutCard('lastWorkoutCard2', State.lastWorkout2, false);
+          renderPrevWorkoutCard('lastWorkoutCard3', State.lastWorkout3, false);
+        } else {
+          setTimeout(function() { checkAndRender(attempts - 1); }, 300);
+        }
+      };
+      checkAndRender(10);
     }, 200);
   }
 }
@@ -902,14 +913,15 @@ async function loadLastWorkout() {
   try {
     var ws = await dbGetWorkouts();
     if (ws && ws.length) {
+      // Sort: workouts with scores by most recent completed_at, workouts without scores by generated_at
       ws.sort(function(a, b) {
-        var aDate = a.scores && a.scores.length
-          ? new Date(a.scores[a.scores.length-1].completed_at || a.generated_at)
-          : new Date(a.generated_at);
-        var bDate = b.scores && b.scores.length
-          ? new Date(b.scores[b.scores.length-1].completed_at || b.generated_at)
-          : new Date(b.generated_at);
-        return bDate - aDate;
+        var aTime = (a.scores && a.scores.length && a.scores[a.scores.length-1].completed_at)
+          ? new Date(a.scores[a.scores.length-1].completed_at).getTime()
+          : new Date(a.generated_at).getTime();
+        var bTime = (b.scores && b.scores.length && b.scores[b.scores.length-1].completed_at)
+          ? new Date(b.scores[b.scores.length-1].completed_at).getTime()
+          : new Date(b.generated_at).getTime();
+        return bTime - aTime;
       });
       State.lastWorkout  = ws[0] || null;
       State.lastWorkout2 = ws[1] || null;
@@ -918,36 +930,29 @@ async function loadLastWorkout() {
       State.lastWorkout = State.lastWorkout2 = State.lastWorkout3 = null;
     }
   } catch(e) {
+    console.error('loadLastWorkout error:', e);
     State.lastWorkout = State.lastWorkout2 = State.lastWorkout3 = null;
   }
-  // Only re-render if already visible — pills sequence owns first appearance
-  var el = document.getElementById('lastWorkoutCard');
-  if (el && el.style.display === 'block') {
-    renderLastWorkoutCard();
-    renderPrevWorkoutCard('lastWorkoutCard2', State.lastWorkout2, false);
-    renderPrevWorkoutCard('lastWorkoutCard3', State.lastWorkout3, false);
-  }
+  // Always re-render after data loads — don't check display state
+  // (checkAndRender in pills sequence may still be waiting on this data)
+  renderLastWorkoutCard();
+  renderPrevWorkoutCard('lastWorkoutCard2', State.lastWorkout2, false);
+  renderPrevWorkoutCard('lastWorkoutCard3', State.lastWorkout3, false);
 }
 
 function renderLastWorkoutCard() {
   var el = document.getElementById('lastWorkoutCard');
   if (!el) return;
   var w = State.lastWorkout;
-  if (!w) { el.style.display = 'none'; el.style.opacity = '0'; return; }
+  if (!w) { el.style.display = 'none'; return; }
 
-  var ago    = timeAgo(w.generated_at);
   var prompt = w.prompt || '';
   var time   = w.time_selection || '';
   var score  = getLastScoreSummary(w);
-
-  el.removeAttribute('onclick');
-  el.style.cursor = 'default';
-
-  // Track collapsed state on the element
   var isCollapsed = el.getAttribute('data-collapsed') === 'true';
 
   var dateStr = '';
-  if (w.scores && w.scores.length && w.scores[w.scores.length-1].completed_at) {
+  if (w.scores && w.scores.length && w.scores[w.scores.length-1] && w.scores[w.scores.length-1].completed_at) {
     dateStr = new Date(w.scores[w.scores.length-1].completed_at)
       .toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
   }
@@ -965,20 +970,22 @@ function renderLastWorkoutCard() {
     + '<div class="lw-title">' + w.title + '</div>'
     + '<div class="lw-meta">'
     + (prompt ? prompt : '')
-    + (time   ? (prompt ? ' &nbsp;·&nbsp; ' : '') + time   : '')
+    + (time   ? (prompt ? ' &nbsp;&middot;&nbsp; ' : '') + time   : '')
     + (score  ? ((prompt||time) ? '<br><span class="lw-score">' : '<span class="lw-score">') + score + '</span>' : '')
     + '</div>'
     + '</div>';
 
-  // Fade in smoothly — prevents the card from appearing to teleport
+  var alreadyVisible = el.style.display === 'block';
   el.style.display = 'block';
-  el.style.opacity = '0';
-  el.style.transition = 'opacity 0.4s ease';
-  requestAnimationFrame(function() {
+  if (!alreadyVisible) {
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.4s ease';
     requestAnimationFrame(function() {
-      el.style.opacity = '1';
+      requestAnimationFrame(function() { el.style.opacity = '1'; });
     });
-  });
+  } else {
+    el.style.opacity = '1';
+  }
 }
 
 function toggleLastWorkoutPanel() {
