@@ -884,3 +884,13 @@ video { -webkit-appearance:none; }
 .lw-score {
   color: var(--accent);
 }
+
+/* ── Previous session header date ───────────────────────── */
+.lw-header-date {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+  margin-left: 6px;
+  opacity: 0.8;
+}
