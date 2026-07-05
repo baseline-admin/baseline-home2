@@ -895,7 +895,7 @@ function getLastScoreSummary(w) {
     });
 
   if (!lines.length) return null;
-  return (date ? date + '<br>' : '') + lines.join(' &nbsp;·&nbsp; ');
+  return lines.join(' &nbsp;·&nbsp; ');
 }
 
 async function loadLastWorkout() {
@@ -946,9 +946,17 @@ function renderLastWorkoutCard() {
   // Track collapsed state on the element
   var isCollapsed = el.getAttribute('data-collapsed') === 'true';
 
+  var dateStr = '';
+  if (w.scores && w.scores.length && w.scores[w.scores.length-1].completed_at) {
+    dateStr = new Date(w.scores[w.scores.length-1].completed_at)
+      .toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+  }
+
   el.innerHTML =
     '<div class="lw-header" onclick="toggleLastWorkoutPanel()" style="cursor:pointer;">'
-    + '<span class="lw-label">Previous session</span>'
+    + '<span class="lw-label">Previous session'
+    + (dateStr ? ' <span class="lw-header-date">' + dateStr + '</span>' : '')
+    + '</span>'
     + '<button class="icon-btn lw-repeat-btn" onclick="event.stopPropagation();confirmRepeatWorkout()" title="Repeat workout">'
     + ICON_REFRESH
     + '</button>'
@@ -995,9 +1003,18 @@ function renderPrevWorkoutCard(cardId, w, openByDefault) {
   el.removeAttribute('onclick');
   el.style.cursor = 'default';
   el.setAttribute('data-collapsed', isCollapsed ? 'true' : 'false');
+
+  var dateStr = '';
+  if (w.scores && w.scores.length && w.scores[w.scores.length-1].completed_at) {
+    dateStr = new Date(w.scores[w.scores.length-1].completed_at)
+      .toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+  }
+
   el.innerHTML =
     '<div class="lw-header" style="cursor:pointer;" data-card="' + cardId + '">'  
-    + '<span class="lw-label">Previous session</span>'
+    + '<span class="lw-label">Previous session'
+    + (dateStr ? ' <span class="lw-header-date">' + dateStr + '</span>' : '')
+    + '</span>'
     + '<button class="icon-btn lw-repeat-btn" data-wid="' + w.id + '" title="Repeat workout">'  
     + ICON_REFRESH
     + '</button>'
