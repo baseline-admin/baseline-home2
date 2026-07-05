@@ -120,12 +120,24 @@ function renderPromptPills(prompts) {
       pills.style.opacity = '0';
       pills.style.transition = 'opacity 0.3s ease';
       setTimeout(function(){ pills.style.opacity = '1'; }, 20);
-      // Fade in last session card AFTER pills are visible
-      setTimeout(function() { renderLastWorkoutCard(); }, 400);
+      // Fade in session cards AFTER pills are visible
+      setTimeout(function() {
+        renderLastWorkoutCard();
+        setTimeout(function() {
+          renderPrevWorkoutCard('lastWorkoutCard2', State.lastWorkout2, false);
+          renderPrevWorkoutCard('lastWorkoutCard3', State.lastWorkout3, false);
+        }, 200);
+      }, 400);
     }, 500);
   } else {
     pills.style.visibility = 'visible';
-    setTimeout(function() { renderLastWorkoutCard(); }, 200);
+    setTimeout(function() {
+      renderLastWorkoutCard();
+      setTimeout(function() {
+        renderPrevWorkoutCard('lastWorkoutCard2', State.lastWorkout2, false);
+        renderPrevWorkoutCard('lastWorkoutCard3', State.lastWorkout3, false);
+      }, 200);
+    }, 200);
   }
 }
 
@@ -890,7 +902,6 @@ async function loadLastWorkout() {
   try {
     var ws = await dbGetWorkouts();
     if (ws && ws.length) {
-      // Sort by most recent score completed_at — falls back to generated_at
       ws.sort(function(a, b) {
         var aDate = a.scores && a.scores.length
           ? new Date(a.scores[a.scores.length-1].completed_at || a.generated_at)
@@ -900,16 +911,22 @@ async function loadLastWorkout() {
           : new Date(b.generated_at);
         return bDate - aDate;
       });
-      State.lastWorkout = ws[0];
+      State.lastWorkout  = ws[0] || null;
+      State.lastWorkout2 = ws[1] || null;
+      State.lastWorkout3 = ws[2] || null;
     } else {
-      State.lastWorkout = null;
+      State.lastWorkout = State.lastWorkout2 = State.lastWorkout3 = null;
     }
   } catch(e) {
-    State.lastWorkout = null;
+    State.lastWorkout = State.lastWorkout2 = State.lastWorkout3 = null;
   }
-  // Only re-render if card is already visible — pills sequence owns first appearance
+  // Only re-render if already visible — pills sequence owns first appearance
   var el = document.getElementById('lastWorkoutCard');
-  if (el && el.style.display === 'block') renderLastWorkoutCard();
+  if (el && el.style.display === 'block') {
+    renderLastWorkoutCard();
+    renderPrevWorkoutCard('lastWorkoutCard2', State.lastWorkout2, false);
+    renderPrevWorkoutCard('lastWorkoutCard3', State.lastWorkout3, false);
+  }
 }
 
 function renderLastWorkoutCard() {
@@ -931,7 +948,7 @@ function renderLastWorkoutCard() {
 
   el.innerHTML =
     '<div class="lw-header" onclick="toggleLastWorkoutPanel()" style="cursor:pointer;">'
-    + '<span class="lw-label">Last session</span>'
+    + '<span class="lw-label">Previous session</span>'
     + '<button class="icon-btn lw-repeat-btn" onclick="event.stopPropagation();confirmRepeatWorkout()" title="Repeat workout">'
     + ICON_REFRESH
     + '</button>'
@@ -963,6 +980,92 @@ function toggleLastWorkoutPanel() {
   el.setAttribute('data-collapsed', isCollapsed ? 'false' : 'true');
   var body = el.querySelector('.lw-body');
   if (body) body.style.display = isCollapsed ? 'block' : 'none';
+}
+
+function renderPrevWorkoutCard(cardId, w, openByDefault) {
+  var el = document.getElementById(cardId);
+  if (!el) return;
+  if (!w) { el.style.display = 'none'; el.style.opacity = '0'; return; }
+
+  var prompt = w.prompt || '';
+  var time   = w.time_selection || '';
+  var score  = getLastScoreSummary(w);
+  var isCollapsed = openByDefault === false; // second/third cards collapsed by default
+
+  el.removeAttribute('onclick');
+  el.style.cursor = 'default';
+  el.setAttribute('data-collapsed', isCollapsed ? 'true' : 'false');
+  el.innerHTML =
+    '<div class="lw-header" style="cursor:pointer;" data-card="' + cardId + '">'  
+    + '<span class="lw-label">Previous session</span>'
+    + '<button class="icon-btn lw-repeat-btn" data-wid="' + w.id + '" title="Repeat workout">'  
+    + ICON_REFRESH
+    + '</button>'
+    + '</div>'
+    + '<div class="lw-body" style="display:' + (isCollapsed ? 'none' : 'block') + ';cursor:pointer;" data-wid="' + w.id + '">'  
+    + '<div class="lw-title">' + w.title + '</div>'
+    + '<div class="lw-meta">'
+    + (prompt ? prompt : '')
+    + (time   ? (prompt ? ' &nbsp;·&nbsp; ' : '') + time   : '')
+    + (score  ? ((prompt||time) ? '<br><span class="lw-score">' : '<span class="lw-score">') + score + '</span>' : '')
+    + '</div>'
+    + '</div>';
+
+  // Wire up click handlers via data attributes (avoids quote escaping issues)
+  var header = el.querySelector('.lw-header');
+  if (header) header.addEventListener('click', function() { togglePrevWorkoutPanel(cardId); });
+  var repeatBtn = el.querySelector('.lw-repeat-btn');
+  if (repeatBtn) repeatBtn.addEventListener('click', function(e) { e.stopPropagation(); confirmRepeatWorkoutById(w.id); });
+  var body = el.querySelector('.lw-body');
+  if (body) body.addEventListener('click', function() { openWorkoutModalById(w.id); });
+
+  el.style.display = 'block';
+  el.style.opacity = '0';
+  el.style.transition = 'opacity 0.4s ease';
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() { el.style.opacity = '1'; });
+  });
+}
+
+function togglePrevWorkoutPanel(cardId) {
+  var el = document.getElementById(cardId);
+  if (!el) return;
+  var isCollapsed = el.getAttribute('data-collapsed') === 'true';
+  el.setAttribute('data-collapsed', isCollapsed ? 'false' : 'true');
+  var body = el.querySelector('.lw-body');
+  if (body) body.style.display = isCollapsed ? 'block' : 'none';
+}
+
+function openWorkoutModalById(id) {
+  var tab = document.querySelector('.nav-tab[onclick*="myWorkouts"]');
+  showPage('myWorkouts', tab);
+  setTimeout(function() { openWorkoutModal(id); }, 300);
+}
+
+function confirmRepeatWorkoutById(id) {
+  State._repeatTargetId = id;
+  var el = document.getElementById('lastWorkoutCard') || document.body;
+  var existing = document.getElementById('repeatConfirmPopup');
+  if (existing) return;
+  var popup = document.createElement('div');
+  popup.id = 'repeatConfirmPopup';
+  popup.style.cssText = 'position:fixed;inset:0;background:rgba(30,44,53,0.93);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;';
+  popup.innerHTML =
+    '<div style="font-family:var(--mono);font-size:13px;color:var(--text);letter-spacing:0.04em;">Repeat workout?</div>'
+    + '<div style="display:flex;gap:10px;">'
+    + '<button onclick="cancelRepeatWorkout()" style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:7px 20px;border:1px solid var(--border);border-radius:20px;background:none;color:var(--muted);cursor:pointer;">Cancel</button>'
+    + '<button onclick="doRepeatWorkoutById()" style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:7px 20px;border:1px solid var(--text);border-radius:20px;background:none;color:var(--text);cursor:pointer;">Repeat</button>'
+    + '</div>';
+  document.body.appendChild(popup);
+}
+
+async function doRepeatWorkoutById() {
+  cancelRepeatWorkout();
+  var id = State._repeatTargetId;
+  if (!id) return;
+  var tab = document.querySelector('.nav-tab[onclick*="myWorkouts"]');
+  showPage('myWorkouts', tab);
+  setTimeout(function() { openWorkoutModal(id); }, 300);
 }
 
 function openLastWorkoutModal() {
