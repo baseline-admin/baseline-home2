@@ -133,16 +133,75 @@ function timerTick() {
 }
 
 function scheduleEmomRound() {
-  // Fire a setTimeout for the exact moment this interval ends
-  // This ensures round advances even when tab is backgrounded / phone locked
+  // setTimeout as best-effort (may not fire when backgrounded on iOS)
   if (_timer.intervalTimeout) clearTimeout(_timer.intervalTimeout);
   var elapsed = _timer.elapsedBase + (Date.now() - _timer.startMs);
   var remaining = Math.max(0, _timer.interval - elapsed);
   _timer.intervalTimeout = setTimeout(function() {
     if (!_timer.running || _timer.mode !== 'emom') return;
     emomRoundComplete();
-  }, remaining + 50); // +50ms buffer to ensure elapsed >= interval
+  }, remaining + 50);
 }
+
+// ── Visibility-based EMOM catch-up (reliable even after phone lock) ──
+// When the app returns to foreground, recalculate where the EMOM should be
+// based purely on wall-clock time — no timers needed.
+
+function _emomCatchUp() {
+  if (!_timer.running || _timer.mode !== 'emom') return;
+
+  // Total ms elapsed since the very start of the EMOM
+  // = (rounds already done × interval length) + current interval elapsed
+  var currentIntervalElapsed = _timer.elapsedBase + (Date.now() - _timer.startMs);
+  var totalElapsed = (_timer.roundsDone * _timer.interval) + currentIntervalElapsed;
+  var totalIntervals = _timer.rounds;
+  var intervalMs = _timer.interval;
+
+  // How many complete rounds should have happened by now?
+  var shouldHaveDone = Math.floor(totalElapsed / intervalMs);
+  if (shouldHaveDone >= totalIntervals) shouldHaveDone = totalIntervals;
+
+  var roundsToFire = shouldHaveDone - _timer.roundsDone;
+
+  if (roundsToFire <= 0) return; // still in the same round, nothing to catch up
+
+  // Jump to correct round
+  _timer.roundsDone = shouldHaveDone;
+
+  if (_timer.roundsDone >= _timer.rounds) {
+    // EMOM finished while backgrounded
+    if (_timer.intervalTimeout) clearTimeout(_timer.intervalTimeout);
+    if (_timer.raf) cancelAnimationFrame(_timer.raf);
+    _timer.running  = false;
+    _timer.finished = true;
+    _timer.elapsed  = 0;
+    _timer.elapsedBase = 0;
+    renderTimerDisplay();
+    triggerTimeResponse(true);
+    return;
+  }
+
+  // Reset interval timing to now
+  var positionInCurrentInterval = totalElapsed % intervalMs;
+  _timer.elapsedBase = positionInCurrentInterval;
+  _timer.startMs     = Date.now() - positionInCurrentInterval;
+  _timer.elapsed     = positionInCurrentInterval;
+
+  // Fire TIME response for each skipped round (just once visually if multiple skipped)
+  triggerTimeResponse(false);
+  scheduleEmomRound();
+  if (_timer.raf) cancelAnimationFrame(_timer.raf);
+  _timer.raf = requestAnimationFrame(timerTick);
+}
+
+// Register visibility listener once
+(function() {
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+      _emomCatchUp();
+    }
+  });
+})();
 
 function emomRoundComplete() {
   if (_timer.intervalTimeout) clearTimeout(_timer.intervalTimeout);
