@@ -27,7 +27,9 @@ var State = {
   openWorkout: null,
   workoutsNotif: false,  // true if there are unseen shared workouts
   cachedWorkouts: [],     // local cache updated immediately on title edits
-  lastWorkout: null      // most recent saved workout for generator card
+  lastWorkout: null,      // most recent saved workout for generator card
+  lastWorkout2: null,     // second most recent
+  lastWorkout3: null      // third most recent
 };
 
 // ── DB helpers ────────────────────────────────────────────
@@ -227,7 +229,7 @@ async function saveName() {
 
 function setHeaderName(name) {
   var wrap = document.getElementById('headerRight');
-  wrap.innerHTML = '<span class="user-name" style="font-family:var(--sans);font-size:13px;color:var(--text);margin-right:4px;">' + name + '</span>'
+  wrap.innerHTML = '<span class="user-name" style="font-family:var(--mono);font-size:13px;color:var(--text);margin-right:4px;">' + name + '</span>'
     + '<button class="install-btn" onclick="showAccountMenu()">Account</button>'
     + (!isInstalledPWA() ? '<button class="install-btn" onclick="showInstallTip()">Install</button>' : '')
     + '<button class="sign-out-btn" onclick="signOut()">Sign out</button>';
