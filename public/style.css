@@ -917,3 +917,12 @@ video { -webkit-appearance:none; }
   margin-left: 6px;
   opacity: 0.8;
 }
+
+/* ── Replay button row in session panels ─────────────────── */
+.lw-replay-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
