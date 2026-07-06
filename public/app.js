@@ -177,10 +177,41 @@ function setBusy(id, busy, label) {
   b.textContent = busy ? 'Please wait...' : label;
 }
 
+var PAGE_ORDER = ['generator', 'myWorkouts', 'library', 'pro'];
+var _currentPage = 'generator';
+
 function showPage(name, btn) {
-  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  var fromIdx = PAGE_ORDER.indexOf(_currentPage);
+  var toIdx   = PAGE_ORDER.indexOf(name);
+  var dir     = toIdx > fromIdx ? 1 : -1; // 1 = slide left, -1 = slide right
+
+  var outPage = document.getElementById('page' + _currentPage.charAt(0).toUpperCase() + _currentPage.slice(1));
+  var inPage  = document.getElementById('page' + name.charAt(0).toUpperCase() + name.slice(1));
+
+  _currentPage = name;
+
+  if (!outPage || !inPage || outPage === inPage) {
+    // Fallback: no animation
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+    if (inPage) inPage.classList.add('active');
+  } else {
+    // Slide out current, slide in new
+    var slideOut = dir === 1 ? 'page-slide-out-left' : 'page-slide-out-right';
+    var slideIn  = dir === 1 ? 'page-slide-in-right' : 'page-slide-in-left';
+
+    // Position incoming page off-screen, make it visible
+    inPage.classList.add('active', slideIn);
+
+    // Animate outgoing page
+    outPage.classList.add(slideOut);
+
+    setTimeout(function() {
+      outPage.classList.remove('active', slideOut);
+      inPage.classList.remove(slideIn);
+    }, 180);
+  }
+
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
-  document.getElementById('page' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
   if (btn) btn.classList.add('active');
   if (name === 'generator' && typeof loadLastWorkout === 'function') { if (typeof _pillsReady !== 'undefined') _pillsReady = false; loadLastWorkout(); }
   if (name === 'myWorkouts') {
