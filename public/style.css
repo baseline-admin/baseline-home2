@@ -61,7 +61,29 @@ header { padding:24px 40px; border-bottom:1px solid var(--border); display:flex;
 
 /* PAGES */
 .page { display:none; padding:40px; max-width:960px; margin:0 auto; }
-.page.active { display:block; }
+.page.active { display:block; animation:none; }
+
+/* ── Tab slide animations ─────────────────────────────── */
+@keyframes slideInFromRight {
+  from { opacity:0; transform:translateX(32px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+@keyframes slideInFromLeft {
+  from { opacity:0; transform:translateX(-32px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+@keyframes slideOutToLeft {
+  from { opacity:1; transform:translateX(0); }
+  to   { opacity:0; transform:translateX(-32px); }
+}
+@keyframes slideOutToRight {
+  from { opacity:1; transform:translateX(0); }
+  to   { opacity:0; transform:translateX(32px); }
+}
+.page-slide-in-right  { animation:slideInFromRight  0.18s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
+.page-slide-in-left   { animation:slideInFromLeft   0.18s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
+.page-slide-out-left  { animation:slideOutToLeft    0.18s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
+.page-slide-out-right { animation:slideOutToRight   0.18s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
 .page-title { font-size:22px; font-weight:600; margin-bottom:8px; }
 .page-sub { font-size:13px; color:var(--muted); margin-bottom:32px; }
 
