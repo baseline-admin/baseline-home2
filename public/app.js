@@ -199,46 +199,37 @@ function showPage(name, btn) {
   if (!outPage || !inPage || outPage === inPage) {
     document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
     if (inPage) inPage.classList.add('active');
+    onPageReady();
   } else {
-    var DUR = 180;
-    var startX = dir * 40; // incoming starts offset: +40px (from right) or -40px (from left)
+    var DUR = 160;
+    var startX = dir * 36;
 
-    // Show outgoing, start incoming off-screen and invisible
-    inPage.style.display = 'block';
+    // Hide outgoing immediately — no dual-page overlap
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+
+    // Prepare incoming off-screen, then make active (display:block via CSS)
     inPage.style.opacity = '0';
     inPage.style.transform = 'translateX(' + startX + 'px)';
     inPage.style.transition = 'none';
-    outPage.style.transition = 'none';
+    inPage.classList.add('active');
 
     requestAnimationFrame(function() {
       requestAnimationFrame(function() {
-        // Animate both simultaneously
         var easing = 'cubic-bezier(0.25,0.46,0.45,0.94)';
         var t = DUR + 'ms ' + easing;
-        inPage.style.transition  = 'opacity ' + t + ', transform ' + t;
-        outPage.style.transition = 'opacity ' + t + ', transform ' + t;
-
-        inPage.style.opacity   = '1';
-        inPage.style.transform = 'translateX(0)';
-        outPage.style.opacity  = '0';
-        outPage.style.transform = 'translateX(' + (-dir * 40) + 'px)';
+        inPage.style.transition = 'opacity ' + t + ', transform ' + t;
+        inPage.style.opacity    = '1';
+        inPage.style.transform  = 'translateX(0)';
 
         setTimeout(function() {
-          document.querySelectorAll('.page').forEach(function(p) {
-            p.classList.remove('active');
-            p.style.opacity = '';
-            p.style.transform = '';
-            p.style.transition = '';
-            p.style.display = '';
-          });
-          inPage.classList.add('active');
-          // Fire page logic AFTER animation — prevents flicker from re-renders mid-slide
+          inPage.style.opacity    = '';
+          inPage.style.transform  = '';
+          inPage.style.transition = '';
           onPageReady();
         }, DUR + 10);
       });
     });
   }
-  if (!outPage || !inPage || outPage === inPage) onPageReady();
 }
 
 function onPageReady() {
