@@ -482,10 +482,17 @@ function buildCustomScoreKeys(data) {
   var segs = data.segments || {};
   var keys = [];
 
-  // Workout-level score (format)
-  var fmt = (segs.main && segs.main.formatTicked) ? segs.main.format : null;
-  var ws = getWorkoutScoreField(fmt);
-  if (ws) keys.push({ key:'workout', label:ws, unit:null });
+  // Workout-level score — inline mapping since scores.js uses col codes not full strings
+  var fmt = (segs.main && segs.main.formatTicked) ? (segs.main.format || '') : '';
+  var fl = fmt.toLowerCase();
+  if (fl.indexOf('for time') !== -1) {
+    keys.push({ key:'workout', label:'Total time', unit:'mm:ss' });
+  } else if (fl.indexOf('amrap') !== -1) {
+    keys.push({ key:'workout', label:'Total rounds', unit:'rounds' });
+  } else if (fmt && typeof getWorkoutScoreField === 'function') {
+    var ws = getWorkoutScoreField(fmt);
+    if (ws) keys.push({ key:'workout', label:ws, unit:null });
+  }
 
   // Main exercises
   var mainExs = (segs.main && segs.main.exercises) || [];
