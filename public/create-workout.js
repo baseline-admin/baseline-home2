@@ -17,7 +17,7 @@ var CWState = {
 };
 
 var SEGMENT_LABELS = { main:'Main Workout', prep:'Prep Movements', mobility:'Mobility' };
-var MAX_TICKED = 5;
+var MAX_TICKED = 36;
 
 var CW_FORMATS = [
   'AMRAP 16','AMRAP 18','AMRAP 20',
