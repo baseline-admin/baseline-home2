@@ -16,6 +16,7 @@ var ICON_EDIT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" str
 var ICON_COPY = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 var ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 var ICON_REFRESH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>';
+var ICON_REPLAY  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2c4.25 0 7.9 2.6 9.46 6.32"/><polyline points="17 7 21.5 7 21.5 2.5"/><polyline points="9 16 12 19 15 16"/><line x1="12" y1="12" x2="12" y2="19"/></svg>';
 var ICON_SHARE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
 var ICON_CHEVRON_CLOSED = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 var ICON_CHEVRON_OPEN = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
@@ -183,36 +184,58 @@ var _currentPage = 'generator';
 function showPage(name, btn) {
   var fromIdx = PAGE_ORDER.indexOf(_currentPage);
   var toIdx   = PAGE_ORDER.indexOf(name);
-  var dir     = toIdx > fromIdx ? 1 : -1; // 1 = slide left, -1 = slide right
+  var dir     = (toIdx > fromIdx) ? 1 : -1; // 1 = new page to right, -1 = new page to left
 
-  var outPage = document.getElementById('page' + _currentPage.charAt(0).toUpperCase() + _currentPage.slice(1));
-  var inPage  = document.getElementById('page' + name.charAt(0).toUpperCase() + name.slice(1));
+  var outId = 'page' + _currentPage.charAt(0).toUpperCase() + _currentPage.slice(1);
+  var inId  = 'page' + name.charAt(0).toUpperCase() + name.slice(1);
+  var outPage = document.getElementById(outId);
+  var inPage  = document.getElementById(inId);
 
   _currentPage = name;
 
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+
   if (!outPage || !inPage || outPage === inPage) {
-    // Fallback: no animation
     document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
     if (inPage) inPage.classList.add('active');
   } else {
-    // Slide out current, slide in new
-    var slideOut = dir === 1 ? 'page-slide-out-left' : 'page-slide-out-right';
-    var slideIn  = dir === 1 ? 'page-slide-in-right' : 'page-slide-in-left';
+    var DUR = 180;
+    var startX = dir * 40; // incoming starts offset: +40px (from right) or -40px (from left)
 
-    // Position incoming page off-screen, make it visible
-    inPage.classList.add('active', slideIn);
+    // Show outgoing, start incoming off-screen and invisible
+    inPage.style.display = 'block';
+    inPage.style.opacity = '0';
+    inPage.style.transform = 'translateX(' + startX + 'px)';
+    inPage.style.transition = 'none';
+    outPage.style.transition = 'none';
 
-    // Animate outgoing page
-    outPage.classList.add(slideOut);
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        // Animate both simultaneously
+        var easing = 'cubic-bezier(0.25,0.46,0.45,0.94)';
+        var t = DUR + 'ms ' + easing;
+        inPage.style.transition  = 'opacity ' + t + ', transform ' + t;
+        outPage.style.transition = 'opacity ' + t + ', transform ' + t;
 
-    setTimeout(function() {
-      outPage.classList.remove('active', slideOut);
-      inPage.classList.remove(slideIn);
-    }, 180);
+        inPage.style.opacity   = '1';
+        inPage.style.transform = 'translateX(0)';
+        outPage.style.opacity  = '0';
+        outPage.style.transform = 'translateX(' + (-dir * 40) + 'px)';
+
+        setTimeout(function() {
+          document.querySelectorAll('.page').forEach(function(p) {
+            p.classList.remove('active');
+            p.style.opacity = '';
+            p.style.transform = '';
+            p.style.transition = '';
+            p.style.display = '';
+          });
+          inPage.classList.add('active');
+        }, DUR + 10);
+      });
+    });
   }
-
-  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
   if (name === 'generator' && typeof loadLastWorkout === 'function') { if (typeof _pillsReady !== 'undefined') _pillsReady = false; loadLastWorkout(); }
   if (name === 'myWorkouts') {
     loadWorkouts(State.workoutsNotif); // pass notif state so Shared section opens by default
