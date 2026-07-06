@@ -54,7 +54,8 @@ header { padding:24px 40px; border-bottom:1px solid var(--border); display:flex;
 .nav-tab { font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; padding:6px 16px; cursor:pointer; border-radius:20px; color:var(--muted); background:none; border:none; white-space:nowrap; }
 .nav-tab.active { background:var(--accent); color:var(--bg-dark); font-weight:600; }
 .header-right { display:flex; align-items:center; gap:16px; }
-.user-name { font-family:var(--mono); font-size:11px; color:var(--muted); }
+.header-right > * { vertical-align:middle; line-height:1; padding-top:0; padding-bottom:0; margin-top:0; margin-bottom:0; }
+.user-name { font-family:var(--mono); font-size:11px; color:var(--muted); display:inline-flex; align-items:center; }
 .sign-out-btn { font-family:var(--mono); font-size:11px; color:var(--muted); background:none; border:none; cursor:pointer; text-decoration:underline; }
 .sign-out-btn:hover { color:var(--text); }
 
