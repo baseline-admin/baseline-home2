@@ -964,9 +964,6 @@ function renderLastWorkoutCard() {
     + '<span class="lw-label">Previous session'
     + (dateStr ? ' <span class="lw-header-date">' + dateStr + '</span>' : '')
     + '</span>'
-    + '<button class="icon-btn lw-repeat-btn" onclick="event.stopPropagation();confirmRepeatWorkout()" title="Repeat workout">'
-    + ICON_REFRESH
-    + '</button>'
     + '</div>'
     + '<div class="lw-body" style="display:' + (isCollapsed ? 'none' : 'block') + ';cursor:pointer;" onclick="openLastWorkoutModal()">'
     + '<div class="lw-title">' + w.title + '</div>'
@@ -974,6 +971,9 @@ function renderLastWorkoutCard() {
     + (prompt ? prompt : '')
     + (time   ? (prompt ? ' &nbsp;&middot;&nbsp; ' : '') + time   : '')
     + (score  ? ((prompt||time) ? '<br><span class="lw-score">' : '<span class="lw-score">') + score + '</span>' : '')
+    + '</div>'
+    + '<div class="lw-replay-row">'
+    + '<button class="icon-btn lw-repeat-btn" onclick="event.stopPropagation();confirmRepeatWorkout()" title="Repeat workout">' + ICON_REPLAY + '</button>'
     + '</div>'
     + '</div>';
 
@@ -1025,23 +1025,21 @@ function renderPrevWorkoutCard(cardId, w, openByDefault) {
     + '<span class="lw-label">Previous session'
     + (dateStr ? ' <span class="lw-header-date">' + dateStr + '</span>' : '')
     + '</span>'
-    + '<button class="icon-btn lw-repeat-btn" data-wid="' + w.id + '" title="Repeat workout">'  
-    + ICON_REFRESH
-    + '</button>'
-    + '</div>'
-    + '<div class="lw-body" style="display:' + (isCollapsed ? 'none' : 'block') + ';cursor:pointer;" data-wid="' + w.id + '">'  
+     + '</div>'
+     + '<div class="lw-body"' + ' style="display:' + (isCollapsed ? 'none' : 'block') + ';cursor:pointer;" data-wid="' + w.id + '">' 
     + '<div class="lw-title">' + w.title + '</div>'
     + '<div class="lw-meta">'
     + (prompt ? prompt : '')
     + (time   ? (prompt ? ' &nbsp;·&nbsp; ' : '') + time   : '')
     + (score  ? ((prompt||time) ? '<br><span class="lw-score">' : '<span class="lw-score">') + score + '</span>' : '')
     + '</div>'
+    + '<div class="lw-replay-row"><button class="icon-btn lw-repeat-btn" data-replay="1" title="Repeat workout">' + ICON_REPLAY + '</button></div>'
     + '</div>';
 
   // Wire up click handlers via data attributes (avoids quote escaping issues)
   var header = el.querySelector('.lw-header');
   if (header) header.addEventListener('click', function() { togglePrevWorkoutPanel(cardId); });
-  var repeatBtn = el.querySelector('.lw-repeat-btn');
+  var repeatBtn = el.querySelector('[data-replay]');
   if (repeatBtn) repeatBtn.addEventListener('click', function(e) { e.stopPropagation(); confirmRepeatWorkoutById(w.id); });
   var body = el.querySelector('.lw-body');
   if (body) body.addEventListener('click', function() { openWorkoutModalById(w.id); });
