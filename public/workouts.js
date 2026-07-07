@@ -491,7 +491,7 @@ function buildCustomScoreKeys(data) {
     // EMOM — no workout-level score
   } else {
     // For Time variants OR no format selected → default to total time
-    keys.push({ key:'workout', label:'Total Time', unit:'mm:ss' });
+    keys.push({ key:'workout', label:'Total Time', unit:'e.g. 12:45' });
   }
 
   // Main exercises only — TA/TZ (prep/mobility) not loggable
