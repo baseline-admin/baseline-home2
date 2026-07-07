@@ -486,12 +486,12 @@ function buildCustomScoreKeys(data) {
   var fmt = (segs.main && segs.main.formatTicked) ? (segs.main.format || '') : '';
   var fl = fmt.toLowerCase();
   if (fl.indexOf('amrap') !== -1) {
-    keys.push({ key:'workout', label:'total rounds', unit:'rounds' });
+    keys.push({ key:'workout', label:'Total Rounds', unit:'#' });
   } else if (fl.indexOf('emom') !== -1) {
     // EMOM — no workout-level score
   } else {
     // For Time variants OR no format selected → default to total time
-    keys.push({ key:'workout', label:'total time', unit:'mm:ss' });
+    keys.push({ key:'workout', label:'Total Time', unit:'mm:ss' });
   }
 
   // Main exercises only — TA/TZ (prep/mobility) not loggable
@@ -502,7 +502,7 @@ function buildCustomScoreKeys(data) {
   });
 
   // Always add Difficulty (RPE) at the bottom
-  keys.push({ key:'difficulty', label:'Difficulty', unit:'RPE (1-10)' });
+  keys.push({ key:'difficulty', label:'Difficulty', unit:'(1-10)' });
 
   return keys;
 }
