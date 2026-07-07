@@ -482,16 +482,16 @@ function buildCustomScoreKeys(data) {
   var segs = data.segments || {};
   var keys = [];
 
-  // Workout-level score — inline mapping since scores.js uses col codes not full strings
+  // Workout-level score — inline mapping with Total time as default fallback
   var fmt = (segs.main && segs.main.formatTicked) ? (segs.main.format || '') : '';
   var fl = fmt.toLowerCase();
-  if (fl.indexOf('for time') !== -1) {
-    keys.push({ key:'workout', label:'Total time', unit:'mm:ss' });
-  } else if (fl.indexOf('amrap') !== -1) {
+  if (fl.indexOf('amrap') !== -1) {
     keys.push({ key:'workout', label:'Total rounds', unit:'rounds' });
-  } else if (fmt && typeof getWorkoutScoreField === 'function') {
-    var ws = getWorkoutScoreField(fmt);
-    if (ws) keys.push({ key:'workout', label:ws, unit:null });
+  } else if (fl.indexOf('emom') !== -1) {
+    // EMOM — no workout-level score, rounds are fixed
+  } else {
+    // For Time variants OR no format selected → default to Total time
+    keys.push({ key:'workout', label:'Total time', unit:'mm:ss' });
   }
 
   // Main exercises
@@ -522,7 +522,15 @@ function buildCustomScoreKeys(data) {
 }
 
 function buildCustomScoreInputsHTML(data) {
-  return buildScoreInputsHTML(data);
+  var keys = buildCustomScoreKeys(data);
+  if (!keys.length) return '<div class="score-empty">No scores to log for this workout type.</div>';
+  return keys.map(function(k) {
+    var placeholder = k.unit || '';
+    return '<div class="score-row">'
+      + '<label class="score-label">' + k.label + '</label>'
+      + '<input type="text" class="score-input" id="sc_' + k.key + '" placeholder="' + placeholder + '" />'
+      + '</div>';
+  }).join('');
 }
 
 function cwRepLabelForDisplay(ex, segKey) {
