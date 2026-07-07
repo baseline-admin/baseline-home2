@@ -873,16 +873,37 @@ var SCORE_METRIC_MAP = {
   'landmine':      'kg',
   'medicine ball': 'kg',
   'plyometric':    'in',
-  'machine':       'avg pace (mm:ss)',
-  'workout':       '',         // FT total time — no unit suffix
+  'machine':       'pace (mm:ss)',
+  'workout':       '',
   'difficulty':    'RPE'
 };
 
-function getScoreMetric(key, data) {
-  // key is like 'ex1', 'ex2', 'workout', 'difficulty', 'ta0' etc.
+function getScoreMetric(key, workoutData) {
   if (key === 'workout') return '';
   if (key === 'difficulty') return 'RPE';
-  return 'kg'; // default — most scores are weight-based
+  if (!workoutData) return '';
+
+  // Look up the exercise type from workout_data to get the right metric
+  var r = workoutData;
+  var typeStr = '';
+
+  if (key === 'ex1' && r.t1) typeStr = r.t1.type || '';
+  else if (key === 'ex2' && r.t2) typeStr = r.t2.type || '';
+  else if (key === 'ex3' && r.t3) typeStr = r.t3.type || '';
+  else if (key.indexOf('ex') === 0 && r.segments) {
+    // Custom workout
+    var idx = parseInt(key.replace('ex',''), 10) - 1;
+    var exs = r.segments.main && r.segments.main.exercises;
+    if (exs && exs[idx]) typeStr = exs[idx].type || '';
+  }
+  // TA/TZ not loggable — skip
+  if (key.indexOf('ta') === 0 || key.indexOf('tz') === 0) return '';
+
+  var types = typeStr.split(',').map(function(t){ return t.trim().toLowerCase(); });
+  for (var i = 0; i < types.length; i++) {
+    if (SCORE_METRIC_MAP[types[i]] !== undefined) return SCORE_METRIC_MAP[types[i]];
+  }
+  return '';
 }
 
 function getLastScoreSummary(w) {
@@ -892,17 +913,14 @@ function getLastScoreSummary(w) {
   var data = latest.scores_data;
   if (!data || typeof data !== 'object') return null;
 
-  // Format date the same way as the score history section
-  var date = latest.completed_at
-    ? new Date(latest.completed_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
-    : '';
+  var workoutData = w.workout_data || {};
 
-  // Get all non-empty score fields with metric labels
+  // Get all non-empty score fields with correct metric labels
   var lines = Object.keys(data)
     .filter(function(k) { return data[k] !== null && data[k] !== '' && data[k] !== undefined; })
     .map(function(k) {
       var val = String(data[k]);
-      var metric = getScoreMetric(k, data);
+      var metric = getScoreMetric(k, workoutData);
       return metric ? val + ' ' + metric : val;
     });
 
