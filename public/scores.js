@@ -22,8 +22,8 @@ function getExerciseScoreField(typeStr) {
 }
 
 function getWorkoutScoreField(fmt) {
-  if (AM_FORMATS.indexOf(fmt)!==-1) return 'total rounds';
-  if (FT_FORMATS.indexOf(fmt)!==-1) return 'total time';
+  if (AM_FORMATS.indexOf(fmt)!==-1) return 'Total Rounds';
+  if (FT_FORMATS.indexOf(fmt)!==-1) return 'Total Time';
   return null;
 }
 
