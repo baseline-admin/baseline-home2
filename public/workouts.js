@@ -482,37 +482,23 @@ function buildCustomScoreKeys(data) {
   var segs = data.segments || {};
   var keys = [];
 
-  // Workout-level score — inline mapping with Total time as default fallback
+  // Workout-level score — inline mapping with total time as default fallback
   var fmt = (segs.main && segs.main.formatTicked) ? (segs.main.format || '') : '';
   var fl = fmt.toLowerCase();
   if (fl.indexOf('amrap') !== -1) {
-    keys.push({ key:'workout', label:'Total rounds', unit:'rounds' });
+    keys.push({ key:'workout', label:'total rounds', unit:'rounds' });
   } else if (fl.indexOf('emom') !== -1) {
-    // EMOM — no workout-level score, rounds are fixed
+    // EMOM — no workout-level score
   } else {
-    // For Time variants OR no format selected → default to Total time
-    keys.push({ key:'workout', label:'Total time', unit:'mm:ss' });
+    // For Time variants OR no format selected → default to total time
+    keys.push({ key:'workout', label:'total time', unit:'mm:ss' });
   }
 
-  // Main exercises
+  // Main exercises only — TA/TZ (prep/mobility) not loggable
   var mainExs = (segs.main && segs.main.exercises) || [];
   mainExs.forEach(function(ex, i) {
     var s = getExerciseScoreField(ex.type);
     if (s) keys.push({ key:'ex'+(i+1), label:ex.name, unit:s });
-  });
-
-  // Prep exercises
-  var prepExs = (segs.prep && segs.prep.exercises) || [];
-  prepExs.forEach(function(ex, i) {
-    var s = getExerciseScoreField(ex.type);
-    if (s) keys.push({ key:'ta'+i, label:ex.name, unit:s });
-  });
-
-  // Mobility exercises
-  var mobExs = (segs.mobility && segs.mobility.exercises) || [];
-  mobExs.forEach(function(ex, i) {
-    var s = getExerciseScoreField(ex.type);
-    if (s) keys.push({ key:'tz'+i, label:ex.name, unit:s });
   });
 
   // Always add Difficulty (RPE) at the bottom
