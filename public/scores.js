@@ -6,10 +6,11 @@
    ============================================================ */
 
 var SCORE_FIELD_BY_TYPE = {
-  barbell:'Weight (kg)', kettlebell:'Weight (kg)', dumbbell:'Weight (kg)', landmine:'Weight (kg)',
-  plyometric:'Height (in)', machine:'Average pace (mm:ss)'
+  barbell:'kg', kettlebell:'kg', dumbbell:'kg', landmine:'kg',
+  'medicine ball':'kg',
+  plyometric:'height (in)', machine:'pace (mm:ss)'
 };
-var NO_SCORE_TYPES = ['recovery','bodyweight'];
+var NO_SCORE_TYPES = ['recovery','bodyweight','hold'];
 var AM_FORMATS = ['AMRAP 16','AMRAP 18','AMRAP 20'];
 var FT_FORMATS = ['For Time','3 Rounds For Time','4 Rounds For Time','6 Rounds For Time','8 Rounds For Time'];
 
@@ -21,8 +22,8 @@ function getExerciseScoreField(typeStr) {
 }
 
 function getWorkoutScoreField(fmt) {
-  if (AM_FORMATS.indexOf(fmt)!==-1) return 'Total rounds';
-  if (FT_FORMATS.indexOf(fmt)!==-1) return 'Total time';
+  if (AM_FORMATS.indexOf(fmt)!==-1) return 'total rounds';
+  if (FT_FORMATS.indexOf(fmt)!==-1) return 'total time';
   return null;
 }
 
@@ -32,8 +33,7 @@ function buildScoreKeys(r) {
   var s1 = getExerciseScoreField(r.t1.type); if (s1) keys.push({ key:'ex1', label:r.t1.row, unit:s1 });
   if (r.t2) { var s2=getExerciseScoreField(r.t2.type); if(s2) keys.push({key:'ex2',label:r.t2.row,unit:s2}); }
   if (r.t3) { var s3=getExerciseScoreField(r.t3.type); if(s3) keys.push({key:'ex3',label:r.t3.row,unit:s3}); }
-  (r.taP||[]).forEach(function(p,i){ var s=getExerciseScoreField(p.type);if(s)keys.push({key:'ta'+i,label:p.name,unit:s}); });
-  (r.tzP||[]).forEach(function(p,i){ var s=getExerciseScoreField(p.type);if(s)keys.push({key:'tz'+i,label:p.name,unit:s}); });
+  // TA and TZ (prep/mobility) — not loggable
   return keys;
 }
 
@@ -45,7 +45,7 @@ function buildScoreInputsHTML(r) {
   var addRow = function(key,label,placeholder){
     sh+='<div class="score-row"><span class="score-label">'+label+'</span><input class="score-input" type="text" id="sc_'+key+'" value="" placeholder="'+placeholder+'" /></div>';
   };
-  if (wsField) { addRow('workout',wsField,wsField==='Total rounds'?'e.g. 12':'e.g. 14:32'); sh+='<div class="score-divider"></div>'; }
+  if (wsField) { addRow('workout',wsField,wsField==='total rounds'?'e.g. 12':'e.g. 14:32'); sh+='<div class="score-divider"></div>'; }
   keys.forEach(function(k){ if(k.key==='workout')return; addRow(k.key,k.label,k.unit); });
   return sh;
 }
