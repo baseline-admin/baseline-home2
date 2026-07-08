@@ -113,3 +113,25 @@ async function dbInsertScore(workoutId, scoresData) {
 async function dbDeleteScore(id) {
   await sb.from('scores').delete().eq('id', id).eq('user_id', State.currentUser.id);
 }
+
+// ── Pro consultation bookings ────────────────────────────
+// pro_booked_slots is a view exposing only slot_datetime (no user/email/notes)
+// so any signed-in user can see which slots are taken without seeing whose
+// booking it is. See supabase/pro_bookings.sql for the schema + RLS setup.
+
+async function dbGetProBookedSlots(startISO, endISO) {
+  var { data, error } = await sb.from('pro_booked_slots')
+    .select('slot_datetime')
+    .gte('slot_datetime', startISO)
+    .lte('slot_datetime', endISO);
+  if (error) throw error;
+  return data || [];
+}
+
+async function dbCreateProBooking(slotISO, email, notes) {
+  var { data, error } = await sb.from('pro_bookings')
+    .insert({ user_id: State.currentUser.id, slot_datetime: slotISO, email: email, notes: notes || null })
+    .select().single();
+  if (error) throw error;
+  return data;
+}

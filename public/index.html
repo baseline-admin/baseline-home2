@@ -163,7 +163,57 @@
   <!-- Pro -->
   <div class="page" id="pagePro">
     <div class="page-title">Baseline Pro</div>
-    <div class="page-sub">Advanced filters and personalisation. Coming soon.</div>
+    <div class="page-sub">1 on 1 guided programming for tennis players</div>
+
+    <ul class="pro-features">
+      <li>Individualised programs, tailored to your game</li>
+      <li>Regular check in calls with your trainer</li>
+      <li>Progress tracking, form checks and more</li>
+    </ul>
+    <div class="pro-closing">All in the Baseline app. No other downloads required.</div>
+
+    <div class="pro-price-box">
+      <div class="pro-price-label">Membership</div>
+      <div class="pro-price-value">&pound;49.99<span>/month</span></div>
+    </div>
+
+    <button class="pro-cta-btn" onclick="scrollToProCalendar()">Book a free consultation call</button>
+
+    <div class="pro-calendar-panel" id="proCalendarPanel">
+      <div class="pro-cal-header">
+        <div>
+          <div class="pro-cal-title">Consultation calendar</div>
+          <div class="pro-cal-range" id="proCalRangeLabel"></div>
+        </div>
+        <div class="pro-cal-nav">
+          <button class="pro-cal-nav-btn" id="proCalPrevBtn" onclick="proNavWeek(-1)">&larr; Prev</button>
+          <button class="pro-cal-nav-btn" id="proCalNextBtn" onclick="proNavWeek(1)">Next &rarr;</button>
+        </div>
+      </div>
+      <div class="pro-cal-grid" id="proCalendarBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Pro Booking Modal -->
+<div id="proBookingModal" class="ex-modal-overlay" onclick="handleProBookingModalClick(event)">
+  <div class="ex-modal-box" style="max-width:400px;">
+    <button class="ex-modal-close" onclick="closeProBookingModal()">&#x2715;</button>
+    <div class="ex-modal-name" style="margin-bottom:6px;">Book a free consultation</div>
+    <div class="pro-book-slot-display" id="proBookSlotDisplay"></div>
+
+    <div class="pro-book-field">
+      <span class="pro-book-label">Confirmation email</span>
+      <div class="pro-book-email-row" id="proBookEmailWrap"></div>
+    </div>
+
+    <div class="pro-book-field">
+      <span class="pro-book-label">Anything else you'd like to share? (optional)</span>
+      <textarea class="pro-book-textarea" id="proBookNotesInput" placeholder="e.g. your current level, injuries, goals..."></textarea>
+    </div>
+
+    <button class="save-btn" id="proBookConfirmBtn" onclick="submitProBooking()">Confirm</button>
+    <div class="pro-book-confirm-msg" id="proBookConfirmMsg"></div>
   </div>
 </div>
 
@@ -231,6 +281,7 @@
 <script src="scores.js"></script>
 <script src="timer.js"></script>
 <script src="workouts.js"></script>
+<script src="pro.js"></script>
 <script src="create-workout.js"></script>
 <script src="library.js"></script>
 <script>

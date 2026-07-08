@@ -137,6 +137,7 @@ function onPageReady() {
     }
   }
   if (name === 'library' && typeof renderLibrary === 'function') renderLibrary();
+  if (name === 'pro' && typeof renderProTab === 'function') renderProTab();
 }
 
 // ── Name prompt ───────────────────────────────────────────
