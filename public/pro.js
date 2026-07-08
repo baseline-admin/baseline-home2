@@ -86,7 +86,23 @@ function proGetWeeklyBlockedIndices(weekOffset) {
 async function renderProTab() {
   ProState.weekOffset = 0;
   ProState.calendarOpen = false;
+
+  var panel = document.getElementById('proCalendarPanel');
+  if (panel) panel.classList.remove('pro-cal-ready');
+
+  // Set the collapsed shape (header label, chevron, hidden body) synchronously
+  // before reveal — this needs no network round trip, only date math.
   renderProCalendarToggle();
+  renderProWeek();
+
+  // Reveal only once that shape is correct — same double-rAF fade-in used for
+  // the last-workout card, so the panel never flashes in a wrong shape first.
+  if (panel) {
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() { panel.classList.add('pro-cal-ready'); });
+    });
+  }
+
   await loadProBookedSlots();
 }
 

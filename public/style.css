@@ -951,8 +951,10 @@ video { -webkit-appearance:none; }
 
 .pro-calendar-panel {
   background:var(--surface); border:1px solid var(--border); border-radius:8px;
-  padding:24px; transition:border-color 0.3s ease;
+  padding:24px; transition:border-color 0.3s ease, opacity 0.25s ease;
+  opacity:0; /* revealed via .pro-cal-ready once collapsed shape is set — avoids flash of wrong shape */
 }
+.pro-calendar-panel.pro-cal-ready { opacity:1; }
 .pro-calendar-panel.pro-cal-highlight { border-color:var(--accent); }
 .pro-cal-header {
   width:100%; display:flex; align-items:flex-start; justify-content:space-between;
@@ -961,7 +963,7 @@ video { -webkit-appearance:none; }
 }
 .pro-cal-title { font-family:var(--mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
 .pro-cal-range { font-family:var(--mono); font-size:12px; color:var(--text); margin-top:4px; }
-.pro-cal-body { margin-top:20px; padding-top:20px; border-top:1px solid var(--border); }
+.pro-cal-body { display:none; margin-top:20px; padding-top:20px; border-top:1px solid var(--border); }
 .pro-cal-nav { display:flex; gap:8px; margin-bottom:20px; }
 .pro-cal-nav-btn {
   background:none; border:1px solid var(--border); border-radius:var(--radius);
