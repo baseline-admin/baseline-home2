@@ -11,6 +11,7 @@ var PRO_MAX_WEEK_OFFSET = 2;
 
 var ProState = {
   weekOffset: 0,
+  calendarOpen: false,
   bookedTimes: new Set(),
   selectedSlotISO: null,
   bookingEmail: ''
@@ -84,7 +85,21 @@ function proGetWeeklyBlockedIndices(weekOffset) {
 
 async function renderProTab() {
   ProState.weekOffset = 0;
+  ProState.calendarOpen = false;
+  renderProCalendarToggle();
   await loadProBookedSlots();
+}
+
+function renderProCalendarToggle() {
+  var body = document.getElementById('proCalBody');
+  var chevron = document.getElementById('proCalChevron');
+  if (body) body.style.display = ProState.calendarOpen ? 'block' : 'none';
+  if (chevron) chevron.innerHTML = ProState.calendarOpen ? ICON_CHEVRON_OPEN : ICON_CHEVRON_CLOSED;
+}
+
+function toggleProCalendarPanel() {
+  ProState.calendarOpen = !ProState.calendarOpen;
+  renderProCalendarToggle();
 }
 
 async function loadProBookedSlots() {
@@ -102,9 +117,9 @@ async function loadProBookedSlots() {
   renderProWeek();
 }
 
-function renderProWeek() {
-  var container = document.getElementById('proCalendarBody');
-  if (!container) return;
+function renderProWeek(direction) {
+  var wrap = document.getElementById('proCalendarBody');
+  if (!wrap) return;
 
   var days = proGetWeekDays(ProState.weekOffset);
   var blockedIdx = proGetWeeklyBlockedIndices(ProState.weekOffset);
@@ -128,7 +143,10 @@ function renderProWeek() {
       + '</div>';
   }).join('');
 
-  container.innerHTML = gridHtml;
+  // Fresh element each render so the slide-in animation always plays —
+  // direction > 0 (Next) enters from the right, < 0 (Prev) enters from the left.
+  var animClass = direction > 0 ? 'page-slide-in-right' : direction < 0 ? 'page-slide-in-left' : '';
+  wrap.innerHTML = '<div class="pro-cal-grid ' + animClass + '">' + gridHtml + '</div>';
 
   var prevBtn = document.getElementById('proCalPrevBtn');
   var nextBtn = document.getElementById('proCalNextBtn');
@@ -147,12 +165,16 @@ function proNavWeek(delta) {
   var next = ProState.weekOffset + delta;
   if (next < 0 || next > PRO_MAX_WEEK_OFFSET) return;
   ProState.weekOffset = next;
-  renderProWeek();
+  renderProWeek(delta);
 }
 
 function scrollToProCalendar() {
   var panel = document.getElementById('proCalendarPanel');
   if (!panel) return;
+  if (!ProState.calendarOpen) {
+    ProState.calendarOpen = true;
+    renderProCalendarToggle();
+  }
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   panel.classList.add('pro-cal-highlight');
   setTimeout(function() { panel.classList.remove('pro-cal-highlight'); }, 1200);

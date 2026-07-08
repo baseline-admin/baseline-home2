@@ -180,17 +180,20 @@
     <button class="pro-cta-btn" onclick="scrollToProCalendar()">Book a free consultation call</button>
 
     <div class="pro-calendar-panel" id="proCalendarPanel">
-      <div class="pro-cal-header">
+      <button class="pro-cal-header" onclick="toggleProCalendarPanel()">
         <div>
           <div class="pro-cal-title">Consultation calendar</div>
           <div class="pro-cal-range" id="proCalRangeLabel"></div>
         </div>
+        <span class="icon-btn" id="proCalChevron"></span>
+      </button>
+      <div class="pro-cal-body" id="proCalBody">
         <div class="pro-cal-nav">
           <button class="pro-cal-nav-btn" id="proCalPrevBtn" onclick="proNavWeek(-1)">&larr; Prev</button>
           <button class="pro-cal-nav-btn" id="proCalNextBtn" onclick="proNavWeek(1)">Next &rarr;</button>
         </div>
+        <div class="pro-cal-grid-wrap" id="proCalendarBody"></div>
       </div>
-      <div class="pro-cal-grid" id="proCalendarBody"></div>
     </div>
   </div>
 </div>
