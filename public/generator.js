@@ -12,6 +12,9 @@ var FORMAT_MAP = {
   'EM3':['E3MOM 15m','E3MOM 18m'],'EM4':['E4MOM 16m','E4MOM 20m'],'EM5':['E5MOM 15m','E5MOM 20m']
 };
 var REFINE_EXCLUDE_TYPES = ['recovery','hold'];
+// EMOM-family columns have built-in rest intervals, so recovery/hold exercises
+// can never be paired into them.
+var EMOM_COLS = ['EM1','EM2','EM3','EM4','EM5'];
 var PersistentExclusions = { exercises: [], types: [] };
 
 function rnd(a){return a[Math.floor(Math.random()*a.length)];}
@@ -340,6 +343,7 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
       if(!matchesFilter((d.t1ModeData||{})[row],t1ModesAllow))return;
       if(!matchesFilter((d.t1ULCData||{})[row],t1ULCAllow))return;
       if(!clientDiffAllowed((d.t1DiffData||{})[row], diffLevel))return;
+      if(EMOM_COLS.indexOf(selectedCol)!==-1&&isSeconds((d.t1TypeData||{})[row]))return;
       var v=(d.t1Data[row]||{})[selectedCol];if(!v||!v.trim())return;
       t1e.push({row:row,col:selectedCol,val:v,type:(d.t1TypeData||{})[row]||'',mode:(d.t1ModeData||{})[row]||'',ulc:(d.t1ULCData||{})[row]||'',ub:(d.t1UBData||{})[row]||'B'});
     });
@@ -365,6 +369,7 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
         if(!matchesFilter((d.t2ModeData||{})[row],t2ModesAllow))return;
         if(!matchesFilter((d.t2ULCData||{})[row],t2ULCAllow))return;
         if(!clientDiffAllowed((d.t2DiffData||{})[row], diffLevel))return;
+        if(EMOM_COLS.indexOf(selectedCol)!==-1&&isSeconds((d.t2TypeData||{})[row]))return;
         var v=(d.t2Data[row]||{})[selectedCol];if(!v||!v.trim())return;
         t2e.push({row:row,col:selectedCol,val:v,type:(d.t2TypeData||{})[row]||'',mode:(d.t2ModeData||{})[row]||'',ulc:(d.t2ULCData||{})[row]||'',ub:(d.t2UBData||{})[row]||'B'});
       });
@@ -383,6 +388,7 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
       (d.t3Rows||[]).forEach(function(row){
         if(isExcluded(row,(d.t3TypeData||{})[row],excl))return;
         if(t2IsRecovery&&isSeconds((d.t3TypeData||{})[row]))return;
+        if(EMOM_COLS.indexOf(selectedCol)!==-1&&isSeconds((d.t3TypeData||{})[row]))return;
         var v=(d.t3Data[row]||{})[selectedCol];if(!v||!v.trim())return;
         t3e.push({row:row,col:selectedCol,val:v,type:(d.t3TypeData||{})[row]||'',ub:(d.t3UBData||{})[row]||'B'});
       });
@@ -475,8 +481,10 @@ function buildResults(r){
   h+=ec('t1','Exercise 1',r.t1.row,r.t1.col,r.t1n,r.t1.ub,r.t1.type);
   if(r.t2){
     h+=ec('t2','Exercise 2',r.t2.row,r.t2.col,r.t2n,r.t2.ub,r.t2.type);
-  }else{
+  }else if(r.exCount>=2){
     h+='<div class="exercise-card t2"><div class="card-label t2">Exercise 2</div><div class="card-empty" style="color:var(--muted);font-size:12px;">Error — tap GENERATE to try again</div></div>';
+  }else{
+    h+='<div></div>';
   }
   h+='</div>';
   if(r.t3)h+='<div class="exercise-pair" style="margin-top:12px">'+ec('t3','Exercise 3',r.t3.row,r.t3.col,r.t3n,r.t3.ub,r.t3.type)+'<div></div></div>';
@@ -514,6 +522,7 @@ function buildRefinePanel(r,startOpen){
         if(!matchesFilter((d.t1TypeData||{})[row],t1TypesAllow))return false;
         if(!matchesFilter((d.t1ModeData||{})[row],t1ModesAllow))return false;
         if(!matchesFilter((d.t1ULCData||{})[row],t1ULCAllow))return false;
+        if(EMOM_COLS.indexOf(col)!==-1&&isSeconds((d.t1TypeData||{})[row]))return false;
         var v=(d.t1Data[row]||{})[col];return v&&v.trim();
       });
     }
@@ -523,12 +532,14 @@ function buildRefinePanel(r,startOpen){
         if(!matchesFilter((d.t2TypeData||{})[row],t2TypesAllow))return false;
         if(!matchesFilter((d.t2ModeData||{})[row],t2ModesAllow))return false;
         if(!matchesFilter((d.t2ULCData||{})[row],t2ULCAllow))return false;
+        if(EMOM_COLS.indexOf(col)!==-1&&isSeconds((d.t2TypeData||{})[row]))return false;
         var v=(d.t2Data[row]||{})[col];return v&&v.trim();
       });
     }
     if(slot==='t3'){
       return(d.t3Rows||[]).some(function(row){
         if(isExcluded(row,(d.t3TypeData||{})[row],testExcl))return false;
+        if(EMOM_COLS.indexOf(col)!==-1&&isSeconds((d.t3TypeData||{})[row]))return false;
         var v=(d.t3Data[row]||{})[col];return v&&v.trim();
       });
     }
