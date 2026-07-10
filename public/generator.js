@@ -16,6 +16,26 @@ var PersistentExclusions = { exercises: [], types: [] };
 
 function rnd(a){return a[Math.floor(Math.random()*a.length)];}
 function pickN(arr,n){var p=arr.slice(),r=[];n=Math.min(n,p.length);for(var i=0;i<n;i++){var x=Math.floor(Math.random()*p.length);r.push(p.splice(x,1)[0]);}return r;}
+// Like pickN, but avoids picking two exercises that share a type tag.
+// Falls back to allowing a repeat type if there aren't enough distinct-type
+// options left, so the workout never comes up short on exercises.
+function pickNUniqueTypes(arr,n){
+  var pool=arr.slice(),picked=[],usedTypes=[];
+  n=Math.min(n,pool.length);
+  while(picked.length<n&&pool.length){
+    var candidates=pool.filter(function(ex){
+      var types=parseList(ex.type);
+      if(!types.length)return true;
+      return types.every(function(t){return usedTypes.indexOf(t)===-1;});
+    });
+    var source=candidates.length?candidates:pool;
+    var chosen=source[Math.floor(Math.random()*source.length)];
+    pool.splice(pool.indexOf(chosen),1);
+    picked.push(chosen);
+    parseList(chosen.type).forEach(function(t){if(usedTypes.indexOf(t)===-1)usedTypes.push(t);});
+  }
+  return picked;
+}
 
 function parseRange(s){
   if(!s||!s.trim())return null;
@@ -376,7 +396,7 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
     taP=keep.taP; tzP=keep.tzP;
   }else{
     var taE=(d.taRows||[]).filter(function(ex){var v=(d.taData||{})[ex];return v&&v.trim();}).map(function(ex){return{name:ex,val:d.taData[ex],ub:(d.taUBData||{})[ex]||'B',rounds:(d.taRoundsData||{})[ex]||'2',type:(d.taTypeData||{})[ex]||''};});
-    taP=pickN(taE,nAZ);
+    taP=pickNUniqueTypes(taE,nAZ);
     var tzE=(d.tzRows||[]).filter(function(ex){var v=(d.tzData||{})[ex];return v&&v.trim();}).map(function(ex){return{name:ex,val:d.tzData[ex],ub:(d.tzUBData||{})[ex]||'B',rounds:(d.tzRoundsData||{})[ex]||'2',type:(d.tzTypeData||{})[ex]||''};});
     tzP=pickN(tzE,nAZ);
   }
