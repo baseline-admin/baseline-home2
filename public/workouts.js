@@ -52,7 +52,7 @@ function sectionHTML(key, label, list, openByDefault) {
     : '<div class="empty-state" style="padding:16px 0;">No workouts here yet.</div>';
   return '<div class="ws-section">'
     + '<button class="ws-section-header" onclick="toggleWorkoutSection(\''+key+'\')">'
-    + '<span>'+label+' <span class="ws-count">('+list.length+')</span></span>'
+    + '<span class="lib-panel-label">'+label+'</span><span class="ws-count">'+list.length+'</span>'
     + '<span class="ws-chevron">'+chevron+'</span>'
     + '</button>'
     + '<div class="ws-section-body" style="display:'+(isOpen?'block':'none')+';" id="wsBody_'+key+'">'+body+'</div>'
