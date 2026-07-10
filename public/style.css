@@ -740,15 +740,16 @@ video { -webkit-appearance:none; }
   display: flex; align-items: center; gap: 16px;
 }
 .timer-start-btn {
+  -webkit-appearance: none; appearance: none;
   font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
-  padding: 8px 20px; border-radius: 20px;
+  padding: 8px 20px; min-width: 88px; border-radius: 20px;
   border: 1.5px solid #fff; background: transparent; color: #fff;
-  cursor: pointer; white-space: nowrap;
+  cursor: pointer; white-space: nowrap; text-align: center;
   transition: opacity 0.15s;
   flex-shrink: 0;
 }
 .timer-start-btn:hover { opacity: 0.8; }
-.timer-start-btn:disabled { opacity: 0.4; cursor: default; }
+.timer-start-btn:disabled { opacity: 0.4; cursor: default; background: transparent; }
 .timer-display-wrap {
   display: flex; flex-direction: column;
 }
