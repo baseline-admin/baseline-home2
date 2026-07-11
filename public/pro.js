@@ -198,19 +198,22 @@ function scrollToProCalendar() {
 
 // ── Booking modal ─────────────────────────────────────────
 
+function formatProSlotLabel(dt) {
+  return dt.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+    + ', ' + dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
 function openProBookingModal(isoStr) {
   ProState.selectedSlotISO = isoStr;
   ProState.bookingEmail = (State.currentUser && State.currentUser.email) || '';
 
-  var dt = new Date(isoStr);
-  var label = dt.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
-    + ', ' + dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  document.getElementById('proBookSlotDisplay').textContent = label;
+  document.getElementById('proBookSlotDisplay').textContent = formatProSlotLabel(new Date(isoStr));
 
   renderProBookEmailRow();
   document.getElementById('proBookNotesInput').value = '';
   document.getElementById('proBookConfirmMsg').textContent = '';
   hideProIcsLink();
+  hideProDetailsPanel();
 
   var confirmBtn = document.getElementById('proBookConfirmBtn');
   confirmBtn.disabled = false;
@@ -246,6 +249,54 @@ function saveProEmailEdit() {
   if (!val) return;
   ProState.bookingEmail = val;
   renderProBookEmailRow();
+}
+
+// ── Confirmation details panel ──────────────────────────────
+
+function buildProBookingDetailsText(slotDate, userLabel, meetLink) {
+  var lines = [userLabel + ' Baseline Pro Consultation Call', formatProSlotLabel(slotDate)];
+  if (meetLink) lines.push(meetLink);
+  return lines.join('\n');
+}
+
+function showProDetailsPanel(slotDate, userLabel, meetLink) {
+  var panel = document.getElementById('proBookDetailsPanel');
+  if (!panel) return;
+  var text = buildProBookingDetailsText(slotDate, userLabel, meetLink);
+  panel.innerHTML = '<div class="pro-book-details-text">' + text.split('\n').join('<br>') + '</div>'
+    + '<div class="pro-book-details-copy-row">'
+    + '<button class="icon-btn" onclick="copyProBookingDetails()" id="proBookCopyBtn" title="Copy details">' + ICON_COPY + '</button>'
+    + '</div>';
+  panel.setAttribute('data-copy-text', text);
+  panel.style.display = 'block';
+}
+
+function hideProDetailsPanel() {
+  var panel = document.getElementById('proBookDetailsPanel');
+  if (!panel) return;
+  panel.style.display = 'none';
+  panel.innerHTML = '';
+  panel.removeAttribute('data-copy-text');
+}
+
+function copyProBookingDetails() {
+  var panel = document.getElementById('proBookDetailsPanel');
+  var btn = document.getElementById('proBookCopyBtn');
+  if (!panel || !btn) return;
+  var text = panel.getAttribute('data-copy-text') || '';
+  navigator.clipboard.writeText(text).then(function() {
+    btn.innerHTML = ICON_CHECK;
+    btn.style.opacity = '1';
+    setTimeout(function() {
+      btn.style.transition = 'opacity 0.3s';
+      btn.style.opacity = '0';
+      setTimeout(function() {
+        btn.innerHTML = ICON_COPY;
+        btn.style.opacity = '1';
+        btn.style.transition = '';
+      }, 350);
+    }, 900);
+  });
 }
 
 // ── Add to Calendar (.ics) ──────────────────────────────────
@@ -331,18 +382,25 @@ async function submitProBooking() {
   try {
     await dbCreateProBooking(ProState.selectedSlotISO, ProState.bookingEmail, notes);
 
-    // Show a working Add to Calendar link immediately — doesn't depend on the
-    // backend Calendar call, so it's available even if that's slow or fails.
+    // Show details + a working Add to Calendar link immediately — neither
+    // depends on the backend Calendar call, so both work even if that's
+    // slow or fails. Both upgrade in place with the real Meet link once
+    // sendProConsultationInvite resolves.
     var slotDate = new Date(ProState.selectedSlotISO);
+    var userLabel = (State.cachedProfile && State.cachedProfile.first_name) || ProState.bookingEmail;
+    showProDetailsPanel(slotDate, userLabel, null);
     showProIcsLink(slotDate, notes, null);
 
     sendProConsultationInvite(ProState.selectedSlotISO, ProState.bookingEmail, notes).then(function(meetLink) {
-      if (meetLink) showProIcsLink(slotDate, notes, meetLink);
+      if (meetLink) {
+        showProDetailsPanel(slotDate, userLabel, meetLink);
+        showProIcsLink(slotDate, notes, meetLink);
+      }
     });
 
     confirmBtn.textContent = 'Confirmed';
     confirmBtn.classList.add('saved');
-    msgEl.textContent = 'Confirmed — add it to your calendar below.';
+    msgEl.textContent = 'Confirmed — here are your consultation call details:';
 
     ProState.bookedTimes.add(new Date(ProState.selectedSlotISO).getTime());
     renderProWeek();
