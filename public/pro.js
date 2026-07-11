@@ -288,11 +288,21 @@ async function submitProBooking() {
   }
 }
 
-// Sending the confirmation email + Google Meet invite (from auth@baseline.fitness,
-// synced to samuel@baselinefitness.com's Google Calendar) needs backend credentials
-// that don't exist in this project yet — a Google Calendar API service account and
-// an email sender for that domain. The booking itself is saved in Supabase and the
-// slot locks immediately either way; wire this function up once those are available.
-function sendProConsultationInvite(slotISO, email, notes) {
-  console.log('[stub] Would send consultation invite for', slotISO, 'to', email, notes ? 'with notes' : '');
+// Fire-and-forget: the Supabase booking above is what locks the slot, so a slow
+// or failed calendar call shouldn't delay/block the "Confirmed" state the user sees.
+async function sendProConsultationInvite(slotISO, email, notes) {
+  try {
+    var userLabel = (State.cachedProfile && State.cachedProfile.first_name) || email;
+    var res = await fetch('/api/book-consultation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slotISO: slotISO, email: email, notes: notes, userLabel: userLabel })
+    });
+    if (!res.ok) {
+      var body = await res.json().catch(function() { return {}; });
+      console.error('Consultation invite failed:', body.error || res.status);
+    }
+  } catch (e) {
+    console.error('Consultation invite request failed:', e);
+  }
 }
