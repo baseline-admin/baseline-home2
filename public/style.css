@@ -691,8 +691,9 @@ video { -webkit-appearance:none; }
   padding-top: 4px;
 }
 .gen-filter-header {
+  -webkit-appearance: none; appearance: none;
   width: 100%; display: flex; align-items: center; justify-content: space-between;
-  background: none; border: none; cursor: pointer;
+  background: none; border: none; cursor: pointer; margin: 0;
   padding: 10px 0; font-family: var(--mono); font-size: 11px;
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
   text-align: left;
@@ -705,7 +706,8 @@ video { -webkit-appearance:none; }
   padding-bottom: 8px;
 }
 .gen-duration-pill {
-  font-family: var(--mono); font-size: 11px; padding: 6px 16px;
+  -webkit-appearance: none; appearance: none;
+  font-family: var(--mono); font-size: 11px; padding: 6px 16px; margin: 0;
   border: 1px solid var(--border); border-radius: 20px;
   background: var(--surface); color: var(--muted);
   cursor: pointer; letter-spacing: 0.05em;

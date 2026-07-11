@@ -284,8 +284,10 @@ function renderFormatFilterInfo(key) {
   if (!el) return;
   var text = FORMAT_FILTER_INFO[key] || '';
   if (!text) { el.innerHTML = ''; return; }
-  var paras = text.split('\n\n').map(function(p) {
-    return '<p style="margin:0 0 10px 0;line-height:1.6;">' + p + '</p>';
+  var parts = text.split('\n\n');
+  var paras = parts.map(function(p, i) {
+    var margin = i === parts.length - 1 ? '0' : '0 0 10px 0';
+    return '<p style="margin:' + margin + ';line-height:1.6;">' + p + '</p>';
   }).join('');
   el.innerHTML = '<div class="timer-panel fmt-info-panel" style="margin-top:12px;">'
     + '<div style="font-family:var(--mono);font-size:12px;color:var(--text);line-height:1.7;">' + paras + '</div></div>';
@@ -751,8 +753,10 @@ function toggleFormatInfo(btn, fmt) {
   panel.id = 'fmtInfoPanel';
   panel.className = 'timer-panel fmt-info-panel';
   // Split on \n\n for paragraphs
-  var paras = text.split('\n\n').map(function(p) {
-    return '<p style="margin:0 0 10px 0;line-height:1.6;">' + p + '</p>';
+  var parts = text.split('\n\n');
+  var paras = parts.map(function(p, i) {
+    var margin = i === parts.length - 1 ? '0' : '0 0 10px 0';
+    return '<p style="margin:' + margin + ';line-height:1.6;">' + p + '</p>';
   }).join('');
   panel.innerHTML = '<div style="font-family:var(--mono);font-size:12px;color:var(--text);line-height:1.7;">' + paras + '</div>';
   // Insert after the timer-btn-row, same pattern as timer panel

@@ -44,6 +44,10 @@ async function createConsultationEvent({ slotISO, attendeeEmail, notes, userLabe
     start: { dateTime: start.toISOString(), timeZone: TIMEZONE },
     end: { dateTime: end.toISOString(), timeZone: TIMEZONE },
     attendees: [{ email: attendeeEmail }],
+    // Google Calendar generally derives the notification email's sender name
+    // from the calendar owner's account profile, not this field — see the
+    // account-rename fix for the real solution to that.
+    organizer: { email: CALENDAR_OWNER, displayName: 'Baseline' },
     conferenceData: {
       createRequest: { requestId: 'baseline-pro-' + start.getTime() },
     },
