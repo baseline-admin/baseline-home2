@@ -257,7 +257,7 @@ var FORMAT_FILTER_COLS = {
 
 var FORMAT_FILTER_INFO = {
   AM: 'Complete as many rounds of the workout generated as possible before the timer reaches 0.',
-  EM: 'Every Minute On the Minute\n\nComplete 1 round of the workout generated before the timer reaches 0. Repeat until all rounds have been completed.',
+  EM: 'Complete 1 round of the workout generated before the timer reaches 0. Repeat until all rounds have been completed.',
   FT: 'Complete the workout generated fast as possible'
 };
 
