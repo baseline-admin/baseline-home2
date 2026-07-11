@@ -87,20 +87,18 @@ function getLastScoreSummary(w) {
 async function loadLastWorkout() {
   try {
     var ws = await dbGetWorkouts();
-    if (ws && ws.length) {
-      // Sort: workouts with scores by most recent completed_at, workouts without scores by generated_at
-      ws.sort(function(a, b) {
-        var aTime = (a.scores && a.scores.length && a.scores[a.scores.length-1].completed_at)
-          ? new Date(a.scores[a.scores.length-1].completed_at).getTime()
-          : new Date(a.generated_at).getTime();
-        var bTime = (b.scores && b.scores.length && b.scores[b.scores.length-1].completed_at)
-          ? new Date(b.scores[b.scores.length-1].completed_at).getTime()
-          : new Date(b.generated_at).getTime();
+    // Only workouts with at least one saved score belong in "Previous session" —
+    // a saved-but-unscored workout should never appear here.
+    var scored = (ws || []).filter(function(w) { return w.scores && w.scores.length; });
+    if (scored.length) {
+      scored.sort(function(a, b) {
+        var aTime = new Date(a.scores[a.scores.length-1].completed_at).getTime();
+        var bTime = new Date(b.scores[b.scores.length-1].completed_at).getTime();
         return bTime - aTime;
       });
-      State.lastWorkout  = ws[0] || null;
-      State.lastWorkout2 = ws[1] || null;
-      State.lastWorkout3 = ws[2] || null;
+      State.lastWorkout  = scored[0] || null;
+      State.lastWorkout2 = scored[1] || null;
+      State.lastWorkout3 = scored[2] || null;
     } else {
       State.lastWorkout = State.lastWorkout2 = State.lastWorkout3 = null;
     }
