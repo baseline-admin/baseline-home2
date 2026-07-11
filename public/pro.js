@@ -1,4 +1,4 @@
-/* ============================================================
+ur/* ============================================================
    BASELINE - pro.js
    Baseline Pro tab — consultation booking calendar.
    Depends on: app.js, db.js
@@ -270,7 +270,7 @@ async function submitProBooking() {
 
     confirmBtn.textContent = 'Confirmed';
     confirmBtn.classList.add('saved');
-    msgEl.textContent = 'Confirmed — we’ll be in touch shortly.';
+    msgEl.textContent = 'Confirmed — check your email.';
 
     ProState.bookedTimes.add(new Date(ProState.selectedSlotISO).getTime());
     renderProWeek();
