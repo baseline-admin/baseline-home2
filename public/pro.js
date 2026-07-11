@@ -210,6 +210,7 @@ function openProBookingModal(isoStr) {
   renderProBookEmailRow();
   document.getElementById('proBookNotesInput').value = '';
   document.getElementById('proBookConfirmMsg').textContent = '';
+  hideProIcsLink();
 
   var confirmBtn = document.getElementById('proBookConfirmBtn');
   confirmBtn.disabled = false;
@@ -232,7 +233,10 @@ function startEditProEmail() {
   wrap.innerHTML = '<input id="proBookEmailInput" type="email" class="pro-book-input" value="' + ProState.bookingEmail + '" />'
     + '<button class="icon-btn" onclick="saveProEmailEdit()" title="Save">' + ICON_CHECK + '</button>';
   var input = document.getElementById('proBookEmailInput');
-  if (input) { input.focus(); input.select(); }
+  if (input) {
+    input.focus(); input.select();
+    input.addEventListener('keydown', function(e) { if (e.key === 'Enter') saveProEmailEdit(); });
+  }
 }
 
 function saveProEmailEdit() {
@@ -242,6 +246,62 @@ function saveProEmailEdit() {
   if (!val) return;
   ProState.bookingEmail = val;
   renderProBookEmailRow();
+}
+
+// ── Add to Calendar (.ics) ──────────────────────────────────
+// User-side only — has no bearing on the real event created on
+// samuel@baseline.fitness's calendar via the backend.
+
+var _proIcsObjectUrl = null;
+
+function icsEscape(s) {
+  return (s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+}
+
+function formatIcsDate(d) {
+  return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+}
+
+function buildProConsultationIcs(startDate, notes, meetLink) {
+  var end = new Date(startDate.getTime() + 30 * 60000);
+  var descParts = [];
+  if (meetLink) descParts.push('Join: ' + meetLink);
+  if (notes) descParts.push('Notes: ' + notes);
+  var description = descParts.join('\n\n');
+
+  var lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Baseline//Pro Consultation//EN',
+    'BEGIN:VEVENT',
+    'UID:baseline-pro-' + startDate.getTime() + '@baseline.fitness',
+    'DTSTAMP:' + formatIcsDate(new Date()),
+    'DTSTART:' + formatIcsDate(startDate),
+    'DTEND:' + formatIcsDate(end),
+    'SUMMARY:' + icsEscape('Baseline Pro Free Consultation Call'),
+  ];
+  if (description) lines.push('DESCRIPTION:' + icsEscape(description));
+  if (meetLink) lines.push('LOCATION:' + icsEscape(meetLink));
+  lines.push('END:VEVENT', 'END:VCALENDAR');
+
+  return lines.join('\r\n');
+}
+
+function showProIcsLink(startDate, notes, meetLink) {
+  var link = document.getElementById('proBookIcsLink');
+  if (!link) return;
+  if (_proIcsObjectUrl) URL.revokeObjectURL(_proIcsObjectUrl);
+  var ics = buildProConsultationIcs(startDate, notes, meetLink);
+  var blob = new Blob([ics], { type: 'text/calendar' });
+  _proIcsObjectUrl = URL.createObjectURL(blob);
+  link.href = _proIcsObjectUrl;
+  link.style.display = 'inline-block';
+}
+
+function hideProIcsLink() {
+  var link = document.getElementById('proBookIcsLink');
+  if (link) link.style.display = 'none';
+  if (_proIcsObjectUrl) { URL.revokeObjectURL(_proIcsObjectUrl); _proIcsObjectUrl = null; }
 }
 
 function closeProBookingModal() {
@@ -255,6 +315,10 @@ function handleProBookingModalClick(e) {
 
 async function submitProBooking() {
   if (!ProState.selectedSlotISO) return;
+  // Commit any in-progress email edit — user may hit Confirm without
+  // explicitly clicking the checkmark save button first.
+  var emailInput = document.getElementById('proBookEmailInput');
+  if (emailInput && emailInput.value.trim()) ProState.bookingEmail = emailInput.value.trim();
   var notesInput = document.getElementById('proBookNotesInput');
   var notes = notesInput ? notesInput.value.trim() : '';
   var confirmBtn = document.getElementById('proBookConfirmBtn');
@@ -266,7 +330,15 @@ async function submitProBooking() {
 
   try {
     await dbCreateProBooking(ProState.selectedSlotISO, ProState.bookingEmail, notes);
-    sendProConsultationInvite(ProState.selectedSlotISO, ProState.bookingEmail, notes);
+
+    // Show a working Add to Calendar link immediately — doesn't depend on the
+    // backend Calendar call, so it's available even if that's slow or fails.
+    var slotDate = new Date(ProState.selectedSlotISO);
+    showProIcsLink(slotDate, notes, null);
+
+    sendProConsultationInvite(ProState.selectedSlotISO, ProState.bookingEmail, notes).then(function(meetLink) {
+      if (meetLink) showProIcsLink(slotDate, notes, meetLink);
+    });
 
     confirmBtn.textContent = 'Confirmed';
     confirmBtn.classList.add('saved');
@@ -274,7 +346,6 @@ async function submitProBooking() {
 
     ProState.bookedTimes.add(new Date(ProState.selectedSlotISO).getTime());
     renderProWeek();
-    setTimeout(closeProBookingModal, 1400);
   } catch (e) {
     confirmBtn.disabled = false;
     confirmBtn.textContent = 'Confirm';
@@ -298,11 +369,14 @@ async function sendProConsultationInvite(slotISO, email, notes) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slotISO: slotISO, email: email, notes: notes, userLabel: userLabel })
     });
+    var body = await res.json().catch(function() { return {}; });
     if (!res.ok) {
-      var body = await res.json().catch(function() { return {}; });
       console.error('Consultation invite failed:', body.error || res.status);
+      return null;
     }
+    return body.meetLink || null;
   } catch (e) {
     console.error('Consultation invite request failed:', e);
+    return null;
   }
 }
