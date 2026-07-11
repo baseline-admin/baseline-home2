@@ -135,6 +135,18 @@
             <button class="gen-duration-pill diff-pill" data-value="3" onclick="selectDiff(this)">Level 3</button>
           </div>
         </div>
+        <div class="gen-filter-panel">
+          <button class="gen-filter-header" onclick="toggleFormatFilterPanel()">
+            <span class="gen-filter-label">FORMAT</span>
+            <span class="gen-filter-chevron" id="formatFilterChevron">&#x25BE;</span>
+          </button>
+          <div class="gen-filter-body" id="formatFilterBody" style="display:none;">
+            <button class="gen-duration-pill format-filter-pill" data-value="AM" onclick="selectFormatFilter(this)">AMRAP</button>
+            <button class="gen-duration-pill format-filter-pill" data-value="EM" onclick="selectFormatFilter(this)">EMOM</button>
+            <button class="gen-duration-pill format-filter-pill" data-value="FT" onclick="selectFormatFilter(this)">For Time</button>
+            <div id="formatFilterInfo" style="flex-basis:100%;"></div>
+          </div>
+        </div>
           <button class="gen-btn" id="genBtn" disabled onclick="generate()">Generate</button>
         </div>
         <div class="gen-instructions">Select a workout and duration, then click Generate.</div>

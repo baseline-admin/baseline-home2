@@ -248,6 +248,55 @@ function getSelectedDiffLevel() {
   return parseInt(active.getAttribute('data-value'), 10) || 0;
 }
 
+// ── Format filter (AMRAP / EMOM / For Time) ────────────────
+var FORMAT_FILTER_COLS = {
+  AM: ['AM'],
+  EM: EMOM_COLS,
+  FT: ['FT1','FT3','FT4','FT6','FT8']
+};
+
+var FORMAT_FILTER_INFO = {
+  AM: 'Complete as many rounds of the workout generated as possible before the timer reaches 0.',
+  EM: 'Every Minute On the Minute\n\nComplete 1 round of the workout generated before the timer reaches 0. Repeat until all rounds have been completed.',
+  FT: 'Complete the workout generated fast as possible'
+};
+
+function toggleFormatFilterPanel() {
+  var body = document.getElementById('formatFilterBody');
+  var chev = document.getElementById('formatFilterChevron');
+  var open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'flex';
+  chev.innerHTML     = open ? '&#x25BE;' : '&#x25B4;';
+}
+
+function selectFormatFilter(pill) {
+  var current = pill.classList.contains('gen-duration-pill-active');
+  document.querySelectorAll('.format-filter-pill').forEach(function(p) {
+    p.classList.remove('gen-duration-pill-active');
+  });
+  // Toggle off if already selected
+  if (!current) pill.classList.add('gen-duration-pill-active');
+  renderFormatFilterInfo(current ? '' : pill.getAttribute('data-value'));
+}
+
+function renderFormatFilterInfo(key) {
+  var el = document.getElementById('formatFilterInfo');
+  if (!el) return;
+  var text = FORMAT_FILTER_INFO[key] || '';
+  if (!text) { el.innerHTML = ''; return; }
+  var paras = text.split('\n\n').map(function(p) {
+    return '<p style="margin:0 0 10px 0;line-height:1.6;">' + p + '</p>';
+  }).join('');
+  el.innerHTML = '<div class="timer-panel fmt-info-panel" style="margin-top:12px;">'
+    + '<div style="font-family:var(--mono);font-size:12px;color:var(--text);line-height:1.7;">' + paras + '</div></div>';
+}
+
+function getSelectedFormatFilter() {
+  var active = document.querySelector('.format-filter-pill.gen-duration-pill-active');
+  if (!active) return '';
+  return active.getAttribute('data-value') || '';
+}
+
 function generate(){
   PersistentExclusions={exercises:[],types:[]};
   var prompt=document.getElementById('promptSelect').value;
@@ -296,6 +345,7 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
   var keep=slotsToReplace&&State.lastResult?State.lastResult:null;
   var nAZ=ts==='45mins'?3:ts==='35mins'?2:1;
   var diffLevel=getSelectedDiffLevel();
+  var formatFilter=getSelectedFormatFilter();
   var d=State.sheetData;
   var pRule=d.promptRules[prompt];
   if(!pRule){alert('No rule for: '+prompt);return null;}
@@ -314,7 +364,11 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
   if(keep&&!slotsToReplace['t1']){
     selectedCol=keep.selectedCol; colIdx=d.t1Cols.indexOf(selectedCol);
   }else{
-    var eligCols=d.t1Cols.filter(function(c){return allowedCols.length===0||allowedCols.indexOf(c.toLowerCase())!==-1;});
+    var eligCols=d.t1Cols.filter(function(c){
+      if(allowedCols.length&&allowedCols.indexOf(c.toLowerCase())===-1)return false;
+      if(formatFilter&&FORMAT_FILTER_COLS[formatFilter].indexOf(c)===-1)return false;
+      return true;
+    });
     if(!eligCols.length){
       document.getElementById('output').innerHTML='<div class="state-msg">No eligible columns for this workout. Check Config_ColumnPairing.</div>';
       return null;
