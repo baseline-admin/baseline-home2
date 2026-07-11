@@ -342,7 +342,7 @@ async function submitProBooking() {
 
     confirmBtn.textContent = 'Confirmed';
     confirmBtn.classList.add('saved');
-    msgEl.textContent = 'Confirmed — check your email.';
+    msgEl.textContent = 'Confirmed — add it to your calendar below.';
 
     ProState.bookedTimes.add(new Date(ProState.selectedSlotISO).getTime());
     renderProWeek();

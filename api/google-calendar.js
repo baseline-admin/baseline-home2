@@ -2,8 +2,13 @@
    BASELINE — api/google-calendar.js
    Creates Baseline Pro consultation events on samuel@baseline.fitness's
    Google Calendar via a domain-wide-delegated service account.
-   Google Calendar handles the confirmation email itself (sendUpdates:
-   'all' below) — no separate email service is used.
+   No email goes to the user — sendUpdates:'none' below means Calendar
+   sends nothing to attendees. The user instead gets a client-side
+   .ics "Add to Calendar" link (see pro.js). The attendee is still
+   listed on the event so Samuel can see who it's with when he opens
+   it — Samuel's own view of the event is unaffected either way, since
+   he's the organizer and sees it on his calendar regardless of this
+   setting.
    ============================================================ */
 const { google } = require('googleapis');
 
@@ -56,7 +61,7 @@ async function createConsultationEvent({ slotISO, attendeeEmail, notes, userLabe
   const { data } = await calendar.events.insert({
     calendarId: 'primary',
     conferenceDataVersion: 1,
-    sendUpdates: 'all',
+    sendUpdates: 'none',
     requestBody,
   });
 
