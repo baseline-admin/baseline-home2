@@ -213,6 +213,7 @@ function openProBookingModal(isoStr) {
   document.getElementById('proBookNotesInput').value = '';
   document.getElementById('proBookConfirmMsg').textContent = '';
   hideProIcsLink();
+  hideProGCalLink();
   hideProDetailsPanel();
 
   var confirmBtn = document.getElementById('proBookConfirmBtn');
@@ -299,12 +300,47 @@ function copyProBookingDetails() {
   });
 }
 
-// ── Add to Calendar (.ics) ──────────────────────────────────
+// ── Add to Calendar ──────────────────────────────────────────
 // User-side only — has no bearing on the real event created on
-// samuel@baseline.fitness's calendar via the backend.
-// Served from a real endpoint (api/ics.js) rather than a client-generated
-// blob: URL — blob + download attribute is unreliable on Android Chrome
-// (silent failures / opens raw text instead of downloading).
+// samuel@baseline.fitness's calendar via the backend. Offers two
+// options since browser handling of .ics links is inconsistent across
+// platforms: a direct Google Calendar link (predictable everywhere,
+// no file-handling involved) and an .ics download for Apple/Outlook,
+// served from a real endpoint (api/ics.js) rather than a client-side
+// blob: URL, which is unreliable on Android Chrome.
+
+function formatGCalDate(d) {
+  return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+}
+
+function buildGoogleCalendarUrl(startDate, notes, meetLink, userLabel) {
+  var end = new Date(startDate.getTime() + 30 * 60000);
+  var summary = (userLabel ? userLabel + ' ' : '') + 'Baseline Pro Consultation Call';
+  var descParts = [];
+  if (meetLink) descParts.push('Join: ' + meetLink);
+  if (notes) descParts.push('Notes: ' + notes);
+
+  var params = new URLSearchParams();
+  params.set('action', 'TEMPLATE');
+  params.set('text', summary);
+  params.set('dates', formatGCalDate(startDate) + '/' + formatGCalDate(end));
+  if (descParts.length) params.set('details', descParts.join('\n\n'));
+  if (meetLink) params.set('location', meetLink);
+
+  return 'https://calendar.google.com/calendar/render?' + params.toString();
+}
+
+function showProGCalLink(startDate, notes, meetLink, userLabel) {
+  var link = document.getElementById('proBookGoogleCalLink');
+  if (!link) return;
+  link.href = buildGoogleCalendarUrl(startDate, notes, meetLink, userLabel);
+  link.style.display = 'inline-block';
+}
+
+function hideProGCalLink() {
+  var link = document.getElementById('proBookGoogleCalLink');
+  if (link) link.style.display = 'none';
+}
 
 function showProIcsLink(startDate, notes, meetLink, userLabel) {
   var link = document.getElementById('proBookIcsLink');
@@ -357,11 +393,13 @@ async function submitProBooking() {
     var slotDate = new Date(ProState.selectedSlotISO);
     var userLabel = (State.cachedProfile && State.cachedProfile.first_name) || ProState.bookingEmail;
     showProDetailsPanel(slotDate, userLabel, null);
+    showProGCalLink(slotDate, notes, null, userLabel);
     showProIcsLink(slotDate, notes, null, userLabel);
 
     sendProConsultationInvite(ProState.selectedSlotISO, ProState.bookingEmail, notes).then(function(meetLink) {
       if (meetLink) {
         showProDetailsPanel(slotDate, userLabel, meetLink);
+        showProGCalLink(slotDate, notes, meetLink, userLabel);
         showProIcsLink(slotDate, notes, meetLink, userLabel);
       }
     });

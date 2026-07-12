@@ -59,7 +59,9 @@ app.get('/api/consultation-ics', (req, res) => {
     userLabel: typeof req.query.name === 'string' ? req.query.name.slice(0, 80) : '',
   });
   res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename="baseline-pro-consultation.ics"');
+  // 'inline' (not 'attachment') lets iOS Safari hand this off directly to
+  // its native "Add Event" sheet instead of forcing a generic file download.
+  res.setHeader('Content-Disposition', 'inline; filename="baseline-pro-consultation.ics"');
   res.send(ics);
 });
 
