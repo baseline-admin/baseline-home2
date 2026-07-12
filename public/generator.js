@@ -256,8 +256,8 @@ var FORMAT_FILTER_COLS = {
 };
 
 var FORMAT_FILTER_INFO = {
-  AM: 'Complete as many rounds of the workout generated as possible before the timer reaches 0.',
-  EM: 'Complete 1 round of the workout generated before the timer reaches 0. Repeat until all rounds have been completed.',
+  AM: 'Complete as many rounds of the workout generated as possible before the timer reaches zero.',
+  EM: 'Complete one round of the workout generated before the timer reaches zero.',
   FT: 'Complete the workout generated fast as possible'
 };
 
