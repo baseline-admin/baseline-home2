@@ -302,57 +302,25 @@ function copyProBookingDetails() {
 // ── Add to Calendar (.ics) ──────────────────────────────────
 // User-side only — has no bearing on the real event created on
 // samuel@baseline.fitness's calendar via the backend.
+// Served from a real endpoint (api/ics.js) rather than a client-generated
+// blob: URL — blob + download attribute is unreliable on Android Chrome
+// (silent failures / opens raw text instead of downloading).
 
-var _proIcsObjectUrl = null;
-
-function icsEscape(s) {
-  return (s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
-}
-
-function formatIcsDate(d) {
-  return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-}
-
-function buildProConsultationIcs(startDate, notes, meetLink) {
-  var end = new Date(startDate.getTime() + 30 * 60000);
-  var descParts = [];
-  if (meetLink) descParts.push('Join: ' + meetLink);
-  if (notes) descParts.push('Notes: ' + notes);
-  var description = descParts.join('\n\n');
-
-  var lines = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//Baseline//Pro Consultation//EN',
-    'BEGIN:VEVENT',
-    'UID:baseline-pro-' + startDate.getTime() + '@baseline.fitness',
-    'DTSTAMP:' + formatIcsDate(new Date()),
-    'DTSTART:' + formatIcsDate(startDate),
-    'DTEND:' + formatIcsDate(end),
-    'SUMMARY:' + icsEscape('Baseline Pro Free Consultation Call'),
-  ];
-  if (description) lines.push('DESCRIPTION:' + icsEscape(description));
-  if (meetLink) lines.push('LOCATION:' + icsEscape(meetLink));
-  lines.push('END:VEVENT', 'END:VCALENDAR');
-
-  return lines.join('\r\n');
-}
-
-function showProIcsLink(startDate, notes, meetLink) {
+function showProIcsLink(startDate, notes, meetLink, userLabel) {
   var link = document.getElementById('proBookIcsLink');
   if (!link) return;
-  if (_proIcsObjectUrl) URL.revokeObjectURL(_proIcsObjectUrl);
-  var ics = buildProConsultationIcs(startDate, notes, meetLink);
-  var blob = new Blob([ics], { type: 'text/calendar' });
-  _proIcsObjectUrl = URL.createObjectURL(blob);
-  link.href = _proIcsObjectUrl;
+  var params = new URLSearchParams();
+  params.set('slot', startDate.toISOString());
+  if (notes) params.set('notes', notes);
+  if (meetLink) params.set('meet', meetLink);
+  if (userLabel) params.set('name', userLabel);
+  link.href = '/api/consultation-ics?' + params.toString();
   link.style.display = 'inline-block';
 }
 
 function hideProIcsLink() {
   var link = document.getElementById('proBookIcsLink');
   if (link) link.style.display = 'none';
-  if (_proIcsObjectUrl) { URL.revokeObjectURL(_proIcsObjectUrl); _proIcsObjectUrl = null; }
 }
 
 function closeProBookingModal() {
@@ -389,12 +357,12 @@ async function submitProBooking() {
     var slotDate = new Date(ProState.selectedSlotISO);
     var userLabel = (State.cachedProfile && State.cachedProfile.first_name) || ProState.bookingEmail;
     showProDetailsPanel(slotDate, userLabel, null);
-    showProIcsLink(slotDate, notes, null);
+    showProIcsLink(slotDate, notes, null, userLabel);
 
     sendProConsultationInvite(ProState.selectedSlotISO, ProState.bookingEmail, notes).then(function(meetLink) {
       if (meetLink) {
         showProDetailsPanel(slotDate, userLabel, meetLink);
-        showProIcsLink(slotDate, notes, meetLink);
+        showProIcsLink(slotDate, notes, meetLink, userLabel);
       }
     });
 
