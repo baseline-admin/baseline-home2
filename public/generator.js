@@ -387,7 +387,22 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
 
   var workoutFormat=keep&&!slotsToReplace['t1']?keep.fmt:getFormat(selectedCol);
 
-  // T1
+  function buildT2Candidates(){
+    var t2e=[];
+    (d.t2Rows||[]).forEach(function(row){
+      if(isExcluded(row,(d.t2TypeData||{})[row],excl))return;
+      if(!matchesFilter((d.t2TypeData||{})[row],t2TypesAllow))return;
+      if(!matchesFilter((d.t2ModeData||{})[row],t2ModesAllow))return;
+      if(!matchesFilter((d.t2ULCData||{})[row],t2ULCAllow))return;
+      if(!clientDiffAllowed((d.t2DiffData||{})[row], diffLevel))return;
+      if(EMOM_COLS.indexOf(selectedCol)!==-1&&isSeconds((d.t2TypeData||{})[row]))return;
+      var v=(d.t2Data[row]||{})[selectedCol];if(!v||!v.trim())return;
+      t2e.push({row:row,col:selectedCol,val:v,type:(d.t2TypeData||{})[row]||'',mode:(d.t2ModeData||{})[row]||'',ulc:(d.t2ULCData||{})[row]||'',ub:(d.t2UBData||{})[row]||'B'});
+    });
+    return t2e;
+  }
+
+  // T1 (single-exercise workouts draw from either T1 or T2's pool — see below)
   var t1,t1n;
   if(keep&&!slotsToReplace['t1']){
     t1=keep.t1; t1n=keep.t1n;
@@ -403,11 +418,21 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
       var v=(d.t1Data[row]||{})[selectedCol];if(!v||!v.trim())return;
       t1e.push({row:row,col:selectedCol,val:v,type:(d.t1TypeData||{})[row]||'',mode:(d.t1ModeData||{})[row]||'',ulc:(d.t1ULCData||{})[row]||'',ub:(d.t1UBData||{})[row]||'B'});
     });
-    if(!t1e.length){
+
+    var soloPool=t1e;
+    if(exCount===1){
+      // Workouts with only 1 exercise (FT1, EMOM 10m/12m) can draw that
+      // exercise from either T1 or T2's pool, not just T1.
+      var t2eForSolo=buildT2Candidates();
+      if(t1e.length&&t2eForSolo.length) soloPool=rnd([true,false])?t1e:t2eForSolo;
+      else if(t2eForSolo.length) soloPool=t2eForSolo;
+    }
+
+    if(!soloPool.length){
       document.getElementById('output').innerHTML='<div class="state-msg">No T1 exercises available for this workout. Try a different prompt or check sheet filters.</div>';
       return null;
     }
-    var t1p=rnd(t1e);
+    var t1p=rnd(soloPool);
     t1={row:t1p.row,col:selectedCol,val:t1p.val,type:t1p.type,mode:t1p.mode,ulc:t1p.ulc,ub:t1p.ub};
     t1n=parseRange(t1p.val);
   }
@@ -418,17 +443,7 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
     if(keep&&!slotsToReplace['t2']){
       t2=keep.t2; t2n=keep.t2n;
     }else{
-      var t2e=[];
-      (d.t2Rows||[]).forEach(function(row){
-        if(isExcluded(row,(d.t2TypeData||{})[row],excl))return;
-        if(!matchesFilter((d.t2TypeData||{})[row],t2TypesAllow))return;
-        if(!matchesFilter((d.t2ModeData||{})[row],t2ModesAllow))return;
-        if(!matchesFilter((d.t2ULCData||{})[row],t2ULCAllow))return;
-        if(!clientDiffAllowed((d.t2DiffData||{})[row], diffLevel))return;
-        if(EMOM_COLS.indexOf(selectedCol)!==-1&&isSeconds((d.t2TypeData||{})[row]))return;
-        var v=(d.t2Data[row]||{})[selectedCol];if(!v||!v.trim())return;
-        t2e.push({row:row,col:selectedCol,val:v,type:(d.t2TypeData||{})[row]||'',mode:(d.t2ModeData||{})[row]||'',ulc:(d.t2ULCData||{})[row]||'',ub:(d.t2UBData||{})[row]||'B'});
-      });
+      var t2e=buildT2Candidates();
       if(t2e.length){var t2p=rnd(t2e);t2={row:t2p.row,col:selectedCol,val:t2p.val,type:t2p.type,mode:t2p.mode,ulc:t2p.ulc,ub:t2p.ub};t2n=parseRange(t2p.val);}
     }
   }
