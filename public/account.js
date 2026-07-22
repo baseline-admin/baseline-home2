@@ -56,6 +56,12 @@ async function showAccountMenu() {
   State.subscriptionStatus = subStatus;
   var accountLine = buildAccountLineInfo(subStatus);
 
+  // RLS lets a user select their own referral_codes row directly — no
+  // server round-trip needed just to read it.
+  var referralCode = '';
+  var { data: referralRow } = await sb.from('referral_codes').select('code').eq('user_id', user.id).maybeSingle();
+  if (referralRow) referralCode = referralRow.code;
+
   var body = document.getElementById('accountModalBody');
   body.innerHTML =
     '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">'
@@ -82,6 +88,12 @@ async function showAccountMenu() {
     + '<button onclick="confirmRefreshDisplayId()" class="icon-btn" title="Refresh ID">' + ICON_REFRESH + '</button>'
     + '</div>'
     + '</div>'
+    + (referralCode
+        ? '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">'
+          + '<span>Referral code <span style="color:var(--text);" id="accountReferralCode">' + referralCode + '</span></span>'
+          + '<button onclick="copyReferralCode()" class="icon-btn" id="copyReferralBtn" title="Copy referral code">' + ICON_COPY + '</button>'
+          + '</div>'
+        : '')
     + '</div>';
 
   document.getElementById('accountModal').classList.add('open');
@@ -111,6 +123,25 @@ function copyDisplayId() {
   if (!el || !btn) return;
   navigator.clipboard.writeText(el.textContent).then(function() {
     // Swap to checkmark, fade out, fade back
+    btn.innerHTML = ICON_CHECK;
+    btn.style.opacity = '1';
+    setTimeout(function() {
+      btn.style.transition = 'opacity 0.3s';
+      btn.style.opacity = '0';
+      setTimeout(function() {
+        btn.innerHTML = ICON_COPY;
+        btn.style.opacity = '1';
+        btn.style.transition = '';
+      }, 350);
+    }, 900);
+  });
+}
+
+function copyReferralCode() {
+  var el = document.getElementById('accountReferralCode');
+  var btn = document.getElementById('copyReferralBtn');
+  if (!el || !btn) return;
+  navigator.clipboard.writeText(el.textContent).then(function() {
     btn.innerHTML = ICON_CHECK;
     btn.style.opacity = '1';
     setTimeout(function() {

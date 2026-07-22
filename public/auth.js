@@ -89,12 +89,18 @@ async function verifyOTP() {
 async function register() {
   var email = document.getElementById('regEmail').value.trim();
   var pass  = document.getElementById('regPassword').value;
+  var referralCode = document.getElementById('regReferralCode').value.trim();
   if (!email || !pass) { document.getElementById('err3').textContent = 'Please fill in all fields.'; return; }
   if (!email.includes('@')) { document.getElementById('err3').textContent = 'Please enter a valid email.'; return; }
   if (pass.length < 6) { document.getElementById('err3').textContent = 'Password must be at least 6 characters.'; return; }
 
   var btn = document.getElementById('btnRegister');
   btn.disabled = true; btn.textContent = 'Creating...';
+
+  // Stashed in localStorage rather than a JS variable — with email
+  // confirmation required, this page may be long gone by the time the
+  // user actually comes back with a session (startApp reads and clears it).
+  if (referralCode) localStorage.setItem('baseline_pending_referral_code', referralCode);
 
   var { data, error } = await sb.auth.signUp({ email: email, password: pass });
 

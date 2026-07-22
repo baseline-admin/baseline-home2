@@ -73,6 +73,10 @@
         <label class="form-label">Password</label>
         <input class="form-input" type="password" id="regPassword" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter')register()" />
       </div>
+      <div class="form-group">
+        <label class="form-label">Referral code (optional)</label>
+        <input class="form-input" type="text" id="regReferralCode" placeholder="e.g. REF-4K7QXP" onkeydown="if(event.key==='Enter')register()" />
+      </div>
       <button class="auth-btn" id="btnRegister" onclick="register()">Create account</button>
       <div class="auth-error" id="err3"></div>
       <button class="auth-back" onclick="showStep1()">&#8592; Back</button>
@@ -295,6 +299,7 @@
 <script src="db.js"></script>
 <script src="account.js"></script>
 <script src="upgrade.js"></script>
+<script src="referral.js"></script>
 <script src="auth.js"></script>
 <script src="generator.js"></script>
 <script src="exercise-media.js"></script>

@@ -36,6 +36,38 @@ function mapStripeStatus(stripeStatus) {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRIAL_LENGTH_DAYS = 14;
+const REFERRAL_BONUS_DAYS = 30;
+const REFERRAL_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O or 1/I/L
+
+function generateReferralCode() {
+  let code = '';
+  for (let i = 0; i < 6; i++) code += REFERRAL_CODE_CHARS[Math.floor(Math.random() * REFERRAL_CODE_CHARS.length)];
+  return 'REF-' + code;
+}
+
+// Idempotent, like initTrial's subscriptions row — safe to call on every
+// login, not just the first. Retries on the rare code collision.
+async function ensureReferralCode(supabaseAdmin, userId) {
+  const { data: existing, error: existingErr } = await supabaseAdmin
+    .from('referral_codes')
+    .select('code')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (existingErr) throw existingErr;
+  if (existing) return existing.code;
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = generateReferralCode();
+    const { data: inserted, error } = await supabaseAdmin
+      .from('referral_codes')
+      .insert({ user_id: userId, code })
+      .select('code')
+      .single();
+    if (!error) return inserted.code;
+    if (error.code !== '23505') throw error; // anything but a collision is a real failure
+  }
+  throw new Error('Could not generate a unique referral code after 5 attempts');
+}
 
 // Shared by /api/subscription-status and /api/init-trial. Trial expiry is
 // judged live against trial_ends_at, not a stored status, since nothing
@@ -413,6 +445,17 @@ app.post('/api/init-trial', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Not signed in' });
 
     const supabaseAdmin = getSupabaseAdmin();
+
+    // Separate concern from the trial itself — every user gets a code
+    // eventually, including old accounts that predate this feature. Awaited
+    // so it's ready the moment the account menu wants to display it, but a
+    // failure here still shouldn't fail the actual trial-init response.
+    try {
+      await ensureReferralCode(supabaseAdmin, user.id);
+    } catch (err) {
+      console.error('referral code generation failed:', err.message);
+    }
+
     const { data: existing, error: existingErr } = await supabaseAdmin
       .from('subscriptions')
       .select('status, tier, is_lifetime_free, trial_ends_at')
@@ -447,6 +490,92 @@ app.post('/api/init-trial', async (req, res) => {
   } catch (err) {
     console.error('init-trial error:', err.message);
     res.status(500).json({ error: 'Could not start trial' });
+  }
+});
+
+// Called once at signup if the new user entered someone else's referral
+// code. referral_uses.referred_user_id is unique, so this is naturally
+// one redemption per person, ever — enforced by the DB, not just this
+// endpoint's logic.
+app.post('/api/redeem-referral', async (req, res) => {
+  const { code } = req.body || {};
+  if (!code || typeof code !== 'string') {
+    return res.status(400).json({ error: 'Invalid referral code' });
+  }
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Not signed in' });
+
+    const supabaseAdmin = getSupabaseAdmin();
+    const normalizedCode = code.trim().toUpperCase();
+
+    const { data: referralCode, error: codeErr } = await supabaseAdmin
+      .from('referral_codes')
+      .select('user_id, uses')
+      .eq('code', normalizedCode)
+      .maybeSingle();
+    if (codeErr) throw codeErr;
+    if (!referralCode) return res.status(400).json({ error: 'Invalid referral code' });
+    if (referralCode.user_id === user.id) {
+      return res.status(400).json({ error: 'Cannot use your own referral code' });
+    }
+    const referrerId = referralCode.user_id;
+
+    const { error: useInsertErr } = await supabaseAdmin.from('referral_uses').insert({
+      referrer_user_id: referrerId,
+      referred_user_id: user.id,
+      code: normalizedCode,
+      free_month_granted: true,
+    });
+    if (useInsertErr) {
+      if (useInsertErr.code === '23505') { // unique_violation on referred_user_id
+        return res.status(400).json({ error: 'You have already used a referral code' });
+      }
+      throw useInsertErr;
+    }
+
+    // Referred user: extend their trial by 30 days from wherever it
+    // currently ends (set 14 days out by init-trial moments earlier).
+    const { data: referredSub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('trial_ends_at')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    const referredBase = (referredSub && referredSub.trial_ends_at) ? new Date(referredSub.trial_ends_at) : new Date();
+    await supabaseAdmin
+      .from('subscriptions')
+      .update({ trial_ends_at: new Date(referredBase.getTime() + REFERRAL_BONUS_DAYS * DAY_MS).toISOString() })
+      .eq('user_id', user.id);
+
+    // Referrer: extend whichever date currently governs their access —
+    // the paid period if they're subscribed, otherwise their trial.
+    const { data: referrerSub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('status, trial_ends_at, current_period_ends_at')
+      .eq('user_id', referrerId)
+      .maybeSingle();
+    if (referrerSub) {
+      if (referrerSub.status === 'active') {
+        const base = referrerSub.current_period_ends_at ? new Date(referrerSub.current_period_ends_at) : new Date();
+        await supabaseAdmin
+          .from('subscriptions')
+          .update({ current_period_ends_at: new Date(base.getTime() + REFERRAL_BONUS_DAYS * DAY_MS).toISOString() })
+          .eq('user_id', referrerId);
+      } else {
+        const base = referrerSub.trial_ends_at ? new Date(referrerSub.trial_ends_at) : new Date();
+        await supabaseAdmin
+          .from('subscriptions')
+          .update({ trial_ends_at: new Date(base.getTime() + REFERRAL_BONUS_DAYS * DAY_MS).toISOString() })
+          .eq('user_id', referrerId);
+      }
+    }
+
+    await supabaseAdmin.from('referral_codes').update({ uses: (referralCode.uses || 0) + 1 }).eq('code', normalizedCode);
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('redeem-referral error:', err.message);
+    res.status(500).json({ error: 'Could not redeem referral code' });
   }
 });
 

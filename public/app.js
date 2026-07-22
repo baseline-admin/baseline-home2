@@ -250,6 +250,7 @@ async function startApp(user) {
   // before the access check below runs, or they'd wrongly see the mandatory
   // upgrade modal on their very first load.
   await ensureTrialInitialized();
+  redeemPendingReferralCodeIfAny(); // fire-and-forget — see its own comment
 
   var profile = await dbGetProfile();
   State.cachedProfile = profile;
