@@ -37,6 +37,43 @@ function mapStripeStatus(stripeStatus) {
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRIAL_LENGTH_DAYS = 14;
 const REFERRAL_BONUS_DAYS = 30;
+
+// Lowercases and strips any +tag from the local part, so
+// user+anything@gmail.com and user@gmail.com are treated as the same
+// person for one-trial-per-email purposes. Used wherever we decide
+// trial eligibility — not applied to the email Supabase actually sends
+// mail to, only to our own dedup checks.
+function normalizeEmail(email) {
+  const trimmed = String(email).trim().toLowerCase();
+  const atIndex = trimmed.lastIndexOf('@');
+  if (atIndex === -1) return trimmed;
+  const local = trimmed.slice(0, atIndex).split('+')[0];
+  const domain = trimmed.slice(atIndex + 1);
+  return `${local}@${domain}`;
+}
+
+// Curated list of common disposable/throwaway email providers — not
+// exhaustive, but catches the casual/lazy trial-abuse case cheaply
+// without an external API call or a huge third-party list to maintain.
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+  'mailinator.com', 'mailinator.net', 'mailinator.org',
+  'guerrillamail.com', 'guerrillamail.net', 'guerrillamail.org', 'guerrillamail.biz',
+  '10minutemail.com', '10minutemail.net', '10minutemail.co.za',
+  'tempmail.com', 'temp-mail.org', 'temp-mail.io', 'tempmailo.com',
+  'throwawaymail.com', 'throwaway.email',
+  'yopmail.com', 'yopmail.net', 'yopmail.fr',
+  'trashmail.com', 'trashmail.net', 'trash-mail.com',
+  'getnada.com', 'dispostable.com', 'fakeinbox.com', 'sharklasers.com',
+  'maildrop.cc', 'mintemail.com', 'mailnesia.com', 'moakt.com',
+  'spamgourmet.com', 'mytemp.email', 'emailondeck.com', 'mohmal.com',
+  'discard.email', 'fakemail.net', 'tempinbox.com', 'burnermail.io',
+  '33mail.com', 'anonaddy.com', 'inboxbear.com', 'crazymailing.com',
+]);
+
+function isDisposableEmail(email) {
+  const domain = normalizeEmail(email).split('@')[1];
+  return !!domain && DISPOSABLE_EMAIL_DOMAINS.has(domain);
+}
 const REFERRAL_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O or 1/I/L
 
 function generateReferralCode() {
@@ -392,8 +429,10 @@ app.get('/api/cron-hard-delete', async (req, res) => {
     for (const profile of dueProfiles || []) {
       try {
         if (profile.email) {
+          // Normalized so a +alias of a deleted email is also blocked from
+          // a fresh trial, not just an exact re-registration.
           await supabaseAdmin.from('deleted_account_emails').upsert({
-            email: profile.email.toLowerCase(),
+            email: normalizeEmail(profile.email),
             original_user_id: profile.id,
           }, { onConflict: 'email' });
         }
@@ -465,14 +504,29 @@ app.post('/api/init-trial', async (req, res) => {
     if (existing) return res.json(buildStatusResponse(existing));
 
     let usedTrialBefore = false;
+    let normalizedEmail = null;
     if (user.email) {
-      const { data: deletedRecord, error: deletedErr } = await supabaseAdmin
-        .from('deleted_account_emails')
-        .select('id')
-        .eq('email', user.email.toLowerCase())
-        .maybeSingle();
-      if (deletedErr) throw deletedErr;
-      usedTrialBefore = !!deletedRecord;
+      normalizedEmail = normalizeEmail(user.email);
+
+      if (isDisposableEmail(user.email)) {
+        usedTrialBefore = true;
+      } else {
+        const { data: deletedRecord, error: deletedErr } = await supabaseAdmin
+          .from('deleted_account_emails')
+          .select('id')
+          .eq('email', normalizedEmail)
+          .maybeSingle();
+        if (deletedErr) throw deletedErr;
+
+        const { data: grantRecord, error: grantErr } = await supabaseAdmin
+          .from('trial_grants')
+          .select('user_id')
+          .eq('normalized_email', normalizedEmail)
+          .maybeSingle();
+        if (grantErr) throw grantErr;
+
+        usedTrialBefore = !!deletedRecord || !!grantRecord;
+      }
     }
 
     const newRow = usedTrialBefore
@@ -485,6 +539,16 @@ app.post('/api/init-trial', async (req, res) => {
       .select('status, tier, is_lifetime_free, trial_ends_at')
       .single();
     if (insertErr) throw insertErr;
+
+    // Recorded only for genuine trial grants — disposable/repeat emails
+    // never reach here with usedTrialBefore true, so this can't mark a
+    // rejected signup as having "used" the normalized email itself.
+    if (!usedTrialBefore && normalizedEmail) {
+      const { error: grantInsertErr } = await supabaseAdmin
+        .from('trial_grants')
+        .insert({ normalized_email: normalizedEmail, user_id: user.id, original_email: user.email });
+      if (grantInsertErr) console.error('Failed to record trial grant:', grantInsertErr.message);
+    }
 
     res.json(buildStatusResponse(inserted));
   } catch (err) {
