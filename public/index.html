@@ -63,22 +63,29 @@
 
     <!-- Step 3: register -->
     <div id="authStep3" style="display:none">
-      <div class="auth-title">Create account</div>
-      <div class="auth-sub">Create an account to get started.</div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input class="form-input" type="email" id="regEmail" placeholder="you@example.com" />
+      <div id="registerFormWrap">
+        <div class="auth-title">Create account</div>
+        <div class="auth-sub">Create an account to get started.</div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" id="regEmail" placeholder="you@example.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" id="regPassword" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter')register()" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Referral code (optional)</label>
+          <input class="form-input" type="text" id="regReferralCode" placeholder="e.g. REF-4K7QXP" onkeydown="if(event.key==='Enter')register()" />
+        </div>
+        <button class="auth-btn" id="btnRegister" onclick="register()">Create account</button>
+        <div class="auth-error" id="err3"></div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input class="form-input" type="password" id="regPassword" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter')register()" />
+      <div id="registerVerifyPending" style="display:none">
+        <div class="auth-title">Check your email</div>
+        <div class="auth-sub" id="registerVerifySubtext"></div>
+        <div class="auth-sub">Didn't get it? Go back and use "Send sign-in link" with the same email.</div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Referral code (optional)</label>
-        <input class="form-input" type="text" id="regReferralCode" placeholder="e.g. REF-4K7QXP" onkeydown="if(event.key==='Enter')register()" />
-      </div>
-      <button class="auth-btn" id="btnRegister" onclick="register()">Create account</button>
-      <div class="auth-error" id="err3"></div>
       <button class="auth-back" onclick="showStep1()">&#8592; Back</button>
     </div>
 

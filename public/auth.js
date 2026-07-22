@@ -18,6 +18,10 @@ function showRegister() {
   document.getElementById('authStep1').style.display = 'none';
   document.getElementById('authStep3').style.display = 'block';
   document.getElementById('err3').textContent = '';
+  // Reset in case they previously got as far as "check your email" and
+  // came back to try again.
+  document.getElementById('registerFormWrap').style.display = 'block';
+  document.getElementById('registerVerifyPending').style.display = 'none';
 }
 
 // ── Google OAuth ──────────────────────────────────────────
@@ -86,6 +90,12 @@ async function verifyOTP() {
 }
 
 // ── Register ──────────────────────────────────────────────
+// Password alone doesn't prove email ownership, so verification is done
+// with the exact mechanism the sign-in flow already uses: send a real
+// magic link, require it be clicked before granting access, rather than
+// relying on Supabase's separate "Confirm email" setting. signUp() below
+// only creates the account; any session it hands back is immediately
+// discarded — the magic-link click is what grants the real one.
 async function register() {
   var email = document.getElementById('regEmail').value.trim();
   var pass  = document.getElementById('regPassword').value;
@@ -97,23 +107,37 @@ async function register() {
   var btn = document.getElementById('btnRegister');
   btn.disabled = true; btn.textContent = 'Creating...';
 
-  // Stashed in localStorage rather than a JS variable — with email
-  // confirmation required, this page may be long gone by the time the
-  // user actually comes back with a session (startApp reads and clears it).
+  // Stashed in localStorage rather than a JS variable — this page will be
+  // long gone by the time the user actually comes back via the emailed
+  // link, possibly in a different tab (startApp reads and clears it).
   if (referralCode) localStorage.setItem('baseline_pending_referral_code', referralCode);
 
   var { data, error } = await sb.auth.signUp({ email: email, password: pass });
 
+  if (error) {
+    btn.disabled = false; btn.textContent = 'Create account';
+    document.getElementById('err3').textContent = error.message || 'Registration failed.';
+    return;
+  }
+
+  if (data.session) await sb.auth.signOut();
+
+  var { error: linkError } = await sb.auth.signInWithOtp({
+    email: email,
+    options: { shouldCreateUser: false }
+  });
+
   btn.disabled = false; btn.textContent = 'Create account';
 
-  if (error) { document.getElementById('err3').textContent = error.message || 'Registration failed.'; return; }
-
-  if (data.user && data.session) {
-    // Signed in immediately — onAuthStateChange fires and calls startApp
-  } else {
-    document.getElementById('err3').style.color = 'var(--accent)';
-    document.getElementById('err3').textContent = 'Account created! Check your email to confirm, then sign in.';
+  if (linkError) {
+    document.getElementById('err3').textContent = linkError.message || 'Account created, but could not send the verification email.';
+    return;
   }
+
+  document.getElementById('registerVerifySubtext').textContent =
+    'Click the link we sent to ' + email + ' to finish creating your account.';
+  document.getElementById('registerFormWrap').style.display = 'none';
+  document.getElementById('registerVerifyPending').style.display = 'block';
 }
 
 // ── Sign out ──────────────────────────────────────────────
