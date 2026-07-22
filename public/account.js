@@ -1,8 +1,32 @@
 /* ============================================================
    BASELINE - account.js
-   Account modal — view/edit name, display ID.
-   Depends on: app.js (ICON_*, State, setHeaderName, updateGreeting), db.js
+   Account modal — view/edit name, display ID, subscription status.
+   Depends on: app.js (ICON_*, State, setHeaderName, updateGreeting,
+   getSubscriptionStatus), db.js, upgrade.js (openUpgradeModal)
    ============================================================ */
+
+// Maps subscription status onto the Account line's label + button, per the
+// four states in the spec: mid-trial, on Baseline, on Baseline Pro, and
+// everything else (never subscribed / trial expired / lifetime-free grant).
+function buildAccountLineInfo(subStatus) {
+  if (!subStatus) return { label: '—', buttonLabel: null, buttonOnclick: null };
+
+  if (subStatus.isLifetimeFree) {
+    return { label: 'Lifetime Access', buttonLabel: null, buttonOnclick: null };
+  }
+  if (subStatus.status === 'trialing' && subStatus.hasAccess) {
+    var days = subStatus.trialDaysRemaining;
+    var label = 'Free Trial: ' + days + ' day' + (days === 1 ? '' : 's');
+    return { label: label, buttonLabel: 'Upgrade', buttonOnclick: "openUpgradeModal('conditional')" };
+  }
+  if (subStatus.tier === 'baseline') {
+    return { label: 'Baseline', buttonLabel: 'Change / Upgrade', buttonOnclick: "openUpgradeModal('change_upgrade')" };
+  }
+  if (subStatus.tier === 'baseline_pro') {
+    return { label: 'Baseline Pro', buttonLabel: 'Change / Downgrade', buttonOnclick: "openUpgradeModal('change_downgrade')" };
+  }
+  return { label: 'Trial Expired', buttonLabel: 'Upgrade', buttonOnclick: "openUpgradeModal('conditional')" };
+}
 
 async function showAccountMenu() {
   var user    = State.currentUser;
@@ -25,11 +49,24 @@ async function showAccountMenu() {
     createdAt = d.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
   }
 
+  // Fetched fresh every time the menu opens — billing state can change
+  // asynchronously (webhook), so a stale cached value could show the wrong
+  // tier right after a real upgrade/downgrade.
+  var subStatus = await getSubscriptionStatus();
+  State.subscriptionStatus = subStatus;
+  var accountLine = buildAccountLineInfo(subStatus);
+
   var body = document.getElementById('accountModalBody');
   body.innerHTML =
     '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">'
     + '<div><span style="color:var(--text);font-size:13px;">' + name + '</span></div>'
     + '<button onclick="startEditName()" class="icon-btn" title="Edit name">' + ICON_EDIT + '</button>'
+    + '</div>'
+    + '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">'
+    + '<span>Account <span style="color:var(--text);">' + accountLine.label + '</span></span>'
+    + (accountLine.buttonLabel
+        ? '<button onclick="' + accountLine.buttonOnclick + '" class="pill-btn">' + accountLine.buttonLabel + '</button>'
+        : '')
     + '</div>'
     + '<div id="editNameWrap" style="display:none;margin-bottom:16px;">'
     + '<input id="editNameInput" type="text" value="' + name + '" maxlength="30" '

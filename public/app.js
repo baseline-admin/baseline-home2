@@ -197,12 +197,73 @@ function updateGreeting(name) {
 
 // ── Start app ─────────────────────────────────────────────
 
+// Fire-and-forget: starts the 14-day trial on first call for this user,
+// no-ops on every call after (server-side idempotency in /api/init-trial).
+// Runs on every session establishment rather than hooking each of the three
+// signup paths (password/OTP/Google) separately, since it's cheap and safe
+// to call repeatedly.
+async function ensureTrialInitialized() {
+  try {
+    var auth = await getAuthHeader();
+    if (!auth) return;
+    await fetch('/api/init-trial', { method: 'POST', headers: { 'Authorization': auth } });
+  } catch (err) {
+    console.error('Trial init failed:', err);
+  }
+}
+
+// Returns the auth header value for the current session, or null if signed out.
+async function getAuthHeader() {
+  var { data } = await sb.auth.getSession();
+  var token = data && data.session && data.session.access_token;
+  return token ? 'Bearer ' + token : null;
+}
+
+// Fetches fresh subscription status from the server. Used by the account
+// menu and the mandatory-upgrade gate below, rather than caching it in
+// State, since billing state can change asynchronously via webhook.
+async function getSubscriptionStatus() {
+  try {
+    var auth = await getAuthHeader();
+    if (!auth) return null;
+    var res = await fetch('/api/subscription-status', { headers: { 'Authorization': auth } });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.error('Could not load subscription status:', err);
+    return null;
+  }
+}
+
 async function startApp(user) {
   if (State.currentUser && State.currentUser.id === user.id) return;
   State.currentUser = user;
+  // Awaited (not fire-and-forget) — a brand new user's trial row must exist
+  // before the access check below runs, or they'd wrongly see the mandatory
+  // upgrade modal on their very first load.
+  await ensureTrialInitialized();
 
   var profile = await dbGetProfile();
   State.cachedProfile = profile;
+
+  if (profile && profile.deletion_requested_at) {
+    // Recovery takes priority over the paywall gate — showing both at once
+    // would stack two non-dismissable modals, so resolve this one first.
+    // Next load re-evaluates the paywall normally once it's resolved.
+    checkForPendingDeletion(profile);
+  } else {
+    var subStatus = await getSubscriptionStatus();
+    if (subStatus && !subStatus.hasAccess) {
+      // Modal overlay blocks all clicks to the app underneath, so this alone
+      // is the paywall gate — no separate blocking screen needed.
+      openUpgradeModal('mandatory');
+    } else {
+      // Only checked when not being paywalled — see checkForCheckoutSuccess's
+      // own comment for why this ordering is an acceptable trade-off.
+      checkForCheckoutSuccess();
+    }
+  }
+
   // Only use manually entered name — never use OAuth metadata, never show 'friend'
   var name = (profile && profile.first_name) ? profile.first_name : '';
   if (name.toLowerCase() === 'friend' || name.toLowerCase() === 'there') name = '';

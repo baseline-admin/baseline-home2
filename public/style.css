@@ -136,6 +136,14 @@ select option { background:var(--surface); color:var(--text); }
 .save-btn.saved { background:var(--accent); color:var(--bg-dark); border-color:var(--accent); font-weight:600; }
 .save-msg { font-family:var(--mono); font-size:11px; color:var(--muted); }
 
+/* Destructive variant of .save-btn — cancel-out-of-upgrade, delete account, etc. */
+.save-btn.danger-btn { border-color:#D9665C; color:#D9665C; }
+.save-btn.danger-btn:hover { background:#D9665C; color:var(--bg-dark); border-color:#D9665C; }
+
+/* Pill button used for the account menu's Upgrade / Change / Downgrade button */
+.pill-btn { font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; padding:6px 16px; border:1px solid var(--accent); border-radius:20px; background:none; color:var(--accent); cursor:pointer; }
+.pill-btn:hover { background:var(--accent); color:var(--bg-dark); }
+
 /* MY WORKOUTS */
 .workouts-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
 .workout-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; cursor:pointer; transition:border-color 0.15s; }
