@@ -579,6 +579,60 @@ app.post('/api/redeem-referral', async (req, res) => {
   }
 });
 
+// Redeemable any time from the Account menu (unlike referral codes, which
+// are signup-only) — admin-created lifetime-free grants for testers may
+// need to apply to an account that already exists. One redemption per
+// person, ever, enforced by promo_code_redemptions.user_id being unique.
+app.post('/api/redeem-promo-code', async (req, res) => {
+  const { code } = req.body || {};
+  if (!code || typeof code !== 'string') {
+    return res.status(400).json({ error: 'Invalid code' });
+  }
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Not signed in' });
+
+    const supabaseAdmin = getSupabaseAdmin();
+    const normalizedCode = code.trim().toUpperCase();
+
+    const { data: promoCode, error: codeErr } = await supabaseAdmin
+      .from('promo_codes')
+      .select('grants, uses, max_uses')
+      .eq('code', normalizedCode)
+      .maybeSingle();
+    if (codeErr) throw codeErr;
+    if (!promoCode) return res.status(400).json({ error: 'Invalid code' });
+    if (promoCode.max_uses !== null && promoCode.uses >= promoCode.max_uses) {
+      return res.status(400).json({ error: 'This code has reached its usage limit' });
+    }
+
+    const { error: redemptionErr } = await supabaseAdmin.from('promo_code_redemptions').insert({
+      user_id: user.id,
+      code: normalizedCode,
+    });
+    if (redemptionErr) {
+      if (redemptionErr.code === '23505') { // unique_violation on user_id
+        return res.status(400).json({ error: 'You have already redeemed a code' });
+      }
+      throw redemptionErr;
+    }
+
+    if (promoCode.grants === 'lifetime_free') {
+      const { error: upsertErr } = await supabaseAdmin
+        .from('subscriptions')
+        .upsert({ user_id: user.id, is_lifetime_free: true, status: 'active' }, { onConflict: 'user_id' });
+      if (upsertErr) throw upsertErr;
+    }
+
+    await supabaseAdmin.from('promo_codes').update({ uses: promoCode.uses + 1 }).eq('code', normalizedCode);
+
+    res.json({ ok: true, grants: promoCode.grants });
+  } catch (err) {
+    console.error('redeem-promo-code error:', err.message);
+    res.status(500).json({ error: 'Could not redeem code' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Server on port ' + PORT));
 module.exports = app;

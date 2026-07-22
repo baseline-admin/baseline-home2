@@ -94,6 +94,16 @@ async function showAccountMenu() {
           + '<button onclick="copyReferralCode()" class="icon-btn" id="copyReferralBtn" title="Copy referral code">' + ICON_COPY + '</button>'
           + '</div>'
         : '')
+    + (subStatus && subStatus.isLifetimeFree ? '' :
+        '<div style="margin-top:10px;">'
+        + '<button onclick="revealPromoCodeInput()" class="icon-btn-text" id="promoCodeToggle">Have a code?</button>'
+        + '<div id="promoCodeWrap" style="display:none;margin-top:8px;">'
+        + '<input id="promoCodeInput" type="text" placeholder="Enter code" maxlength="40" '
+        + 'style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 10px;border-radius:6px;width:100%;box-sizing:border-box;margin-bottom:8px;" />'
+        + '<button onclick="submitPromoCode()" id="submitPromoCodeBtn" style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:6px 16px;border:1px solid var(--accent);border-radius:20px;background:none;color:var(--accent);cursor:pointer;">Redeem</button>'
+        + '<div id="promoCodeMsg" style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:8px;"></div>'
+        + '</div>'
+        + '</div>')
     + '</div>';
 
   document.getElementById('accountModal').classList.add('open');
@@ -102,6 +112,39 @@ async function showAccountMenu() {
 function startEditName() {
   document.getElementById('editNameWrap').style.display = 'block';
   document.getElementById('editNameInput').focus();
+}
+
+function revealPromoCodeInput() {
+  document.getElementById('promoCodeWrap').style.display = 'block';
+  document.getElementById('promoCodeToggle').style.display = 'none';
+  document.getElementById('promoCodeInput').focus();
+}
+
+async function submitPromoCode() {
+  var input = document.getElementById('promoCodeInput');
+  var btn = document.getElementById('submitPromoCodeBtn');
+  var msg = document.getElementById('promoCodeMsg');
+  var code = input.value.trim();
+  if (!code) return;
+  btn.disabled = true; btn.textContent = 'Redeeming...';
+  try {
+    var auth = await getAuthHeader();
+    if (!auth) throw new Error('Please sign in again.');
+    var res = await fetch('/api/redeem-promo-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': auth },
+      body: JSON.stringify({ code: code })
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not redeem code.');
+    msg.textContent = 'Code redeemed!';
+    // Re-render the menu so the account line/button reflect lifetime-free
+    // access immediately, rather than waiting for the next time it's opened.
+    setTimeout(function() { showAccountMenu(); }, 800);
+  } catch (err) {
+    msg.textContent = err.message || 'Something went wrong.';
+    btn.disabled = false; btn.textContent = 'Redeem';
+  }
 }
 
 async function saveEditName() {
