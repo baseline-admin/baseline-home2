@@ -238,6 +238,14 @@ async function getSubscriptionStatus() {
 async function startApp(user) {
   if (State.currentUser && State.currentUser.id === user.id) return;
   State.currentUser = user;
+
+  // Checked before anything else — an unconfirmed email/password signup
+  // shouldn't get a trial started or see any app UI at all.
+  if (!user.email_confirmed_at) {
+    showEmailVerificationGate(user.email);
+    return;
+  }
+
   // Awaited (not fire-and-forget) — a brand new user's trial row must exist
   // before the access check below runs, or they'd wrongly see the mandatory
   // upgrade modal on their very first load.

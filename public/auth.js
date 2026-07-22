@@ -116,4 +116,53 @@ async function signOut() {
   await sb.auth.signOut();
   showStep1();
   document.getElementById('authEmail').value = '';
+  // Defensive: some of these modals have their own sign-out shortcut (e.g.
+  // the verify-email gate), so signing out from inside one must not leave
+  // it stuck open over the now-empty login screen.
+  ['accountModal', 'upgradeModal', 'congratsModal', 'recoverModal', 'verifyEmailModal'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+  });
+}
+
+// ── Email verification gate ───────────────────────────────
+// Only reachable in practice if Supabase grants a session before the
+// confirmation link is clicked — with "Confirm email" on, signUp() usually
+// withholds the session entirely until then (see register()'s else branch
+// above). This is a defensive backstop for startApp, not the primary gate.
+
+function showEmailVerificationGate(email) {
+  document.getElementById('verifyEmailModalBody').textContent =
+    'We sent a confirmation link to ' + email + '. Click it, then come back here.';
+  document.getElementById('verifyEmailModal').classList.add('open');
+}
+
+async function checkEmailVerified() {
+  var msg = document.getElementById('verifyEmailMsg');
+  try {
+    var { data, error } = await sb.auth.refreshSession();
+    if (error) throw error;
+    var user = data && data.user;
+    if (user && user.email_confirmed_at) {
+      document.getElementById('verifyEmailModal').classList.remove('open');
+      State.currentUser = null; // clear the guard so startApp actually re-runs
+      startApp(user);
+    } else {
+      msg.textContent = 'Still not verified — check your email and click the link.';
+    }
+  } catch (err) {
+    msg.textContent = err.message || 'Could not check verification status.';
+  }
+}
+
+async function resendVerificationEmail() {
+  var msg = document.getElementById('verifyEmailMsg');
+  try {
+    var email = State.currentUser && State.currentUser.email;
+    var { error } = await sb.auth.resend({ type: 'signup', email: email });
+    if (error) throw error;
+    msg.textContent = 'Verification email resent.';
+  } catch (err) {
+    msg.textContent = err.message || 'Could not resend email.';
+  }
 }

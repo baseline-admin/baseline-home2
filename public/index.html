@@ -352,6 +352,21 @@
     <div id="recoverModalMsg" style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:10px;"></div>
   </div>
 </div>
+<!-- Verify Email Modal — shown on login for password signups whose email
+     isn't confirmed yet. No backdrop-dismiss or X; sign out is the only escape. -->
+<div id="verifyEmailModal" class="ex-modal-overlay">
+  <div class="ex-modal-box" style="max-width:380px;text-align:center;">
+    <div class="ex-modal-name" style="margin-bottom:16px;">Verify your email</div>
+    <div id="verifyEmailModalBody" style="font-family:var(--mono);font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:20px;">
+    </div>
+    <button class="save-btn" onclick="checkEmailVerified()" style="width:100%;margin-bottom:12px;">I've verified — Continue</button>
+    <div style="display:flex;justify-content:center;gap:16px;">
+      <button class="icon-btn-text" onclick="resendVerificationEmail()">Resend email</button>
+      <button class="icon-btn-text" onclick="signOut()">Sign out</button>
+    </div>
+    <div id="verifyEmailMsg" style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:10px;"></div>
+  </div>
+</div>
 <!-- Share Modal -->
 <div id="shareModal" class="ex-modal-overlay" onclick="handleShareModalClick(event)">
   <div class="ex-modal-box" style="max-width:400px;">
