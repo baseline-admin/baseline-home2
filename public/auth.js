@@ -18,10 +18,6 @@ function showRegister() {
   document.getElementById('authStep1').style.display = 'none';
   document.getElementById('authStep3').style.display = 'block';
   document.getElementById('err3').textContent = '';
-  // Reset in case they previously got as far as "check your email" and
-  // came back to try again.
-  document.getElementById('registerFormWrap').style.display = 'block';
-  document.getElementById('registerVerifyPending').style.display = 'none';
 }
 
 // ── Google OAuth ──────────────────────────────────────────
@@ -90,12 +86,6 @@ async function verifyOTP() {
 }
 
 // ── Register ──────────────────────────────────────────────
-// Password alone doesn't prove email ownership, so verification is done
-// with the exact mechanism the sign-in flow already uses: send a real
-// magic link, require it be clicked before granting access, rather than
-// relying on Supabase's separate "Confirm email" setting. signUp() below
-// only creates the account; any session it hands back is immediately
-// discarded — the magic-link click is what grants the real one.
 async function register() {
   var email = document.getElementById('regEmail').value.trim();
   var pass  = document.getElementById('regPassword').value;
@@ -107,37 +97,22 @@ async function register() {
   var btn = document.getElementById('btnRegister');
   btn.disabled = true; btn.textContent = 'Creating...';
 
-  // Stashed in localStorage rather than a JS variable — this page will be
-  // long gone by the time the user actually comes back via the emailed
-  // link, possibly in a different tab (startApp reads and clears it).
+  // Stashed in localStorage rather than a JS variable so startApp (in a
+  // fresh page load, once signed in) can pick it up and redeem it.
   if (referralCode) localStorage.setItem('baseline_pending_referral_code', referralCode);
 
   var { data, error } = await sb.auth.signUp({ email: email, password: pass });
 
-  if (error) {
-    btn.disabled = false; btn.textContent = 'Create account';
-    document.getElementById('err3').textContent = error.message || 'Registration failed.';
-    return;
-  }
-
-  if (data.session) await sb.auth.signOut();
-
-  var { error: linkError } = await sb.auth.signInWithOtp({
-    email: email,
-    options: { shouldCreateUser: false }
-  });
-
   btn.disabled = false; btn.textContent = 'Create account';
 
-  if (linkError) {
-    document.getElementById('err3').textContent = linkError.message || 'Account created, but could not send the verification email.';
-    return;
-  }
+  if (error) { document.getElementById('err3').textContent = error.message || 'Registration failed.'; return; }
 
-  document.getElementById('registerVerifySubtext').textContent =
-    'Click the link we sent to ' + email + ' to finish creating your account.';
-  document.getElementById('registerFormWrap').style.display = 'none';
-  document.getElementById('registerVerifyPending').style.display = 'block';
+  if (data.user && data.session) {
+    // Signed in immediately — onAuthStateChange fires and calls startApp
+  } else {
+    document.getElementById('err3').style.color = 'var(--accent)';
+    document.getElementById('err3').textContent = 'Account created! Check your email to confirm, then sign in.';
+  }
 }
 
 // ── Sign out ──────────────────────────────────────────────
@@ -146,53 +121,10 @@ async function signOut() {
   await sb.auth.signOut();
   showStep1();
   document.getElementById('authEmail').value = '';
-  // Defensive: some of these modals have their own sign-out shortcut (e.g.
-  // the verify-email gate), so signing out from inside one must not leave
-  // it stuck open over the now-empty login screen.
-  ['accountModal', 'upgradeModal', 'congratsModal', 'recoverModal', 'verifyEmailModal'].forEach(function(id) {
+  // Defensive: signing out from inside a modal must not leave it stuck
+  // open over the now-empty login screen.
+  ['accountModal', 'upgradeModal', 'congratsModal', 'recoverModal'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.classList.remove('open');
   });
-}
-
-// ── Email verification gate ───────────────────────────────
-// Only reachable in practice if Supabase grants a session before the
-// confirmation link is clicked — with "Confirm email" on, signUp() usually
-// withholds the session entirely until then (see register()'s else branch
-// above). This is a defensive backstop for startApp, not the primary gate.
-
-function showEmailVerificationGate(email) {
-  document.getElementById('verifyEmailModalBody').textContent =
-    'We sent a confirmation link to ' + email + '. Click it, then come back here.';
-  document.getElementById('verifyEmailModal').classList.add('open');
-}
-
-async function checkEmailVerified() {
-  var msg = document.getElementById('verifyEmailMsg');
-  try {
-    var { data, error } = await sb.auth.refreshSession();
-    if (error) throw error;
-    var user = data && data.user;
-    if (user && user.email_confirmed_at) {
-      document.getElementById('verifyEmailModal').classList.remove('open');
-      State.currentUser = null; // clear the guard so startApp actually re-runs
-      startApp(user);
-    } else {
-      msg.textContent = 'Still not verified — check your email and click the link.';
-    }
-  } catch (err) {
-    msg.textContent = err.message || 'Could not check verification status.';
-  }
-}
-
-async function resendVerificationEmail() {
-  var msg = document.getElementById('verifyEmailMsg');
-  try {
-    var email = State.currentUser && State.currentUser.email;
-    var { error } = await sb.auth.resend({ type: 'signup', email: email });
-    if (error) throw error;
-    msg.textContent = 'Verification email resent.';
-  } catch (err) {
-    msg.textContent = err.message || 'Could not resend email.';
-  }
 }
