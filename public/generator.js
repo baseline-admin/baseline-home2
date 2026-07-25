@@ -59,6 +59,19 @@ function matchesFilter(value, allowedList){
   return false;
 }
 function getFormat(col){var o=FORMAT_MAP[col];return o?rnd(o):col;}
+function lastWord(name){
+  var parts=(name||'').trim().split(/\s+/);
+  return parts.length?parts[parts.length-1].toLowerCase():'';
+}
+// Drops candidates whose last word matches one already used (e.g. won't let
+// "Kettlebell Push Press" and "Dual Kettlebell Push Press" both be picked),
+// falling back to the unfiltered pool if that would leave nothing to choose
+// from — same fallback philosophy as pickNUniqueTypes.
+function filterByLastWord(pool,usedWords,nameKey){
+  if(!usedWords.length)return pool;
+  var filtered=pool.filter(function(ex){return usedWords.indexOf(lastWord(ex[nameKey]))===-1;});
+  return filtered.length?filtered:pool;
+}
 function isUni(ubVal){return(ubVal||'').toString().trim().toUpperCase()==='U';}
 function isSeconds(typeStr){
   var types=parseList(typeStr||'');
@@ -102,6 +115,7 @@ async function loadSheetData(){
     sel.disabled=false;
     document.getElementById('timeSelect').disabled=false;
     document.getElementById('genBtn').disabled=false;
+    updateSuggestButtonState();
     renderPromptPills(prompts);
     // Re-render library if it's the active page
     var libPage = document.getElementById('pageLibrary');
@@ -277,6 +291,7 @@ function selectFormatFilter(pill) {
   // Toggle off if already selected
   if (!current) pill.classList.add('gen-duration-pill-active');
   renderFormatFilterInfo(current ? '' : pill.getAttribute('data-value'));
+  updateSuggestButtonState();
 }
 
 function renderFormatFilterInfo(key) {
@@ -444,6 +459,7 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
       t2=keep.t2; t2n=keep.t2n;
     }else{
       var t2e=buildT2Candidates();
+      t2e=filterByLastWord(t2e,[lastWord(t1.row)],'row');
       if(t2e.length){var t2p=rnd(t2e);t2={row:t2p.row,col:selectedCol,val:t2p.val,type:t2p.type,mode:t2p.mode,ulc:t2p.ulc,ub:t2p.ub};t2n=parseRange(t2p.val);}
     }
   }
@@ -463,6 +479,8 @@ function _buildWorkout(prompt,ts,slotsToReplace,excl){
         var v=(d.t3Data[row]||{})[selectedCol];if(!v||!v.trim())return;
         t3e.push({row:row,col:selectedCol,val:v,type:(d.t3TypeData||{})[row]||'',ub:(d.t3UBData||{})[row]||'B'});
       });
+      var usedWords=[lastWord(t1.row)]; if(t2) usedWords.push(lastWord(t2.row));
+      t3e=filterByLastWord(t3e,usedWords,'row');
       if(t3e.length){var t3p=rnd(t3e);t3={row:t3p.row,col:selectedCol,val:t3p.val,type:t3p.type,ub:t3p.ub};t3n=parseRange(t3p.val);}
     }
   }
@@ -505,42 +523,47 @@ function renderOutput(isRegen){
   }
 }
 
-function buildResults(r){
-  var ec=function(csstype,label,name,col,reps,ub,extype){
-    var repsVal=reps!==null&&reps!==undefined?reps:'--';
-    var unit=repLabel(extype,ub);
-    var unitSpan='<span class="card-col" style="margin-left:8px;font-size:12px;">'+unit+'</span>';
-    var html='<div class="exercise-card '+csstype+'">';
-    html+='<div class="card-label '+csstype+'">'+label+'</div>';
-    var hasMedia=State.sheetData&&State.sheetData.exerciseMedia&&State.sheetData.exerciseMedia[name];
-    if(hasMedia){
-      html+='<div class="card-exercise card-exercise-link" data-exname="'+name+'" onclick="openExerciseModal(this)"><span class="ex-link-dot">&#9654;</span> '+name+'</div>';
-    }else{
-      html+='<div class="card-exercise">'+name+'</div>';
-    }
-    if(col)html+='<div class="card-col">'+col+'</div>';
-    html+='<div class="card-reps-row"><span class="card-reps">'+repsVal+'</span>'+unitSpan+'</div>';
-    html+='</div>';
-    return html;
-  };
-  var ac=function(csstype,label,name,reps,ub,rounds,extype){
-    var repsVal=reps!==null&&reps!==undefined?reps:'--';
-    var unit=repLabel(extype,ub);
-    var unitSpan='<span class="card-col" style="margin-left:8px;font-size:12px;">'+unit+'</span>';
-    var roundsStr=rounds&&parseInt(rounds)>1?'<div class="card-col" style="margin-top:4px;">x'+rounds+' rounds</div>':'';
-    var html='<div class="acc-card '+csstype+'">';
-    html+='<div class="card-label '+csstype+'">'+label+'</div>';
-    var hasMediaAcc=State.sheetData&&State.sheetData.exerciseMedia&&State.sheetData.exerciseMedia[name];
-    if(hasMediaAcc){
-      html+='<div class="acc-name card-exercise-link" data-exname="'+name+'" onclick="openExerciseModal(this)">'+name+'</div>';
-    }else{
-      html+='<div class="acc-name">'+name+'</div>';
-    }
-    html+='<div class="card-reps-row"><span class="acc-reps">'+repsVal+'</span>'+unitSpan+'</div>';
-    html+=roundsStr+'</div>';
-    return html;
-  };
+// Shared Main Work card builder — used by both a generated workout and the
+// Suggest Exercises panel. `rounds` is optional (e.g. '3-4') and renders the
+// same "xN rounds" line ac() already shows on Prep/Mobility cards; existing
+// callers that don't pass it get the old no-rounds-line behavior unchanged.
+function ec(csstype,label,name,col,reps,ub,extype,rounds){
+  var repsVal=reps!==null&&reps!==undefined?reps:'--';
+  var unit=repLabel(extype,ub);
+  var unitSpan='<span class="card-col" style="margin-left:8px;font-size:12px;">'+unit+'</span>';
+  var roundsStr=rounds?'<div class="card-col" style="margin-top:4px;">x'+rounds+' rounds</div>':'';
+  var html='<div class="exercise-card '+csstype+'">';
+  html+='<div class="card-label '+csstype+'">'+label+'</div>';
+  var hasMedia=State.sheetData&&State.sheetData.exerciseMedia&&State.sheetData.exerciseMedia[name];
+  if(hasMedia){
+    html+='<div class="card-exercise card-exercise-link" data-exname="'+name+'" onclick="openExerciseModal(this)"><span class="ex-link-dot">&#9654;</span> '+name+'</div>';
+  }else{
+    html+='<div class="card-exercise">'+name+'</div>';
+  }
+  if(col)html+='<div class="card-col">'+col+'</div>';
+  html+='<div class="card-reps-row"><span class="card-reps">'+repsVal+'</span>'+unitSpan+'</div>';
+  html+=roundsStr+'</div>';
+  return html;
+}
+function ac(csstype,label,name,reps,ub,rounds,extype){
+  var repsVal=reps!==null&&reps!==undefined?reps:'--';
+  var unit=repLabel(extype,ub);
+  var unitSpan='<span class="card-col" style="margin-left:8px;font-size:12px;">'+unit+'</span>';
+  var roundsStr=rounds&&parseInt(rounds)>1?'<div class="card-col" style="margin-top:4px;">x'+rounds+' rounds</div>':'';
+  var html='<div class="acc-card '+csstype+'">';
+  html+='<div class="card-label '+csstype+'">'+label+'</div>';
+  var hasMediaAcc=State.sheetData&&State.sheetData.exerciseMedia&&State.sheetData.exerciseMedia[name];
+  if(hasMediaAcc){
+    html+='<div class="acc-name card-exercise-link" data-exname="'+name+'" onclick="openExerciseModal(this)">'+name+'</div>';
+  }else{
+    html+='<div class="acc-name">'+name+'</div>';
+  }
+  html+='<div class="card-reps-row"><span class="acc-reps">'+repsVal+'</span>'+unitSpan+'</div>';
+  html+=roundsStr+'</div>';
+  return html;
+}
 
+function buildResults(r){
   var taC=r.taP.map(function(p,i){return ac('ta','Prep '+(i+1),p.name,parseRange(p.val),p.ub,p.rounds,p.type);}).join('');
   var tzC=r.tzP.map(function(p,i){return ac('tz','Mobility '+(i+1),p.name,parseRange(p.val),p.ub,p.rounds,p.type);}).join('');
 
@@ -563,6 +586,216 @@ function buildResults(r){
   if(r.tzP.length)h+='<div class="divider"></div><div class="results-section"><div class="section-label">Mobility</div><div class="acc-grid">'+tzC+'</div></div>';
   h+='</div>';
   return h;
+}
+
+// ── Suggest Exercises ──────────────────────────────────────
+// Alternative to Generate Workout: no workout format (no AMRAP/EMOM/For
+// Time), just up to 6 Main Work exercises (merged from T1/T2/T3, unlike a
+// generated workout's fixed one-slot-per-table approach) plus Prep/Mobility,
+// each shown with a rep RANGE instead of one rolled number.
+
+// Duration -> Main Work exercise count, specific to Suggest (Generated
+// workouts get their count from Config_ColumnPairing instead).
+function suggestMainCount(ts){ return ts==='45mins'?6:ts==='35mins'?5:4; }
+
+// Formats a raw "min/max/step" sheet value as a display range ("8-10"),
+// rather than parseRange's random single-value roll.
+function formatRepRange(s){
+  if(!s||!s.trim())return null;
+  var p=s.split('/');if(p.length<2)return null;
+  var a=parseFloat(p[0]),b=parseFloat(p[1]);
+  if(isNaN(a)||isNaN(b))return null;
+  if(Math.round(a)===Math.round(b))return String(Math.round(a));
+  return Math.round(a)+'-'+Math.round(b);
+}
+
+// Same fallback philosophy as pickNUniqueTypes, but enforces two rules at
+// once: no two picks share a last word, and no more than 2 picks share a
+// type. Relaxes the type cap (never the last-word rule, which is the one
+// meant to stop near-duplicate exercises) if the pool can't satisfy both,
+// so the suggestion count never comes up short.
+function pickSuggestedExercises(arr,n){
+  var pool=arr.slice(),picked=[],usedLastWords=[],typeCounts={};
+  n=Math.min(n,pool.length);
+  while(picked.length<n&&pool.length){
+    var strict=pool.filter(function(ex){
+      if(usedLastWords.indexOf(lastWord(ex.name))!==-1)return false;
+      var types=parseList(ex.type);
+      for(var i=0;i<types.length;i++){if((typeCounts[types[i]]||0)>=2)return false;}
+      return true;
+    });
+    var lastWordOnly=strict.length?strict:pool.filter(function(ex){
+      return usedLastWords.indexOf(lastWord(ex.name))===-1;
+    });
+    var source=lastWordOnly.length?lastWordOnly:pool;
+    var chosen=source[Math.floor(Math.random()*source.length)];
+    pool.splice(pool.indexOf(chosen),1);
+    picked.push(chosen);
+    usedLastWords.push(lastWord(chosen.name));
+    parseList(chosen.type).forEach(function(t){typeCounts[t]=(typeCounts[t]||0)+1;});
+  }
+  return picked;
+}
+
+function _buildSuggested(prompt,ts){
+  var diffLevel=getSelectedDiffLevel();
+  var d=State.sheetData;
+  var pRule=d.promptRules[prompt];
+  if(!pRule){alert('No rule for: '+prompt);return null;}
+
+  var t1TypesAllow=parseList(pRule.t1Types||'');
+  var t1ModesAllow=parseList(pRule.t1Modes||'');
+  var t1ULCAllow  =parseList(pRule.t1ULC||'');
+  var t2TypesAllow=parseList(pRule.t2Types||'');
+  var t2ModesAllow=parseList(pRule.t2Modes||'');
+  var t2ULCAllow  =parseList(pRule.t2ULC||'');
+
+  // AM column primary, EM3 as backup, per exercise — a suggested workout has
+  // no format/column of its own to key off, unlike a generated workout.
+  function repRangeVal(dataDict,row){
+    var v=(dataDict[row]||{})['AM'];
+    if(!v||!v.trim())v=(dataDict[row]||{})['EM3'];
+    return v;
+  }
+
+  var pool=[];
+  (d.t1Rows||[]).forEach(function(row){
+    var type=(d.t1TypeData||{})[row]||'';
+    if(isSeconds(type))return; // Rest/recovery excluded entirely — not an exercise
+    if(!matchesFilter(type,t1TypesAllow))return;
+    if(!matchesFilter((d.t1ModeData||{})[row],t1ModesAllow))return;
+    if(!matchesFilter((d.t1ULCData||{})[row],t1ULCAllow))return;
+    if(!clientDiffAllowed((d.t1DiffData||{})[row],diffLevel))return;
+    var v=repRangeVal(d.t1Data,row);if(!v||!v.trim())return;
+    pool.push({name:row,val:v,ub:(d.t1UBData||{})[row]||'B',type:type});
+  });
+  (d.t2Rows||[]).forEach(function(row){
+    var type=(d.t2TypeData||{})[row]||'';
+    if(isSeconds(type))return;
+    if(!matchesFilter(type,t2TypesAllow))return;
+    if(!matchesFilter((d.t2ModeData||{})[row],t2ModesAllow))return;
+    if(!matchesFilter((d.t2ULCData||{})[row],t2ULCAllow))return;
+    if(!clientDiffAllowed((d.t2DiffData||{})[row],diffLevel))return;
+    var v=repRangeVal(d.t2Data,row);if(!v||!v.trim())return;
+    pool.push({name:row,val:v,ub:(d.t2UBData||{})[row]||'B',type:type});
+  });
+  (d.t3Rows||[]).forEach(function(row){
+    // T3 stays unfiltered by type/mode/ULC, same as a generated workout.
+    var type=(d.t3TypeData||{})[row]||'';
+    if(isSeconds(type))return;
+    var v=repRangeVal(d.t3Data,row);if(!v||!v.trim())return;
+    pool.push({name:row,val:v,ub:(d.t3UBData||{})[row]||'B',type:type});
+  });
+
+  var mainP=pickSuggestedExercises(pool,suggestMainCount(ts));
+
+  var nAZ=ts==='45mins'?3:ts==='35mins'?2:1;
+  var taE=(d.taRows||[]).filter(function(ex){
+    var v=(d.taData||{})[ex];if(!v||!v.trim())return false;
+    return !isSeconds((d.taTypeData||{})[ex]||'');
+  }).map(function(ex){return{name:ex,val:d.taData[ex],ub:(d.taUBData||{})[ex]||'B',rounds:(d.taRoundsData||{})[ex]||'2',type:(d.taTypeData||{})[ex]||''};});
+  var taP=pickNUniqueTypes(taE,nAZ);
+
+  var tzE=(d.tzRows||[]).filter(function(ex){
+    var v=(d.tzData||{})[ex];if(!v||!v.trim())return false;
+    return !isSeconds((d.tzTypeData||{})[ex]||'');
+  }).map(function(ex){return{name:ex,val:d.tzData[ex],ub:(d.tzUBData||{})[ex]||'B',rounds:(d.tzRoundsData||{})[ex]||'2',type:(d.tzTypeData||{})[ex]||''};});
+  var tzP=pickN(tzE,nAZ);
+
+  return{mainP:mainP,taP:taP,tzP:tzP,prompt:prompt,timeStr:ts};
+}
+
+function suggestExercises(){
+  var prompt=document.getElementById('promptSelect').value;
+  var ts=document.getElementById('timeSelect').value;
+  if(!prompt||!ts)return;
+  if(getSelectedFormatFilter())return; // button should already be disabled — defensive only
+  showGenerating();
+  var result=_buildSuggested(prompt,ts);
+  if(!result)return;
+  State.lastSuggested=result;
+  renderSuggestedOutput();
+}
+
+function buildSuggestedResults(r){
+  var taC=r.taP.map(function(p,i){return ac('ta','Prep '+(i+1),p.name,formatRepRange(p.val),p.ub,p.rounds,p.type);}).join('');
+  var tzC=r.tzP.map(function(p,i){return ac('tz','Mobility '+(i+1),p.name,formatRepRange(p.val),p.ub,p.rounds,p.type);}).join('');
+  var mainC=r.mainP.map(function(ex,i){return ec('t1','Exercise '+(i+1),ex.name,null,formatRepRange(ex.val),ex.ub,ex.type,'3-4');}).join('');
+
+  var h='<div class="results">';
+  h+='<div class="gen-instruction">Tap an exercise to view instructions &mdash; tap image to play video</div>';
+  if(r.taP.length)h+='<div class="results-section"><div class="section-label">Prep</div><div class="acc-grid">'+taC+'</div></div><div class="divider"></div>';
+  h+='<div class="results-section"><div class="section-label">Main Work</div><div class="acc-grid">'+mainC+'</div></div>';
+  if(r.tzP.length)h+='<div class="divider"></div><div class="results-section"><div class="section-label">Mobility</div><div class="acc-grid">'+tzC+'</div></div>';
+  h+='</div>';
+  return h;
+}
+
+function renderSuggestedOutput(){
+  if(typeof openGeneratorPanel==='function') openGeneratorPanel();
+  var inst=document.querySelector('.gen-instructions');
+  if(inst) inst.style.display='none';
+  var r=State.lastSuggested;
+  var h=buildSuggestedResults(r);
+  h+='<div class="save-area">';
+  h+='<button class="save-btn" id="createWorkoutFromSuggestBtn" onclick="createWorkoutFromSuggested()">Create Workout</button>';
+  h+='</div>';
+  document.getElementById('output').innerHTML=h;
+  var lwCard = document.getElementById('lastWorkoutCard');
+  var outputEl = document.getElementById('output');
+  if (lwCard && outputEl && outputEl.parentNode) {
+    outputEl.parentNode.insertBefore(lwCard, outputEl.nextSibling);
+  }
+}
+
+// Transports the suggestion into the Create Workout panel, following the
+// exact same pattern as loadWorkoutForEditing (create-workout.js): rebuild
+// CWState wholesale, then navigate to the Library tab to render it.
+function createWorkoutFromSuggested(){
+  var r=State.lastSuggested;
+  if(!r)return;
+
+  function midpoint(valStr){
+    if(!valStr||!valStr.trim())return '';
+    var p=valStr.split('/');
+    if(p.length<2)return '';
+    var a=parseFloat(p[0]),b=parseFloat(p[1]);
+    if(isNaN(a)||isNaN(b))return '';
+    return String(Math.round((a+b)/2));
+  }
+  function toCWExercise(ex){
+    return {name:ex.name,reps:midpoint(ex.val),ub:ex.ub,type:ex.type,isRest:false,ticked:true};
+  }
+
+  var mainEx=r.mainP.map(toCWExercise);
+  var prepEx=r.taP.map(toCWExercise);
+  var mobEx =r.tzP.map(toCWExercise);
+  var prepRounds=r.taP.length?(r.taP[0].rounds||''):'';
+  var mobRounds =r.tzP.length?(r.tzP[0].rounds||''):'';
+
+  CWState = {
+    open: true,
+    activeSegment: 'main',
+    editingWorkoutId: null,
+    editingWorkoutTitle: null,
+    segments: {
+      main:     { exercises: mainEx, format: null, formatTicked: false, rounds: '3-4', roundsTicked: true },
+      prep:     { exercises: prepEx, rounds: prepRounds, roundsTicked: !!prepRounds },
+      mobility: { exercises: mobEx,  rounds: mobRounds,  roundsTicked: !!mobRounds }
+    }
+  };
+
+  var libTab = document.querySelector('.nav-tab[onclick*="library"]');
+  showPage('library', libTab);
+  setTimeout(function(){
+    if (typeof renderLibrary === 'function') renderLibrary();
+  }, 50);
+}
+
+function updateSuggestButtonState(){
+  var btn=document.getElementById('suggestBtn');
+  if(!btn)return;
+  btn.disabled = !!getSelectedFormatFilter() || !State.sheetData;
 }
 
 // ── Refine panel ──────────────────────────────────────────

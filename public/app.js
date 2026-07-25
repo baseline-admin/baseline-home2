@@ -26,6 +26,7 @@ var State = {
   currentUser: null,
   sheetData:   null,
   lastResult:  null,
+  lastSuggested: null,   // Suggest Exercises output — kept separate from lastResult
   openWorkout: null,
   workoutsNotif: false,  // true if there are unseen shared workouts
   cachedWorkouts: [],     // local cache updated immediately on title edits
