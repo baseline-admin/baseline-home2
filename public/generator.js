@@ -78,6 +78,12 @@ function isSeconds(typeStr){
   return types.indexOf('recovery')!==-1||types.indexOf('hold')!==-1;
 }
 function isRecovery(typeStr){ return isSeconds(typeStr); } // alias kept for compatibility
+// Narrower than isSeconds/isRecovery (which also catch 'hold') — Suggest
+// Exercises only needs to drop genuine "Rest" placeholders, not legitimate
+// hold-based exercises (e.g. most Mobility work is type 'hold').
+function isRestType(typeStr){
+  return parseList(typeStr||'').indexOf('recovery')!==-1;
+}
 function repLabel(typeStr,ub){
   if(isSeconds(typeStr))return'seconds';
   var types=parseList(typeStr||'');
@@ -661,7 +667,7 @@ function _buildSuggested(prompt,ts){
   var pool=[];
   (d.t1Rows||[]).forEach(function(row){
     var type=(d.t1TypeData||{})[row]||'';
-    if(isSeconds(type))return; // Rest/recovery excluded entirely — not an exercise
+    if(isRestType(type))return; // Rest/recovery excluded entirely — not an exercise (hold stays eligible)
     if(!matchesFilter(type,t1TypesAllow))return;
     if(!matchesFilter((d.t1ModeData||{})[row],t1ModesAllow))return;
     if(!matchesFilter((d.t1ULCData||{})[row],t1ULCAllow))return;
@@ -671,7 +677,7 @@ function _buildSuggested(prompt,ts){
   });
   (d.t2Rows||[]).forEach(function(row){
     var type=(d.t2TypeData||{})[row]||'';
-    if(isSeconds(type))return;
+    if(isRestType(type))return;
     if(!matchesFilter(type,t2TypesAllow))return;
     if(!matchesFilter((d.t2ModeData||{})[row],t2ModesAllow))return;
     if(!matchesFilter((d.t2ULCData||{})[row],t2ULCAllow))return;
@@ -682,7 +688,7 @@ function _buildSuggested(prompt,ts){
   (d.t3Rows||[]).forEach(function(row){
     // T3 stays unfiltered by type/mode/ULC, same as a generated workout.
     var type=(d.t3TypeData||{})[row]||'';
-    if(isSeconds(type))return;
+    if(isRestType(type))return;
     var v=repRangeVal(d.t3Data,row);if(!v||!v.trim())return;
     pool.push({name:row,val:v,ub:(d.t3UBData||{})[row]||'B',type:type});
   });
@@ -692,13 +698,13 @@ function _buildSuggested(prompt,ts){
   var nAZ=ts==='45mins'?3:ts==='35mins'?2:1;
   var taE=(d.taRows||[]).filter(function(ex){
     var v=(d.taData||{})[ex];if(!v||!v.trim())return false;
-    return !isSeconds((d.taTypeData||{})[ex]||'');
+    return !isRestType((d.taTypeData||{})[ex]||'');
   }).map(function(ex){return{name:ex,val:d.taData[ex],ub:(d.taUBData||{})[ex]||'B',rounds:(d.taRoundsData||{})[ex]||'2',type:(d.taTypeData||{})[ex]||''};});
   var taP=pickNUniqueTypes(taE,nAZ);
 
   var tzE=(d.tzRows||[]).filter(function(ex){
     var v=(d.tzData||{})[ex];if(!v||!v.trim())return false;
-    return !isSeconds((d.tzTypeData||{})[ex]||'');
+    return !isRestType((d.tzTypeData||{})[ex]||'');
   }).map(function(ex){return{name:ex,val:d.tzData[ex],ub:(d.tzUBData||{})[ex]||'B',rounds:(d.tzRoundsData||{})[ex]||'2',type:(d.tzTypeData||{})[ex]||''};});
   var tzP=pickN(tzE,nAZ);
 
