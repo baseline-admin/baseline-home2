@@ -71,12 +71,15 @@ async function showAccountMenu() {
     + '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">'
     + '<span>Account <span style="color:var(--text);">' + accountLine.label + '</span></span>'
     + (accountLine.buttonLabel
-        ? '<button onclick="' + accountLine.buttonOnclick + '" class="pill-btn">' + accountLine.buttonLabel + '</button>'
+        ? '<div style="display:flex;align-items:center;">'
+          + '<button onclick="revealUpgradeButton()" class="icon-btn" id="upgradeToggleBtn" title="' + accountLine.buttonLabel + '">' + ICON_PLUS + '</button>'
+          + '<span id="upgradeButtonWrap" class="upgrade-btn-wrap"><button onclick="' + accountLine.buttonOnclick + '" class="pill-btn">' + accountLine.buttonLabel + '</button></span>'
+          + '</div>'
         : '')
     + '</div>'
     + '<div id="editNameWrap" style="display:none;margin-bottom:16px;">'
     + '<input id="editNameInput" type="text" value="' + name + '" maxlength="30" '
-    + 'style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 10px;border-radius:6px;width:100%;box-sizing:border-box;margin-bottom:8px;" />'
+    + 'style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:16px;padding:6px 10px;border-radius:6px;width:100%;box-sizing:border-box;margin-bottom:8px;" />'
     + '<button onclick="saveEditName()" style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:6px 16px;border:1px solid var(--accent);border-radius:20px;background:none;color:var(--accent);cursor:pointer;">Save</button>'
     + '</div>'
     + '<div style="padding:12px 0;border-top:1px solid var(--border);">'
@@ -84,8 +87,8 @@ async function showAccountMenu() {
     + '<div style="display:flex;align-items:center;justify-content:space-between;">'
     + '<span>User ID <span style="color:var(--text);" id="accountDisplayId">' + displayId + '</span></span>'
     + '<div style="display:flex;align-items:center;gap:4px;">'
-    + '<button onclick="copyDisplayId()" class="icon-btn" id="copyIdBtn" title="Copy User ID">' + ICON_COPY + '</button>'
     + '<button onclick="confirmRefreshDisplayId()" class="icon-btn" title="Refresh ID">' + ICON_REFRESH + '</button>'
+    + '<button onclick="copyDisplayId()" class="icon-btn" id="copyIdBtn" title="Copy User ID">' + ICON_COPY + '</button>'
     + '</div>'
     + '</div>'
     + (referralCode
@@ -99,7 +102,7 @@ async function showAccountMenu() {
         + '<button onclick="revealPromoCodeInput()" class="icon-btn-text" id="promoCodeToggle">Have a code?</button>'
         + '<div id="promoCodeWrap" style="display:none;margin-top:8px;">'
         + '<input id="promoCodeInput" type="text" placeholder="Enter code" maxlength="40" '
-        + 'style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 10px;border-radius:6px;width:100%;box-sizing:border-box;margin-bottom:8px;" />'
+        + 'style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:16px;padding:6px 10px;border-radius:6px;width:100%;box-sizing:border-box;margin-bottom:8px;" />'
         + '<button onclick="submitPromoCode()" id="submitPromoCodeBtn" style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;padding:6px 16px;border:1px solid var(--accent);border-radius:20px;background:none;color:var(--accent);cursor:pointer;">Redeem</button>'
         + '<div id="promoCodeMsg" style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:8px;"></div>'
         + '</div>'
@@ -112,6 +115,13 @@ async function showAccountMenu() {
 function startEditName() {
   document.getElementById('editNameWrap').style.display = 'block';
   document.getElementById('editNameInput').focus();
+}
+
+function revealUpgradeButton() {
+  var toggleBtn = document.getElementById('upgradeToggleBtn');
+  var wrap = document.getElementById('upgradeButtonWrap');
+  if (toggleBtn) toggleBtn.style.display = 'none';
+  if (wrap) wrap.classList.add('expanded');
 }
 
 function revealPromoCodeInput() {

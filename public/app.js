@@ -20,6 +20,7 @@ var ICON_REPLAY  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" 
 var ICON_SHARE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
 var ICON_CHEVRON_CLOSED = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 var ICON_CHEVRON_OPEN = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+var ICON_PLUS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
 var State = {
   currentUser: null,
@@ -150,7 +151,7 @@ function isInstalledPWA() {
 function showNamePrompt() {
   var wrap = document.getElementById('headerRight');
   wrap.innerHTML = '<div class="name-prompt-wrap">'
-    + '<input class="name-prompt-input" id="nameInput" type="text" placeholder="Enter your name" maxlength="30" />'
+    + '<input class="name-prompt-input" id="nameInput" type="text" placeholder="Your name" maxlength="30" />'
     + '<button class="name-prompt-btn" onclick="saveName()">Save</button>'
     + '</div>'
     + (!isInstalledPWA() ? '<button class="install-btn" onclick="showInstallTip()">Install</button>' : '');
