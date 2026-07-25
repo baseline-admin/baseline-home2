@@ -31,11 +31,11 @@ function buildAccountLineInfo(subStatus) {
 async function showAccountMenu() {
   var user    = State.currentUser;
   var profile = State.cachedProfile || {};
-  var name    = profile.first_name || '';
+  var name    = normalizeUserName(profile.first_name);
 
   // Ensure a display_id exists (first-time users who signed up before this feature)
   if (!profile.display_id) {
-    var newId = buildDisplayId(name);
+    var newId = buildDisplayId(name || NAME_PLACEHOLDER);
     var updated = await dbUpsertProfile(name, newId);
     State.cachedProfile = updated;
     profile = updated;
@@ -65,7 +65,7 @@ async function showAccountMenu() {
   var body = document.getElementById('accountModalBody');
   body.innerHTML =
     '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">'
-    + '<div><span style="color:var(--text);font-size:13px;">' + name + '</span></div>'
+    + '<div><span style="color:var(--text);font-size:13px;">' + (name || NAME_PLACEHOLDER) + '</span></div>'
     + '<button onclick="startEditName()" class="icon-btn" title="Edit name">' + ICON_EDIT + '</button>'
     + '</div>'
     + '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">'
@@ -162,6 +162,13 @@ async function saveEditName() {
   if (!input) return;
   var name = input.value.trim();
   if (!name) return;
+  if (isReservedName(name)) {
+    input.value = '';
+    input.style.borderColor = '#D9665C';
+    setTimeout(function() { input.style.borderColor = ''; }, 2000);
+    input.focus();
+    return;
+  }
   var newDisplayId = buildDisplayId(name);
   var updated = await dbUpsertProfile(name, newDisplayId);
   State.cachedProfile = updated;
@@ -239,8 +246,8 @@ async function doRefreshDisplayId() {
   var p = document.getElementById('refreshConfirmPopup');
   if (p) p.remove();
   var profile = State.cachedProfile || {};
-  var name = profile.first_name || '';
-  var newDisplayId = buildDisplayId(name);
+  var name = normalizeUserName(profile.first_name);
+  var newDisplayId = buildDisplayId(name || NAME_PLACEHOLDER);
   var updated = await dbUpsertProfile(name, newDisplayId);
   State.cachedProfile = updated;
   var el = document.getElementById('accountDisplayId');

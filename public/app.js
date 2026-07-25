@@ -36,6 +36,28 @@ var State = {
 
 // DB helpers — see db.js
 
+// ── Name handling ──────────────────────────────────────────
+// 'Friend' shows up as first_name on a freshly created profiles row — a
+// legacy DB-side default that predates this codebase, not something set
+// by any code here. Never display it, never let anyone save it as their
+// own name, and self-heal it out of the stored row the first time it's
+// seen (see startApp). Same treatment for 'there', an old OAuth-metadata
+// fallback.
+var NAME_PLACEHOLDER = 'EnterName';
+
+function normalizeUserName(rawName) {
+  var name = (rawName || '').trim();
+  if (!name) return '';
+  var lower = name.toLowerCase();
+  if (lower === 'friend' || lower === 'there') return '';
+  return name;
+}
+
+function isReservedName(rawName) {
+  var lower = (rawName || '').trim().toLowerCase();
+  return lower === 'friend' || lower === 'there' || lower === NAME_PLACEHOLDER.toLowerCase();
+}
+
 // ── Splash ───────────────────────────────────────────────
 
 function dismissSplash() {
@@ -166,6 +188,14 @@ async function saveName() {
   if (!input) return;
   var name = input.value.trim();
   if (!name) return;
+  if (isReservedName(name)) {
+    input.value = '';
+    input.placeholder = 'Try a different name';
+    input.style.borderColor = '#D9665C';
+    setTimeout(function() { input.style.borderColor = ''; input.placeholder = 'Your name'; }, 2000);
+    input.focus();
+    return;
+  }
   await dbUpsertProfile(name);
   setHeaderName(name);
   updateGreeting(name);
@@ -247,6 +277,11 @@ async function startApp(user) {
   redeemPendingReferralCodeIfAny(); // fire-and-forget — see its own comment
 
   var profile = await dbGetProfile();
+  // Self-heal a legacy 'Friend'/'there' default straight out of the stored
+  // row, so it never lingers as literal data for any other reader to see.
+  if (profile && profile.first_name && isReservedName(profile.first_name)) {
+    profile = await dbUpsertProfile('', profile.display_id);
+  }
   State.cachedProfile = profile;
 
   if (profile && profile.deletion_requested_at) {
@@ -268,8 +303,7 @@ async function startApp(user) {
   }
 
   // Only use manually entered name — never use OAuth metadata, never show 'friend'
-  var name = (profile && profile.first_name) ? profile.first_name : '';
-  if (name.toLowerCase() === 'friend' || name.toLowerCase() === 'there') name = '';
+  var name = normalizeUserName(profile && profile.first_name);
 
   var greetingEl = document.getElementById('greeting');
   if (greetingEl) {

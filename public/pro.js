@@ -391,7 +391,7 @@ async function submitProBooking() {
     // slow or fails. Both upgrade in place with the real Meet link once
     // sendProConsultationInvite resolves.
     var slotDate = new Date(ProState.selectedSlotISO);
-    var userLabel = (State.cachedProfile && State.cachedProfile.first_name) || ProState.bookingEmail;
+    var userLabel = normalizeUserName(State.cachedProfile && State.cachedProfile.first_name) || ProState.bookingEmail;
     showProDetailsPanel(slotDate, userLabel, null);
     showProGCalLink(slotDate, notes, null, userLabel);
     showProIcsLink(slotDate, notes, null, userLabel);
@@ -427,7 +427,7 @@ async function submitProBooking() {
 // or failed calendar call shouldn't delay/block the "Confirmed" state the user sees.
 async function sendProConsultationInvite(slotISO, email, notes) {
   try {
-    var userLabel = (State.cachedProfile && State.cachedProfile.first_name) || email;
+    var userLabel = normalizeUserName(State.cachedProfile && State.cachedProfile.first_name) || email;
     var res = await fetch('/api/book-consultation', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
