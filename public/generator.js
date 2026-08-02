@@ -685,13 +685,8 @@ function _buildSuggested(prompt,ts){
     var v=repRangeVal(d.t2Data,row);if(!v||!v.trim())return;
     pool.push({name:row,val:v,ub:(d.t2UBData||{})[row]||'B',type:type});
   });
-  (d.t3Rows||[]).forEach(function(row){
-    // T3 stays unfiltered by type/mode/ULC, same as a generated workout.
-    var type=(d.t3TypeData||{})[row]||'';
-    if(isRestType(type))return;
-    var v=repRangeVal(d.t3Data,row);if(!v||!v.trim())return;
-    pool.push({name:row,val:v,ub:(d.t3UBData||{})[row]||'B',type:type});
-  });
+  // Table 3 deliberately excluded from Suggest Exercises — unlike Generate
+  // Workout, which always includes it.
 
   var mainP=pickSuggestedExercises(pool,suggestMainCount(ts));
 
