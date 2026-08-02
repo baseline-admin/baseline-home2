@@ -100,8 +100,9 @@ select option { background:var(--surface); color:var(--text); }
 .gen-btn { padding:10px 16px; background:var(--accent); color:var(--bg-dark); border:none; border-radius:var(--radius); font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; text-align:center; line-height:1.5; font-weight:600; }
 .gen-btn:hover:not(:disabled) { opacity:0.9; }
 .gen-btn:disabled { opacity:0.3; cursor:not-allowed; }
-.gen-btn-row { display:flex; gap:12px; }
+.gen-btn-row { display:flex; align-items:center; gap:12px; }
 .gen-btn-row .gen-btn { flex:1; }
+.gen-btn-or { font-family:var(--mono); font-size:11px; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); }
 .state-msg { text-align:center; padding:60px 0; color:var(--muted); font-family:var(--mono); font-size:13px; }
 
 /* RESULTS */
