@@ -225,6 +225,7 @@ async function checkForCheckoutSuccess() {
   for (var attempt = 0; attempt < 5; attempt++) {
     var status = await getSubscriptionStatus();
     if (status && status.hasAccess && (status.tier === 'baseline' || status.tier === 'baseline_pro')) {
+      State.subscriptionStatus = status; // so the Pro tab picks up the new tier without a reload
       showCongratsModal(status.tier);
       return;
     }

@@ -181,38 +181,69 @@
 
   <!-- Pro -->
   <div class="page" id="pagePro">
-    <div class="page-title">Baseline Pro</div>
-    <div class="page-sub">1 on 1 guided programming for tennis players</div>
+    <!-- Shown to signed-in users without Baseline Pro: marketing + booking -->
+    <div id="proMarketingView">
+      <div class="page-title">Baseline Pro</div>
+      <div class="page-sub">1 on 1 guided programming for tennis players</div>
 
-    <ul class="pro-features">
-      <li>Individualised programs, tailored to your game</li>
-      <li>Regular check in calls with your trainer</li>
-      <li>Progress tracking, form checks and more</li>
-    </ul>
-    <div class="pro-closing">All in the Baseline app. No other downloads required.</div>
+      <ul class="pro-features">
+        <li>Individualised programs, tailored to your game</li>
+        <li>Regular check in calls with your trainer</li>
+        <li>Progress tracking, form checks and more</li>
+      </ul>
+      <div class="pro-closing">All in the Baseline app. No other downloads required.</div>
 
-    <div class="pro-price-box" onclick="openUpgradeModal('pro_upgrade')" role="button" tabindex="0">
-      <div class="pro-price-label">Membership</div>
-      <div class="pro-price-value">&pound;49.99<span>/month</span></div>
+      <div class="pro-price-box" onclick="openUpgradeModal('pro_upgrade')" role="button" tabindex="0">
+        <div class="pro-price-label">Membership</div>
+        <div class="pro-price-value">&pound;49.99<span>/month</span></div>
+      </div>
+
+      <button class="pro-cta-btn" onclick="scrollToProCalendar()">Book a free consultation call</button>
+
+      <div class="pro-calendar-panel" id="proCalendarPanel">
+        <button class="pro-cal-header" onclick="toggleProCalendarPanel()">
+          <div>
+            <div class="pro-cal-title">Consultation calendar</div>
+            <div class="pro-cal-range" id="proCalRangeLabel"></div>
+          </div>
+          <span class="icon-btn" id="proCalChevron"></span>
+        </button>
+        <div class="pro-cal-body" id="proCalBody">
+          <div class="pro-cal-nav">
+            <button class="pro-cal-nav-btn" id="proCalPrevBtn" onclick="proNavWeek(-1)">&larr; Prev</button>
+            <button class="pro-cal-nav-btn" id="proCalNextBtn" onclick="proNavWeek(1)">Next &rarr;</button>
+          </div>
+          <div class="pro-cal-grid-wrap" id="proCalendarBody"></div>
+        </div>
+      </div>
     </div>
 
-    <button class="pro-cta-btn" onclick="scrollToProCalendar()">Book a free consultation call</button>
+    <!-- Shown to Baseline Pro subscribers: video upload + coach chat -->
+    <div id="proCoachingView" style="display:none;">
+      <div class="page-title">Baseline Pro</div>
+      <div class="page-sub">Send your coach a video, or ask a question</div>
 
-    <div class="pro-calendar-panel" id="proCalendarPanel">
-      <button class="pro-cal-header" onclick="toggleProCalendarPanel()">
-        <div>
-          <div class="pro-cal-title">Consultation calendar</div>
-          <div class="pro-cal-range" id="proCalRangeLabel"></div>
-        </div>
-        <span class="icon-btn" id="proCalChevron"></span>
-      </button>
-      <div class="pro-cal-body" id="proCalBody">
-        <div class="pro-cal-nav">
-          <button class="pro-cal-nav-btn" id="proCalPrevBtn" onclick="proNavWeek(-1)">&larr; Prev</button>
-          <button class="pro-cal-nav-btn" id="proCalNextBtn" onclick="proNavWeek(1)">Next &rarr;</button>
-        </div>
-        <div class="pro-cal-grid-wrap" id="proCalendarBody"></div>
+      <div class="section-label" style="margin-top:8px;">Upload a video</div>
+      <input type="file" id="proVideoFileInput" accept="video/*" style="display:none;" onchange="handleProVideoFileSelected(event)" />
+      <button class="pro-cta-btn" id="proVideoUploadBtn" onclick="document.getElementById('proVideoFileInput').click()">Upload training video</button>
+      <div id="proVideoUploadMsg" class="lw-meta" style="margin:-8px 0 20px;"></div>
+      <div id="proVideoList"></div>
+
+      <div class="divider"></div>
+
+      <div class="section-label">Chat with your coach</div>
+      <div id="proChatThread" class="pro-chat-thread"></div>
+      <div class="pro-chat-input-row">
+        <textarea id="proChatInput" class="pro-chat-input" placeholder="Message your coach..." rows="2"></textarea>
+        <button class="pro-cta-btn" id="proChatSendBtn" style="width:auto;margin:0;" onclick="sendProChatMessage()">Send</button>
       </div>
+    </div>
+
+    <!-- Shown only to the coach account: inbox across all Pro subscribers -->
+    <div id="proCoachInboxView" style="display:none;">
+      <div class="page-title">Coach Inbox</div>
+      <div class="page-sub">Baseline Pro subscribers</div>
+      <div id="proCoachInboxList"></div>
     </div>
   </div>
 </div>

@@ -292,6 +292,11 @@ async function startApp(user) {
     checkForPendingDeletion(profile);
   } else {
     var subStatus = await getSubscriptionStatus();
+    // Cached so renderProTab() can pick its render branch synchronously
+    // instead of re-fetching (and flashing the wrong shape) on every visit
+    // to the Pro tab. Refreshed again after checkout success and whenever
+    // the account menu opens (see upgrade.js/account.js).
+    State.subscriptionStatus = subStatus;
     if (subStatus && !subStatus.hasAccess) {
       // Modal overlay blocks all clicks to the app underneath, so this alone
       // is the paywall gate — no separate blocking screen needed.

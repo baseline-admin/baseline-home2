@@ -989,6 +989,33 @@ video { -webkit-appearance:none; }
 }
 .pro-cta-btn:hover { opacity:0.9; }
 
+/* Pro coaching: uploaded videos reuse .last-workout-card/.lw-* as-is for
+   visual parity with the "Previous session" cards. */
+.pro-video-card { cursor:default; }
+
+.pro-chat-thread {
+  display:flex; flex-direction:column; gap:8px;
+  max-height:340px; overflow-y:auto;
+  margin-bottom:12px; padding:4px 2px;
+}
+.pro-chat-msg {
+  max-width:80%; padding:10px 14px; border-radius:12px;
+  font-size:14px; color:var(--text); line-height:1.4;
+  background:var(--surface); border:1px solid var(--border);
+}
+.pro-chat-msg-user { align-self:flex-end; background:var(--accent); color:var(--bg-dark); border-color:var(--accent); }
+.pro-chat-msg-coach { align-self:flex-start; }
+.pro-chat-msg-time {
+  font-family:var(--mono); font-size:10px; opacity:0.7; margin-top:4px;
+}
+.pro-chat-input-row { display:flex; gap:10px; align-items:flex-end; }
+.pro-chat-input {
+  flex:1; resize:none; padding:10px 14px; background:var(--surface);
+  border:1px solid var(--border); border-radius:var(--radius);
+  font-family:var(--sans); font-size:14px; color:var(--text);
+}
+.pro-chat-input:focus { outline:none; border-color:var(--accent); }
+
 .pro-calendar-panel {
   background:var(--surface); border:1px solid var(--border); border-radius:8px;
   padding:24px; transition:border-color 0.3s ease, opacity 0.25s ease;

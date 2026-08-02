@@ -83,7 +83,44 @@ function proGetWeeklyBlockedIndices(weekOffset) {
   return indices;
 }
 
+// Three mutually-exclusive views share #pagePro: the marketing/booking view
+// (everyone else), the coaching view (Baseline Pro subscribers), and the
+// coach inbox (the one hardcoded coach account). Branches on the cached
+// State.subscriptionStatus (populated in startApp/account menu/checkout
+// success) rather than fetching here, so switching to the Pro tab never
+// flashes the wrong shape while a request is in flight.
 async function renderProTab() {
+  var sub = State.subscriptionStatus;
+  var marketing = document.getElementById('proMarketingView');
+  var coaching = document.getElementById('proCoachingView');
+  var coachInbox = document.getElementById('proCoachInboxView');
+
+  stopProChatPoll();
+  stopCoachInboxPoll();
+
+  if (sub && sub.isCoach) {
+    if (marketing) marketing.style.display = 'none';
+    if (coaching) coaching.style.display = 'none';
+    if (coachInbox) coachInbox.style.display = 'block';
+    await renderCoachInbox();
+    return;
+  }
+
+  if (sub && sub.tier === 'baseline_pro') {
+    if (marketing) marketing.style.display = 'none';
+    if (coachInbox) coachInbox.style.display = 'none';
+    if (coaching) coaching.style.display = 'block';
+    await renderProCoachingView();
+    return;
+  }
+
+  if (coaching) coaching.style.display = 'none';
+  if (coachInbox) coachInbox.style.display = 'none';
+  if (marketing) marketing.style.display = 'block';
+  renderProMarketingView();
+}
+
+function renderProMarketingView() {
   ProState.weekOffset = 0;
   ProState.calendarOpen = false;
 
@@ -103,7 +140,7 @@ async function renderProTab() {
     });
   }
 
-  await loadProBookedSlots();
+  loadProBookedSlots();
 }
 
 function renderProCalendarToggle() {
@@ -421,6 +458,357 @@ async function submitProBooking() {
       msgEl.textContent = 'Something went wrong. Please try again.';
     }
   }
+}
+
+// ── Pro coaching: video upload ──────────────────────────────
+// Chat body text and video filenames are the first free user-entered text
+// this app renders as HTML — everything else (workout names, prompts) comes
+// from the sheet, not a user — so this is a genuinely new escaping need.
+function proEscapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+async function renderProCoachingView() {
+  await loadProVideos();
+  await loadProChatThread();
+  startProChatPoll();
+}
+
+async function handleProVideoFileSelected(e) {
+  var file = e.target.files && e.target.files[0];
+  e.target.value = ''; // allow re-selecting the same file later
+  if (!file) return;
+
+  var msg = document.getElementById('proVideoUploadMsg');
+  var btn = document.getElementById('proVideoUploadBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Uploading...'; }
+  if (msg) msg.textContent = '';
+
+  try {
+    var auth = await getAuthHeader();
+    if (!auth) throw new Error('Please sign in again.');
+
+    var presignRes = await fetch('/api/pro-video-upload-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': auth },
+      body: JSON.stringify({ filename: file.name, contentType: file.type })
+    });
+    var presignData = await presignRes.json();
+    if (!presignRes.ok || !presignData.uploadUrl) throw new Error(presignData.error || 'Could not start upload.');
+
+    var putRes = await fetch(presignData.uploadUrl, { method: 'PUT', body: file });
+    if (!putRes.ok) throw new Error('Upload to storage failed.');
+
+    var confirmRes = await fetch('/api/pro-video-confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': auth },
+      body: JSON.stringify({ key: presignData.key, originalFilename: file.name })
+    });
+    var confirmData = await confirmRes.json();
+    if (!confirmRes.ok) throw new Error(confirmData.error || 'Could not confirm upload.');
+
+    prependProVideoCard(confirmData);
+    if (msg) msg.textContent = 'Uploaded.';
+  } catch (err) {
+    console.error('handleProVideoFileSelected error:', err);
+    if (msg) msg.textContent = err.message || 'Something went wrong.';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Upload training video'; }
+  }
+}
+
+async function loadProVideos() {
+  try {
+    var res = await sb.from('pro_videos')
+      .select('id, original_filename, created_at')
+      .eq('user_id', State.currentUser.id)
+      .order('created_at', { ascending: false });
+    if (res.error) throw res.error;
+    renderProVideoList(res.data || []);
+  } catch (err) {
+    console.error('loadProVideos error:', err);
+    var wrap = document.getElementById('proVideoList');
+    if (wrap) wrap.innerHTML = '<div class="lw-meta">Could not load videos.</div>';
+  }
+}
+
+// Styled identically to the homepage's "Previous session" card
+// (.last-workout-card/.lw-*, session-cards.js) — collapsed by default,
+// video itself only fetched (via a fresh presigned URL) when expanded.
+function renderProVideoList(videos) {
+  var wrap = document.getElementById('proVideoList');
+  if (!wrap) return;
+  if (!videos.length) {
+    wrap.innerHTML = '<div class="lw-meta">No videos uploaded yet.</div>';
+    return;
+  }
+  wrap.innerHTML = videos.map(proVideoCardHtml).join('');
+  videos.forEach(function(v) { wireProVideoCard(v.id); });
+}
+
+function proVideoCardHtml(v) {
+  var dateStr = new Date(v.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  var name = proEscapeHtml(v.original_filename || 'Training video');
+  return '<div class="last-workout-card pro-video-card" id="pro-video-card-' + v.id + '" data-collapsed="true" style="margin-top:12px;">'
+    + '<div class="lw-header" style="cursor:pointer;">'
+    + '<span class="lw-label">' + name + ' <span class="lw-header-date">' + dateStr + '</span></span>'
+    + '</div>'
+    + '<div class="lw-body" style="display:none;">'
+    + '<div class="lw-meta" id="pro-video-body-' + v.id + '">Tap to load video</div>'
+    + '</div>'
+    + '</div>';
+}
+
+function wireProVideoCard(id) {
+  var card = document.getElementById('pro-video-card-' + id);
+  if (!card) return;
+  var header = card.querySelector('.lw-header');
+  if (header) header.addEventListener('click', function() { toggleProVideoCard(id); });
+}
+
+function prependProVideoCard(v) {
+  var wrap = document.getElementById('proVideoList');
+  if (!wrap) return;
+  if (wrap.querySelector('.lw-meta') && !wrap.querySelector('.pro-video-card')) wrap.innerHTML = '';
+  wrap.insertAdjacentHTML('afterbegin', proVideoCardHtml(v));
+  wireProVideoCard(v.id);
+}
+
+function toggleProVideoCard(id) {
+  var card = document.getElementById('pro-video-card-' + id);
+  if (!card) return;
+  var isCollapsed = card.getAttribute('data-collapsed') === 'true';
+  card.setAttribute('data-collapsed', isCollapsed ? 'false' : 'true');
+  var body = card.querySelector('.lw-body');
+  if (body) body.style.display = isCollapsed ? 'block' : 'none';
+  if (isCollapsed) loadProVideoPlayback(id);
+}
+
+async function loadProVideoPlayback(id) {
+  var target = document.getElementById('pro-video-body-' + id);
+  if (!target || target.getAttribute('data-loaded') === 'true') return;
+  try {
+    var auth = await getAuthHeader();
+    if (!auth) throw new Error('Please sign in again.');
+    var res = await fetch('/api/pro-video-view-url?id=' + encodeURIComponent(id), { headers: { 'Authorization': auth } });
+    var data = await res.json();
+    if (!res.ok || !data.viewUrl) throw new Error(data.error || 'Could not load video.');
+    target.innerHTML = '<video controls style="width:100%;border-radius:8px;display:block;" src="' + data.viewUrl + '"></video>';
+    target.setAttribute('data-loaded', 'true');
+  } catch (err) {
+    console.error('loadProVideoPlayback error:', err);
+    target.textContent = err.message || 'Could not load video.';
+  }
+}
+
+// ── Pro coaching: chat ───────────────────────────────────────
+
+var proChatPollTimer = null;
+
+async function loadProChatThread() {
+  try {
+    var res = await sb.from('pro_messages')
+      .select('sender, body, created_at')
+      .eq('user_id', State.currentUser.id)
+      .order('created_at', { ascending: true });
+    if (res.error) throw res.error;
+    renderProChatThread(res.data || []);
+  } catch (err) {
+    console.error('loadProChatThread error:', err);
+    var wrap = document.getElementById('proChatThread');
+    if (wrap) wrap.innerHTML = '<div class="lw-meta">Could not load messages.</div>';
+  }
+}
+
+function renderProChatThread(messages) {
+  var wrap = document.getElementById('proChatThread');
+  if (!wrap) return;
+  if (!messages.length) {
+    wrap.innerHTML = '<div class="lw-meta">No messages yet — say hello!</div>';
+    return;
+  }
+  wrap.innerHTML = messages.map(function(m) {
+    var cls = 'pro-chat-msg ' + (m.sender === 'coach' ? 'pro-chat-msg-coach' : 'pro-chat-msg-user');
+    var time = new Date(m.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    return '<div class="' + cls + '">' + proEscapeHtml(m.body) + '<div class="pro-chat-msg-time">' + time + '</div></div>';
+  }).join('');
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+async function sendProChatMessage() {
+  var input = document.getElementById('proChatInput');
+  var btn = document.getElementById('proChatSendBtn');
+  if (!input) return;
+  var body = input.value.trim();
+  if (!body) return;
+
+  if (btn) btn.disabled = true;
+  try {
+    var res = await sb.from('pro_messages').insert({ user_id: State.currentUser.id, sender: 'user', body: body });
+    if (res.error) throw res.error;
+    input.value = '';
+    await loadProChatThread();
+  } catch (err) {
+    console.error('sendProChatMessage error:', err);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function startProChatPoll() {
+  stopProChatPoll();
+  proChatPollTimer = setInterval(function() {
+    if (document.hidden) return;
+    loadProChatThread();
+  }, 4000);
+}
+
+function stopProChatPoll() {
+  if (proChatPollTimer) { clearInterval(proChatPollTimer); proChatPollTimer = null; }
+}
+
+// ── Coach inbox ──────────────────────────────────────────────
+
+var CoachInboxState = { inbox: [], expandedUserId: null };
+var coachThreadPollTimer = null;
+var coachListPollTimer = null;
+
+async function renderCoachInbox() {
+  await loadCoachInbox();
+  startCoachInboxPoll();
+}
+
+async function loadCoachInbox() {
+  var wrap = document.getElementById('proCoachInboxList');
+  try {
+    var auth = await getAuthHeader();
+    if (!auth) throw new Error('Please sign in again.');
+    var res = await fetch('/api/coach-inbox', { headers: { 'Authorization': auth } });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not load inbox.');
+    CoachInboxState.inbox = data.inbox || [];
+    renderCoachInboxList();
+  } catch (err) {
+    console.error('loadCoachInbox error:', err);
+    if (wrap) wrap.innerHTML = '<div class="lw-meta">Could not load inbox.</div>';
+  }
+}
+
+function renderCoachInboxList() {
+  var wrap = document.getElementById('proCoachInboxList');
+  if (!wrap) return;
+  if (!CoachInboxState.inbox.length) {
+    wrap.innerHTML = '<div class="lw-meta">No Baseline Pro subscribers yet.</div>';
+    return;
+  }
+  wrap.innerHTML = CoachInboxState.inbox.map(coachInboxCardHtml).join('');
+  CoachInboxState.inbox.forEach(function(entry) {
+    var header = document.getElementById('coach-card-header-' + entry.userId);
+    if (header) header.addEventListener('click', function() { toggleCoachThread(entry.userId); });
+  });
+  // Re-render the expanded thread's messages if one was open before this refresh
+  if (CoachInboxState.expandedUserId) loadCoachThread(CoachInboxState.expandedUserId);
+}
+
+function coachInboxCardHtml(entry) {
+  var isOpen = CoachInboxState.expandedUserId === entry.userId;
+  var name = proEscapeHtml(entry.firstName || 'Unnamed user');
+  var previewParts = [];
+  if (entry.lastMessage) {
+    var who = entry.lastMessage.sender === 'coach' ? 'You: ' : '';
+    previewParts.push(who + entry.lastMessage.body);
+  }
+  if (entry.videoCount) previewParts.push(entry.videoCount + ' video' + (entry.videoCount === 1 ? '' : 's'));
+  var preview = previewParts.length ? proEscapeHtml(previewParts.join(' &middot; ')) : 'No activity yet';
+  return '<div class="last-workout-card pro-video-card" id="coach-card-' + entry.userId + '" data-collapsed="' + (isOpen ? 'false' : 'true') + '" style="margin-top:12px;">'
+    + '<div class="lw-header" id="coach-card-header-' + entry.userId + '" style="cursor:pointer;">'
+    + '<span class="lw-label">' + name + '</span>'
+    + '</div>'
+    + '<div class="lw-body" style="display:' + (isOpen ? 'block' : 'none') + ';">'
+    + '<div class="lw-meta" style="margin-bottom:12px;">' + preview + '</div>'
+    + '<div class="pro-chat-thread" id="coach-thread-' + entry.userId + '"></div>'
+    + '<div class="pro-chat-input-row">'
+    + '<textarea class="pro-chat-input" id="coach-reply-input-' + entry.userId + '" placeholder="Reply..." rows="2"></textarea>'
+    + '<button class="pro-cta-btn" style="width:auto;margin:0;" onclick="sendCoachReply(\'' + entry.userId + '\')">Send</button>'
+    + '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+function toggleCoachThread(userId) {
+  var wasOpen = CoachInboxState.expandedUserId === userId;
+  CoachInboxState.expandedUserId = wasOpen ? null : userId;
+  stopCoachThreadPoll();
+  renderCoachInboxList();
+  if (!wasOpen) {
+    loadCoachThread(userId);
+    startCoachThreadPoll(userId);
+  }
+}
+
+async function loadCoachThread(userId) {
+  var wrap = document.getElementById('coach-thread-' + userId);
+  if (!wrap) return;
+  try {
+    var res = await sb.from('pro_messages')
+      .select('sender, body, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+    if (res.error) throw res.error;
+    var messages = res.data || [];
+    wrap.innerHTML = messages.length ? messages.map(function(m) {
+      var cls = 'pro-chat-msg ' + (m.sender === 'coach' ? 'pro-chat-msg-coach' : 'pro-chat-msg-user');
+      var time = new Date(m.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      return '<div class="' + cls + '">' + proEscapeHtml(m.body) + '<div class="pro-chat-msg-time">' + time + '</div></div>';
+    }).join('') : '<div class="lw-meta">No messages yet.</div>';
+    wrap.scrollTop = wrap.scrollHeight;
+  } catch (err) {
+    console.error('loadCoachThread error:', err);
+  }
+}
+
+async function sendCoachReply(userId) {
+  var input = document.getElementById('coach-reply-input-' + userId);
+  if (!input) return;
+  var body = input.value.trim();
+  if (!body) return;
+  try {
+    var res = await sb.from('pro_messages').insert({ user_id: userId, sender: 'coach', body: body });
+    if (res.error) throw res.error;
+    input.value = '';
+    await loadCoachThread(userId);
+  } catch (err) {
+    console.error('sendCoachReply error:', err);
+  }
+}
+
+// Thread-list summary polls slowly; the one open thread (if any) polls
+// faster — a coach with many subscribers polling every thread every few
+// seconds would be a much heavier query pattern than one open thread.
+function startCoachInboxPoll() {
+  stopCoachInboxPoll();
+  coachListPollTimer = setInterval(function() {
+    if (document.hidden) return;
+    loadCoachInbox();
+  }, 20000);
+}
+
+function stopCoachInboxPoll() {
+  if (coachListPollTimer) { clearInterval(coachListPollTimer); coachListPollTimer = null; }
+  stopCoachThreadPoll();
+}
+
+function startCoachThreadPoll(userId) {
+  coachThreadPollTimer = setInterval(function() {
+    if (document.hidden) return;
+    loadCoachThread(userId);
+  }, 4000);
+}
+
+function stopCoachThreadPoll() {
+  if (coachThreadPollTimer) { clearInterval(coachThreadPollTimer); coachThreadPollTimer = null; }
 }
 
 // Fire-and-forget: the Supabase booking above is what locks the slot, so a slow
