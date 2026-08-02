@@ -639,7 +639,15 @@ video { -webkit-appearance:none; }
   grid-column: 1 / -1; /* spans full grid width in library */
   background:var(--surface); border:1px solid var(--border);
   border-radius:var(--radius); padding:20px 24px;
-  margin:8px 0 4px; animation:panelSlide 0.2s ease;
+  margin:8px 0 4px;
+}
+/* Collapse multi-column tile grids to a single column while a panel is
+   open in them, so the panel always lands directly under its own tile
+   instead of leaving/causing gaps from CSS grid auto-placement. */
+.exercise-pair:has(.ex-inline-panel),
+.acc-grid:has(.ex-inline-panel),
+.library-grid:has(.ex-inline-panel) {
+  grid-template-columns: 1fr;
 }
 .ex-panel-header {
   display:flex; align-items:flex-start; justify-content:space-between;

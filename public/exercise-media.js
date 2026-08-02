@@ -7,6 +7,9 @@
 
 // ── Exercise inline panels ───────────────────────────────
 
+var EX_PANEL_ANIM = '180ms cubic-bezier(0.25,0.46,0.45,0.94)';
+var EX_PANEL_ANIM_MS = 180;
+
 function openExerciseModal(el) {
   var name = el.getAttribute('data-exname');
   if (!name) return;
@@ -14,21 +17,55 @@ function openExerciseModal(el) {
   // Toggle: if panel already open for this exercise, close it
   var panelId = 'expanel-' + name.replace(/[^a-zA-Z0-9]/g, '-');
   var existing = document.getElementById(panelId);
-  if (existing) { existing.remove(); return; }
+  if (existing) { _closeExercisePanel(existing); return; }
 
-  // Find insertion point
+  // Find insertion point — the individual tile wrapper must be checked
+  // before any multi-tile container (.exercise-pair/.acc-grid), otherwise
+  // the panel lands after the whole group instead of the clicked tile.
   var insertAfter = el.closest('.library-card')
-    || el.closest('.exercise-pair')
     || el.closest('.acc-card')
+    || el.closest('.exercise-card')
+    || el.closest('.exercise-pair')
     || el.closest('.acc-grid')
     || el.parentElement;
 
   var panel = document.createElement('div');
   panel.id = panelId;
   panel.className = 'ex-inline-panel';
+  panel.style.height = '0px';
+  panel.style.opacity = '0';
+  panel.style.overflow = 'hidden';
 
   _renderPanelContent(panel, name, []);
   insertAfter.parentNode.insertBefore(panel, insertAfter.nextSibling);
+  _expandExercisePanel(panel);
+}
+
+function _expandExercisePanel(panel) {
+  var target = panel.scrollHeight;
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      panel.style.transition = 'height ' + EX_PANEL_ANIM + ', opacity ' + EX_PANEL_ANIM;
+      panel.style.height = target + 'px';
+      panel.style.opacity = '1';
+      setTimeout(function () {
+        panel.style.height = 'auto';
+        panel.style.overflow = '';
+        panel.style.transition = '';
+      }, EX_PANEL_ANIM_MS + 20);
+    });
+  });
+}
+
+function _closeExercisePanel(panel) {
+  if (!panel) return;
+  panel.style.height = panel.scrollHeight + 'px';
+  panel.style.overflow = 'hidden';
+  panel.offsetHeight; // force reflow so the browser animates from this height
+  panel.style.transition = 'height ' + EX_PANEL_ANIM + ', opacity ' + EX_PANEL_ANIM;
+  panel.style.height = '0px';
+  panel.style.opacity = '0';
+  setTimeout(function () { if (panel.parentNode) panel.remove(); }, EX_PANEL_ANIM_MS + 20);
 }
 
 function _renderPanelContent(panel, name, history) {
@@ -107,7 +144,7 @@ function _renderPanelContent(panel, name, history) {
 
   panel.innerHTML = '<div class="ex-panel-header">'
     + breadcrumbHtml
-    + '<button class="ex-panel-close" onclick="this.closest(\'.ex-inline-panel\').remove()">&#x2715;</button>'
+    + '<button class="ex-panel-close" onclick="_closeExercisePanel(this.closest(\'.ex-inline-panel\'))">&#x2715;</button>'
     + '</div>'
     + '<div class="ex-media-layout">' + videoHtml + textHtml + '</div>';
 }
