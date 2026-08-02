@@ -143,6 +143,12 @@ select option { background:var(--surface); color:var(--text); }
 .save-btn.danger-btn { border-color:#D9665C; color:#D9665C; }
 .save-btn.danger-btn:hover { background:#D9665C; color:var(--bg-dark); border-color:#D9665C; }
 
+/* "Not sure?" collapsible in the Pro Upgrade modal */
+.not-sure-toggle { display:flex; align-items:center; gap:6px; cursor:pointer; margin-bottom:14px; }
+.not-sure-chevron { font-family:var(--mono); font-size:11px; color:var(--muted); display:inline-block; width:12px; }
+.not-sure-label { font-size:13px; color:var(--text); text-decoration:underline; text-underline-offset:2px; }
+.not-sure-body { color:var(--muted); font-size:13px; line-height:1.5; margin-bottom:20px; }
+
 /* Pill button used for the account menu's Upgrade / Change / Downgrade button */
 .pill-btn { font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; padding:6px 16px; border:1px solid var(--accent); border-radius:20px; background:none; color:var(--accent); cursor:pointer; }
 .pill-btn:hover { background:var(--accent); color:var(--bg-dark); }
@@ -968,7 +974,9 @@ video { -webkit-appearance:none; }
 .pro-price-box {
   display:inline-block; background:var(--surface); border:1px solid var(--border);
   border-radius:8px; padding:14px 24px; margin-bottom:28px;
+  cursor:pointer; transition:border-color 0.15s;
 }
+.pro-price-box:hover { border-color:var(--accent); }
 .pro-price-label { font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
 .pro-price-value { font-size:22px; font-weight:600; color:var(--text); }
 .pro-price-value span { font-family:var(--mono); font-size:12px; color:var(--muted); font-weight:400; margin-left:4px; }

@@ -55,6 +55,11 @@ async function showAccountMenu() {
   var subStatus = await getSubscriptionStatus();
   State.subscriptionStatus = subStatus;
   var accountLine = buildAccountLineInfo(subStatus);
+  // tier is only ever set by the checkout.session.completed webhook, so
+  // reaching 'baseline'/'baseline_pro' here always means a real Stripe
+  // customer exists — trial and lifetime-free users are excluded earlier
+  // in buildAccountLineInfo's branch order.
+  var hasPaidSubscription = subStatus && (subStatus.tier === 'baseline' || subStatus.tier === 'baseline_pro');
 
   // RLS lets a user select their own referral_codes row directly — no
   // server round-trip needed just to read it.
@@ -77,6 +82,13 @@ async function showAccountMenu() {
           + '</div>'
         : '')
     + '</div>'
+    + (hasPaidSubscription
+        ? '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">'
+          + '<span>Manage Subscription</span>'
+          + '<button onclick="openBillingPortal()" class="icon-btn" id="manageBillingBtn" title="Manage Subscription">' + ICON_EDIT + '</button>'
+          + '</div>'
+          + '<div id="manageBillingMsg" style="font-family:var(--mono);font-size:11px;color:var(--accent);margin:-8px 0 16px;"></div>'
+        : '')
     + '<div id="editNameWrap" style="display:none;margin-bottom:16px;">'
     + '<input id="editNameInput" type="text" value="' + name + '" maxlength="30" '
     + 'style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:16px;padding:6px 10px;border-radius:6px;width:100%;box-sizing:border-box;margin-bottom:8px;" />'
@@ -110,6 +122,24 @@ async function showAccountMenu() {
     + '</div>';
 
   document.getElementById('accountModal').classList.add('open');
+}
+
+async function openBillingPortal() {
+  var btn = document.getElementById('manageBillingBtn');
+  var msg = document.getElementById('manageBillingMsg');
+  if (msg) msg.textContent = '';
+  if (btn) btn.disabled = true;
+  try {
+    var auth = await getAuthHeader();
+    if (!auth) throw new Error('Please sign in again.');
+    var res = await fetch('/api/create-portal', { method: 'POST', headers: { 'Authorization': auth } });
+    var data = await res.json();
+    if (!res.ok || !data.url) throw new Error(data.error || 'Could not open billing portal.');
+    window.location.href = data.url;
+  } catch (err) {
+    if (btn) btn.disabled = false;
+    if (msg) msg.textContent = err.message || 'Something went wrong.';
+  }
 }
 
 function startEditName() {

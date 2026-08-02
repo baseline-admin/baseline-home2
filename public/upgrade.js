@@ -35,6 +35,8 @@ function openUpgradeModal(kind) {
     renderChangeUpgradeModal();
   } else if (kind === 'change_downgrade') {
     renderChangeDowngradeModal();
+  } else if (kind === 'pro_upgrade') {
+    renderProUpgradeModal();
   }
 
   document.getElementById('upgradeModal').classList.add('open');
@@ -92,6 +94,37 @@ function renderChangeDowngradeModal() {
     + '<button class="save-btn" onclick="cancelToAccountMenu()" style="flex:1;padding-left:8px;padding-right:8px;">Cancel</button>'
     + '</div>'
     + '<div id="upgradeMsg" style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:10px;"></div>';
+}
+
+// Opened by clicking the £49.99 membership panel on the Pro tab. A plain,
+// dismissable upsell (not the mandatory/change variants) that sends real
+// paying customers through Checkout for the baseline_pro tier — previously
+// there was no UI path that actually purchased Baseline Pro.
+function renderProUpgradeModal() {
+  var pro = PRODUCT_INFO.baseline_pro;
+  document.getElementById('upgradeModalBody').innerHTML =
+    '<div style="margin-bottom:4px;color:var(--text);font-size:13px;">' + pro.name + ' — ' + pro.price + '</div>'
+    + '<div style="margin-bottom:20px;">' + pro.description + '</div>'
+    + '<div class="not-sure-toggle" onclick="toggleNotSure()">'
+    + '<span id="notSureChevron" class="not-sure-chevron">&gt;</span>'
+    + '<span class="not-sure-label">Help</span>'
+    + '</div>'
+    + '<div id="notSureBody" class="not-sure-body" style="display:none;">'
+    + "If you are not sure if Baseline Pro is the right fit for you, please feel free to book a consultation call, so we can help you decide. It's free of charge. Just click 'cancel' below and open the Consultation Calendar on the previous page to book your slot."
+    + '</div>'
+    + '<div style="display:flex;gap:10px;">'
+    + '<button class="save-btn" id="upgradeContinueBtn" onclick="continueToCheckout(\'baseline_pro\')" style="flex:1;">Continue</button>'
+    + '<button class="save-btn danger-btn" onclick="closeUpgradeModal()" style="flex:1;">Cancel</button>'
+    + '</div>'
+    + '<div id="upgradeMsg" style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:10px;"></div>';
+}
+
+function toggleNotSure() {
+  var body = document.getElementById('notSureBody');
+  var chevron = document.getElementById('notSureChevron');
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  chevron.textContent = isOpen ? '>' : '⌄';
 }
 
 function goToProTab() {
