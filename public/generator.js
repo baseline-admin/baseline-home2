@@ -542,7 +542,8 @@ function ec(csstype,label,name,col,reps,ub,extype,rounds){
   html+='<div class="card-label '+csstype+'">'+label+'</div>';
   var hasMedia=State.sheetData&&State.sheetData.exerciseMedia&&State.sheetData.exerciseMedia[name];
   if(hasMedia){
-    html+='<div class="card-exercise card-exercise-link" data-exname="'+name+'" onclick="openExerciseModal(this)"><span class="ex-link-dot">&#9654;</span> '+name+'</div>';
+    html+='<div class="card-exercise card-exercise-link" data-exname="'+name+'" onclick="openExerciseModal(this)">'+name+'</div>';
+    html+='<span class="card-expand-icon" data-exname="'+name+'" onclick="openExerciseModal(this)" title="View instructions">'+ICON_EXPAND+'</span>';
   }else{
     html+='<div class="card-exercise">'+name+'</div>';
   }
@@ -561,6 +562,7 @@ function ac(csstype,label,name,reps,ub,rounds,extype){
   var hasMediaAcc=State.sheetData&&State.sheetData.exerciseMedia&&State.sheetData.exerciseMedia[name];
   if(hasMediaAcc){
     html+='<div class="acc-name card-exercise-link" data-exname="'+name+'" onclick="openExerciseModal(this)">'+name+'</div>';
+    html+='<span class="card-expand-icon" data-exname="'+name+'" onclick="openExerciseModal(this)" title="View instructions">'+ICON_EXPAND+'</span>';
   }else{
     html+='<div class="acc-name">'+name+'</div>';
   }

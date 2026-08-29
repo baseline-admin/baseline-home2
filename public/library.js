@@ -223,13 +223,16 @@ function renderExerciseGrid(exercises, noFilters) {
           .filter(function(t){ return t; });
         var hasMedia = State.sheetData && State.sheetData.exerciseMedia && State.sheetData.exerciseMedia[ex.name];
         var nameHtml = hasMedia
-          ? '<div class="library-card-name card-exercise-link" data-exname="' + ex.name + '" onclick="openExerciseModal(this)"><span class="ex-link-dot">&#9654;</span> ' + ex.name + '</div>'
+          ? '<div class="library-card-name card-exercise-link" data-exname="' + ex.name + '" onclick="openExerciseModal(this)">' + ex.name + '</div>'
           : '<div class="library-card-name">' + ex.name + '</div>';
+        var expandHtml = hasMedia
+          ? '<span class="card-expand-icon" data-exname="' + ex.name + '" onclick="openExerciseModal(this)" title="View instructions">' + ICON_EXPAND + '</span>'
+          : '';
         return '<div class="library-card ' + ex.css + '">'
           + nameHtml
           + '<div class="library-tags">'
           + tags.map(function(t){ return '<span class="library-tag">' + t + '</span>'; }).join('')
-          + '</div></div>';
+          + '</div>' + expandHtml + '</div>';
       }).join('')
     + '</div>';
 }

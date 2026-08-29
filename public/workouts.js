@@ -421,12 +421,15 @@ function renderCustomExCard(ex, num, segKey) {
   var nameHTML = hasMedia
     ? '<div class="card-exercise card-exercise-link" data-exname="' + ex.name + '" onclick="openExerciseModal(this)">' + ex.name + '</div>'
     : '<div class="card-exercise">' + ex.name + '</div>';
+  var expandHTML = hasMedia
+    ? '<span class="card-expand-icon" data-exname="' + ex.name + '" onclick="openExerciseModal(this)" title="View instructions">' + ICON_EXPAND + '</span>'
+    : '';
   return '<div class="exercise-card ' + css + '">'
     + '<div class="card-label ' + css + '">Exercise ' + num + '</div>'
     + nameHTML
     + '<div class="card-reps-row"><span class="card-reps">' + repsVal + '</span>'
     + '<span class="card-col" style="margin-left:8px;font-size:12px;">' + unit + '</span></div>'
-    + '</div>';
+    + expandHTML + '</div>';
 }
 
 function renderCustomAccCard(ex, num, cssClass, segKey) {
@@ -437,12 +440,15 @@ function renderCustomAccCard(ex, num, cssClass, segKey) {
   var nameHTML = hasMedia
     ? '<div class="acc-name card-exercise-link" data-exname="' + ex.name + '" onclick="openExerciseModal(this)">' + ex.name + '</div>'
     : '<div class="acc-name">' + ex.name + '</div>';
+  var expandHTML = hasMedia
+    ? '<span class="card-expand-icon" data-exname="' + ex.name + '" onclick="openExerciseModal(this)" title="View instructions">' + ICON_EXPAND + '</span>'
+    : '';
   return '<div class="acc-card ' + cssClass + '">'
     + '<div class="card-label ' + cssClass + '">' + label + num + '</div>'
     + nameHTML
     + '<div class="card-reps-row"><span class="acc-reps">' + repsVal + '</span>'
     + '<span class="card-col" style="margin-left:8px;font-size:12px;">' + unit + '</span></div>'
-    + '</div>';
+    + expandHTML + '</div>';
 }
 
 /* ── Override buildScoreKeys to handle custom workouts ── */

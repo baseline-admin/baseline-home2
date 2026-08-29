@@ -358,7 +358,15 @@ select option { background:var(--surface); color:var(--text); }
 /* Clickable exercise names */
 .card-exercise-link { cursor:pointer; }
 .card-exercise-link:hover { color:var(--accent); }
-.ex-link-dot { font-size:9px; opacity:0.5; margin-right:2px; vertical-align:middle; }
+
+/* Corner affordance hinting a card can be tapped open — sits on
+   .exercise-card/.acc-card/.library-card, which are all position:relative. */
+.card-expand-icon {
+  position:absolute; right:10px; bottom:10px;
+  display:inline-flex; color:var(--muted); opacity:0.6;
+  cursor:pointer; transition:opacity 0.15s, color 0.15s;
+}
+.card-expand-icon:hover { opacity:1; color:var(--accent); }
 
 /* Exercise media modal */
 .ex-modal-overlay {
