@@ -235,8 +235,8 @@ async function checkForCheckoutSuccess() {
 }
 
 function showCongratsModal(tier) {
-  var msg = tier === 'baseline_pro' ? 'You are now a Baseline Pro user.'
-    : tier === 'baseline' ? 'You are now a Baseline user.'
+  var msg = tier === 'baseline_pro' ? 'Welcome to Baseline Pro'
+    : tier === 'baseline' ? 'Welcome to Baseline'
     : 'Your upgrade is complete.';
   document.getElementById('congratsModalBody').textContent = msg;
   document.getElementById('congratsModal').classList.add('open');
