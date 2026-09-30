@@ -418,9 +418,10 @@ function renderCustomExCard(ex, num, segKey) {
   var unit = cwRepLabelForDisplay(ex, segKey);
   var css = num === 1 ? 't1' : num === 2 ? 't2' : 't3';
   var hasMedia = State.sheetData && State.sheetData.exerciseMedia && State.sheetData.exerciseMedia[ex.name];
+  var iconHTML = equipmentIconHTML(ex.type);
   var nameHTML = hasMedia
-    ? '<div class="card-exercise card-exercise-link" data-exname="' + ex.name + '" onclick="openExerciseModal(this)">' + ex.name + '</div>'
-    : '<div class="card-exercise">' + ex.name + '</div>';
+    ? '<div class="card-exercise card-exercise-link" data-exname="' + ex.name + '" onclick="openExerciseModal(this)">' + iconHTML + ex.name + '</div>'
+    : '<div class="card-exercise">' + iconHTML + ex.name + '</div>';
   var expandHTML = hasMedia
     ? '<span class="card-expand-icon" data-exname="' + ex.name + '" onclick="openExerciseModal(this)" title="View instructions">' + ICON_EXPAND + '</span>'
     : '';
@@ -437,9 +438,10 @@ function renderCustomAccCard(ex, num, cssClass, segKey) {
   var unit = cwRepLabelForDisplay(ex, segKey);
   var label = segKey === 'prep' ? 'Prep ' : 'Mobility ';
   var hasMedia = State.sheetData && State.sheetData.exerciseMedia && State.sheetData.exerciseMedia[ex.name];
+  var iconHTML = equipmentIconHTML(ex.type);
   var nameHTML = hasMedia
-    ? '<div class="acc-name card-exercise-link" data-exname="' + ex.name + '" onclick="openExerciseModal(this)">' + ex.name + '</div>'
-    : '<div class="acc-name">' + ex.name + '</div>';
+    ? '<div class="acc-name card-exercise-link" data-exname="' + ex.name + '" onclick="openExerciseModal(this)">' + iconHTML + ex.name + '</div>'
+    : '<div class="acc-name">' + iconHTML + ex.name + '</div>';
   var expandHTML = hasMedia
     ? '<span class="card-expand-icon" data-exname="' + ex.name + '" onclick="openExerciseModal(this)" title="View instructions">' + ICON_EXPAND + '</span>'
     : '';

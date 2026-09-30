@@ -359,6 +359,13 @@ select option { background:var(--surface); color:var(--text); }
 .card-exercise-link { cursor:pointer; }
 .card-exercise-link:hover { color:var(--accent); }
 
+/* Equipment-type icon shown inline before the exercise name, on the
+   collapsed tile — independent of whether the tile has media/is expandable. */
+.equipment-icon {
+  display:inline-flex; vertical-align:middle;
+  margin-right:5px; margin-top:-2px; color:var(--muted);
+}
+
 /* Corner affordance hinting a card can be tapped open — sits on
    .exercise-card/.acc-card/.library-card, which are all position:relative. */
 .card-expand-icon {

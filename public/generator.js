@@ -541,11 +541,12 @@ function ec(csstype,label,name,col,reps,ub,extype,rounds){
   var html='<div class="exercise-card '+csstype+'">';
   html+='<div class="card-label '+csstype+'">'+label+'</div>';
   var hasMedia=State.sheetData&&State.sheetData.exerciseMedia&&State.sheetData.exerciseMedia[name];
+  var iconHtml=equipmentIconHTML(extype);
   if(hasMedia){
-    html+='<div class="card-exercise card-exercise-link" data-exname="'+name+'" onclick="openExerciseModal(this)">'+name+'</div>';
+    html+='<div class="card-exercise card-exercise-link" data-exname="'+name+'" onclick="openExerciseModal(this)">'+iconHtml+name+'</div>';
     html+='<span class="card-expand-icon" data-exname="'+name+'" onclick="openExerciseModal(this)" title="View instructions">'+ICON_EXPAND+'</span>';
   }else{
-    html+='<div class="card-exercise">'+name+'</div>';
+    html+='<div class="card-exercise">'+iconHtml+name+'</div>';
   }
   if(col)html+='<div class="card-col">'+col+'</div>';
   html+='<div class="card-reps-row"><span class="card-reps">'+repsVal+'</span>'+unitSpan+'</div>';
@@ -560,11 +561,12 @@ function ac(csstype,label,name,reps,ub,rounds,extype){
   var html='<div class="acc-card '+csstype+'">';
   html+='<div class="card-label '+csstype+'">'+label+'</div>';
   var hasMediaAcc=State.sheetData&&State.sheetData.exerciseMedia&&State.sheetData.exerciseMedia[name];
+  var iconHtmlAcc=equipmentIconHTML(extype);
   if(hasMediaAcc){
-    html+='<div class="acc-name card-exercise-link" data-exname="'+name+'" onclick="openExerciseModal(this)">'+name+'</div>';
+    html+='<div class="acc-name card-exercise-link" data-exname="'+name+'" onclick="openExerciseModal(this)">'+iconHtmlAcc+name+'</div>';
     html+='<span class="card-expand-icon" data-exname="'+name+'" onclick="openExerciseModal(this)" title="View instructions">'+ICON_EXPAND+'</span>';
   }else{
-    html+='<div class="acc-name">'+name+'</div>';
+    html+='<div class="acc-name">'+iconHtmlAcc+name+'</div>';
   }
   html+='<div class="card-reps-row"><span class="acc-reps">'+repsVal+'</span>'+unitSpan+'</div>';
   html+=roundsStr+'</div>';

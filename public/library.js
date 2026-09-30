@@ -222,9 +222,10 @@ function renderExerciseGrid(exercises, noFilters) {
         var tags = splitVals(ex.type).concat(splitVals(ex.mode)).concat(splitVals(ex.ulc))
           .filter(function(t){ return t; });
         var hasMedia = State.sheetData && State.sheetData.exerciseMedia && State.sheetData.exerciseMedia[ex.name];
+        var iconHtml = equipmentIconHTML(ex.type);
         var nameHtml = hasMedia
-          ? '<div class="library-card-name card-exercise-link" data-exname="' + ex.name + '" onclick="openExerciseModal(this)">' + ex.name + '</div>'
-          : '<div class="library-card-name">' + ex.name + '</div>';
+          ? '<div class="library-card-name card-exercise-link" data-exname="' + ex.name + '" onclick="openExerciseModal(this)">' + iconHtml + ex.name + '</div>'
+          : '<div class="library-card-name">' + iconHtml + ex.name + '</div>';
         var expandHtml = hasMedia
           ? '<span class="card-expand-icon" data-exname="' + ex.name + '" onclick="openExerciseModal(this)" title="View instructions">' + ICON_EXPAND + '</span>'
           : '';

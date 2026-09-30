@@ -22,6 +22,36 @@ var ICON_CHEVRON_CLOSED = '<svg width="12" height="12" viewBox="0 0 24 24" fill=
 var ICON_CHEVRON_OPEN = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
 var ICON_PLUS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 var ICON_EXPAND = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+var ICON_LANDMINE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="21" x2="8" y2="21"/><line x1="4" y1="21" x2="4" y2="17"/><line x1="4" y1="19" x2="21" y2="5"/><circle cx="21" cy="5" r="2.2"/></svg>';
+var ICON_KETTLEBELL = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="7" rx="2.2"/><path d="M8 9 L4 13 L4 17 Q4 19 6 20 L10 21 L14 21 L18 20 Q20 19 20 17 L20 13 L16 9"/></svg>';
+var ICON_BARBELL = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="12" x2="23" y2="12"/><line x1="3" y1="10.5" x2="3" y2="13.5"/><line x1="5" y1="9.5" x2="5" y2="14.5"/><line x1="7" y1="9" x2="7" y2="15"/><line x1="17" y1="9" x2="17" y2="15"/><line x1="19" y1="9.5" x2="19" y2="14.5"/><line x1="21" y1="10.5" x2="21" y2="13.5"/></svg>';
+var ICON_PLYOMETRIC = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21C12 16 12 12 12 9"/><polyline points="9 12 12 9 15 12"/><path d="M12 21C11 14 8 11 4 10"/><polyline points="7 8 4 10 7 13"/><path d="M12 21C13 14 16 11 20 10"/><polyline points="17 8 20 10 17 13"/></svg>';
+var ICON_DUMBBELL = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="12" x2="15" y2="12"/><line x1="5" y1="7" x2="5" y2="17"/><line x1="7" y1="9" x2="7" y2="15"/><line x1="17" y1="9" x2="17" y2="15"/><line x1="19" y1="7" x2="19" y2="17"/></svg>';
+var ICON_MEDICINE_BALL = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M7.5 5a10 10 0 0 1 0 14"/></svg>';
+var ICON_MACHINE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 6 12 9 4 12 20 15 12 22 12"/></svg>';
+
+// Maps a Main-sheet Type value to its equipment icon — shown next to the
+// exercise name on the collapsed tile, before it's ever expanded. Type can be
+// a comma-separated list (see parseList/matchesFilter in generator.js), so
+// this checks each value and shows the first one that has an icon; types
+// with no icon (bodyweight, hold, recovery, etc.) just show no icon.
+var EQUIPMENT_ICONS = {
+  barbell: ICON_BARBELL,
+  dumbbell: ICON_DUMBBELL,
+  kettlebell: ICON_KETTLEBELL,
+  machine: ICON_MACHINE,
+  landmine: ICON_LANDMINE,
+  'medicine ball': ICON_MEDICINE_BALL,
+  plyometric: ICON_PLYOMETRIC
+};
+function equipmentIconHTML(type){
+  var types = parseList(type || '');
+  for (var i = 0; i < types.length; i++){
+    var icon = EQUIPMENT_ICONS[types[i].toLowerCase().trim()];
+    if (icon) return '<span class="equipment-icon">' + icon + '</span>';
+  }
+  return '';
+}
 
 var State = {
   currentUser: null,
