@@ -30,6 +30,44 @@ async function saveWorkout(callback) {
 // ── Workouts tab — three collapsible sections ──────────────────────────
 var WorkoutSections = { open: { mine:false, custom:false, shared:false } };
 
+// Every exercise type used anywhere in the workout (t1/t2/t3/prep/mobility
+// for a regular workout, or all segment exercises for a custom one) —
+// type is already embedded in the saved workout_data, no sheetData lookup
+// needed. Recovery/hold are deliberately excluded (same pause icon either
+// way, and redundant on an at-a-glance equipment summary).
+function workoutEquipmentIconsHTML(w) {
+  var data = w.workout_data || {};
+  var types = [];
+  if (data.custom) {
+    var segs = data.segments || {};
+    ['prep','main','mobility'].forEach(function(key){
+      var seg = segs[key];
+      if (seg && seg.exercises) seg.exercises.forEach(function(ex){ types.push(ex.type); });
+    });
+  } else {
+    if (data.t1) types.push(data.t1.type);
+    if (data.t2) types.push(data.t2.type);
+    if (data.t3) types.push(data.t3.type);
+    (data.taP || []).forEach(function(p){ types.push(p.type); });
+    (data.tzP || []).forEach(function(p){ types.push(p.type); });
+  }
+
+  var seenIcons = {};
+  var iconsHtml = '';
+  types.forEach(function(typeStr){
+    parseList(typeStr || '').forEach(function(t){
+      var key = t.toLowerCase().trim();
+      if (key === 'recovery' || key === 'hold') return;
+      var icon = EQUIPMENT_ICONS[key];
+      if (icon && !seenIcons[icon]) {
+        seenIcons[icon] = true;
+        iconsHtml += '<span class="equipment-icon">' + icon + '</span>';
+      }
+    });
+  });
+  return iconsHtml ? '<div class="wc-equip-row">' + iconsHtml + '</div>' : '';
+}
+
 function workoutCardHTML(w) {
   var date = new Date(w.generated_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
   var sc = w.scores ? w.scores.length : 0;
@@ -40,6 +78,7 @@ function workoutCardHTML(w) {
     + '<div class="wc-date">'+date+'</div>'
     + '<div class="wc-title">'+w.title+'</div>'
     + '<div class="wc-meta">'+(w.prompt||'')+' &middot; '+(w.time_selection||'')+'</div>'
+    + workoutEquipmentIconsHTML(w)
     + (sc ? '<div class="wc-score-badge">'+sc+' result'+(sc>1?'s':'')+'</div>' : '')
     + '</div>';
 }
