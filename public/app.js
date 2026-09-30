@@ -29,12 +29,14 @@ var ICON_PLYOMETRIC = '<svg width="14" height="14" viewBox="0 0 24 24" fill="non
 var ICON_DUMBBELL = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="12" x2="15" y2="12"/><line x1="5" y1="7" x2="5" y2="17"/><line x1="7" y1="9" x2="7" y2="15"/><line x1="17" y1="9" x2="17" y2="15"/><line x1="19" y1="7" x2="19" y2="17"/></svg>';
 var ICON_MEDICINE_BALL = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M7.5 5a10 10 0 0 1 0 14"/></svg>';
 var ICON_MACHINE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 6 12 9 4 12 20 15 12 22 12"/></svg>';
+var ICON_RECOVERY = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="5" x2="8" y2="19"/><line x1="16" y1="5" x2="16" y2="19"/></svg>';
 
 // Maps a Main-sheet Type value to its equipment icon — shown next to the
 // exercise name on the collapsed tile, before it's ever expanded. Type can be
 // a comma-separated list (see parseList/matchesFilter in generator.js), so
-// this checks each value and shows the first one that has an icon; types
-// with no icon (bodyweight, hold, recovery, etc.) just show no icon.
+// this checks each value and shows the first one that has an icon. Bodyweight
+// reuses the plyometric icon (both are "no equipment" movement); recovery
+// and hold (isometric/static positions) share a pause glyph.
 var EQUIPMENT_ICONS = {
   barbell: ICON_BARBELL,
   dumbbell: ICON_DUMBBELL,
@@ -42,7 +44,10 @@ var EQUIPMENT_ICONS = {
   machine: ICON_MACHINE,
   landmine: ICON_LANDMINE,
   'medicine ball': ICON_MEDICINE_BALL,
-  plyometric: ICON_PLYOMETRIC
+  plyometric: ICON_PLYOMETRIC,
+  bodyweight: ICON_PLYOMETRIC,
+  recovery: ICON_RECOVERY,
+  hold: ICON_RECOVERY
 };
 function equipmentIconHTML(type){
   var types = parseList(type || '');
