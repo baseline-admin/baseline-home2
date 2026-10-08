@@ -63,12 +63,20 @@ function cwActivateSegment(key) {
 
 // ── Add exercise from library ─────────────────────────────
 
-function cwAddExercise(name) {
-  // Auto-determine segment from active library filter
+// Which segment a clicked library card goes into. An active Prep/Mobility
+// library filter means the grid only shows Prep/Mobility-table exercises, so
+// those win; otherwise it's whichever section the user selected in the panel
+// (defaulting to Main). Used by both the click handler and the grid render so
+// the tick/+ markers always match where a click will actually land.
+function cwTargetSegment() {
   var af = (typeof LibraryState !== 'undefined') ? LibraryState.activeFilters : {};
-  var seg = af.prep && af.prep.length ? 'prep'
-          : af.mobility && af.mobility.length ? 'mobility'
-          : 'main';
+  if (af.prep && af.prep.length) return 'prep';
+  if (af.mobility && af.mobility.length) return 'mobility';
+  return CWState.activeSegment || 'main';
+}
+
+function cwAddExercise(name) {
+  var seg = cwTargetSegment();
   CWState.activeSegment = seg;
   var d = State.sheetData || {};
   var exercises = CWState.segments[seg].exercises;
@@ -326,21 +334,11 @@ function renderCWExerciseGrid(exercises, noFilters) {
           .filter(function(t){ return t; });
 
         var inSeg = false, isTicked = false;
-        var af = (typeof LibraryState !== 'undefined') ? LibraryState.activeFilters : {};
-        var checkSegForTick = activeSeg || (CWState.open
-          ? ((af.prep && af.prep.length) ? 'prep' : (af.mobility && af.mobility.length) ? 'mobility' : 'main')
-          : null);
-        if (checkSegForTick) {
-          var found = CWState.segments[checkSegForTick].exercises.filter(function(e){ return e.name===ex.name&&!e.isRest; })[0];
-          if (found) { inSeg = true; isTicked = found.ticked; }
-        }
+        var checkSeg = cwTargetSegment();
+        var found = CWState.segments[checkSeg].exercises.filter(function(e){ return e.name===ex.name&&!e.isRest; })[0];
+        if (found) { inSeg = true; isTicked = found.ticked; }
 
-        // Segment is auto-determined from filter, always allow clicking when CW open
-        var autoSeg = (af && af.prep && af.prep.length) ? 'prep'
-                    : (af && af.mobility && af.mobility.length) ? 'mobility'
-                    : 'main';
-        var checkSeg = activeSeg || (CWState.open ? autoSeg : null);
-        var tickedInSeg = checkSeg ? CWState.segments[checkSeg].exercises.filter(function(e){ return e.ticked; }).length : 0;
+        var tickedInSeg = CWState.segments[checkSeg].exercises.filter(function(e){ return e.ticked; }).length;
         var atMax = tickedInSeg >= MAX_TICKED && !isTicked;
         var clickable = CWState.open && (!atMax || inSeg);
 
