@@ -7,11 +7,36 @@
 var APP_URL = 'https://www.baseline.fitness';
 var pendingEmail = '';
 
+// Kept in sessionStorage so that switching to the mail app to read the code
+// (which can reload the page on a phone) doesn't throw the user back to the
+// email step. Cleared on Back, on success, and on sign-out.
+var OTP_PENDING_KEY = 'baseline_pending_otp_email';
+
+function clearPendingOtp() {
+  pendingEmail = '';
+  try { sessionStorage.removeItem(OTP_PENDING_KEY); } catch (e) {}
+}
+
 function showStep1() {
   document.getElementById('authStep1').style.display = 'block';
   document.getElementById('authStep2').style.display = 'none';
   document.getElementById('authStep3').style.display = 'none';
   document.getElementById('err1').textContent = '';
+  document.getElementById('err2').textContent = '';
+  document.getElementById('otpCode').value = '';
+  clearPendingOtp();
+}
+
+function showOtpStep(email) {
+  pendingEmail = email;
+  try { sessionStorage.setItem(OTP_PENDING_KEY, email); } catch (e) {}
+  document.getElementById('authStep1').style.display = 'none';
+  document.getElementById('authStep2').style.display = 'block';
+  document.getElementById('authStep3').style.display = 'none';
+  document.getElementById('otpSubtext').textContent = 'We sent a code to ' + email + '. Enter it below to sign in.';
+  document.getElementById('err2').textContent = '';
+  document.getElementById('otpCode').value = '';
+  setTimeout(function() { var el = document.getElementById('otpCode'); if (el) el.focus(); }, 100);
 }
 
 function showRegister() {
@@ -32,7 +57,6 @@ function signInWithGoogle() {
 async function sendOTP() {
   var email = document.getElementById('authEmail').value.trim();
   if (!email || !email.includes('@')) { document.getElementById('err1').textContent = 'Please enter a valid email.'; return; }
-  pendingEmail = email;
   document.getElementById('err1').textContent = '';
   document.getElementById('authStep1').querySelector('.auth-btn').disabled = true;
   document.getElementById('authStep1').querySelector('.auth-btn').textContent = 'Sending...';
@@ -43,7 +67,7 @@ async function sendOTP() {
   });
 
   document.getElementById('authStep1').querySelector('.auth-btn').disabled = false;
-  document.getElementById('authStep1').querySelector('.auth-btn').textContent = 'Send sign-in link';
+  document.getElementById('authStep1').querySelector('.auth-btn').textContent = 'Send sign-in code';
 
   if (error && error.message && error.message.toLowerCase().includes('not found')) {
     document.getElementById('err1').textContent = 'No account found. Please create one below.';
@@ -54,26 +78,25 @@ async function sendOTP() {
     if (msg.includes('not allowed') || msg.includes('signup') || msg.includes('otp')) {
       document.getElementById('err1').textContent = 'Please create an account first.';
     } else {
-      document.getElementById('err1').textContent = error.message || 'Could not send link.';
+      document.getElementById('err1').textContent = error.message || 'Could not send code.';
     }
     return;
   }
 
-  document.getElementById('err1').textContent = '';
-  document.getElementById('err1').style.color = 'var(--accent)';
-  document.getElementById('err1').textContent = 'Check your email for a sign-in link.';
+  showOtpStep(email);
 }
 
 async function verifyOTP() {
+  var errEl = document.getElementById('err2');
   var code = document.getElementById('otpCode').value.trim().replace(/\s/g, '');
-  if (code.length !== 6) { document.getElementById('err2').textContent = 'Please enter the 6-digit code.'; return; }
-  document.getElementById('err2').textContent = '';
-  setBusy ? setBusy('', true, '') : null;
+  if (!/^\d{6,10}$/.test(code)) { errEl.textContent = 'Please enter the code from your email.'; return; }
+  if (!pendingEmail) { errEl.textContent = 'Please go back and request a new code.'; return; }
+  errEl.textContent = '';
 
-  var btn = document.getElementById('authStep2').querySelector('.auth-btn');
+  var btn = document.getElementById('btnVerifyOtp');
   btn.disabled = true; btn.textContent = 'Verifying...';
 
-  var { data, error } = await sb.auth.verifyOtp({
+  var { error } = await sb.auth.verifyOtp({
     email: pendingEmail,
     token: code,
     type: 'email'
@@ -81,9 +104,25 @@ async function verifyOTP() {
 
   btn.disabled = false; btn.textContent = 'Sign in';
 
-  if (error) { document.getElementById('err2').textContent = error.message || 'Invalid or expired code.'; return; }
+  if (error) {
+    var msg = (error.message || '').toLowerCase();
+    errEl.textContent = (msg.includes('expired') || msg.includes('invalid'))
+      ? 'That code is invalid or has expired. Please try again.'
+      : (error.message || 'Could not verify code.');
+    return;
+  }
   // Session is set - onAuthStateChange in app.js handles the rest
+  clearPendingOtp();
 }
+
+// If the page reloaded while the user was reading the code in their mail app,
+// put them back on the code step instead of the email step.
+(function restorePendingOtpStep() {
+  try {
+    var email = sessionStorage.getItem(OTP_PENDING_KEY);
+    if (email) showOtpStep(email);
+  } catch (e) {}
+})();
 
 // ── Register ──────────────────────────────────────────────
 async function register() {
