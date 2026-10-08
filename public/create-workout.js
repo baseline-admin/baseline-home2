@@ -234,7 +234,7 @@ function renderCreateWorkout() {
 
   if (!isOpen) return btnHtml;
 
-  var segKeys = ['main','prep','mobility'];
+  var segKeys = ['prep','main','mobility'];
   var segsHtml = '';
 
   segKeys.forEach(function(key) {
